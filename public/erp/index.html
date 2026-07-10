@@ -15,7 +15,7 @@
                  object-src 'none';
                  base-uri 'none'">
 
-  <link rel="stylesheet" href="./styles.css" />
+  <link rel="stylesheet" href="./styles.css?v=20260710-payments-i18n" />
 </head>
 
 <body>
@@ -30,8 +30,8 @@
       </div>
 
       <div class="brand__title">
-        <div class="brand__name">D2F Gestion</div>
-        <div class="brand__subtitle">Conforme EN16931</div>
+        <div class="brand__name" data-i18n="brand.name">D2F Gestion</div>
+        <div class="brand__subtitle" data-i18n="brand.subtitle">Conforme EN16931</div>
       </div>
     </div>
 
@@ -123,7 +123,7 @@
                 </label>
               </div>
               <label class="u-mt">
-                <span>Meta JSON (optionnel)</span>
+                <span data-i18n="company.meta_json">Meta JSON (optionnel)</span>
                 <textarea id="co-meta-json" rows="6" placeholder='{"objective_annual_ca":250000}'></textarea>
               </label>
               <div class="row2">
@@ -138,7 +138,7 @@
               </div>
               <div class="row2">
                 <label>
-                  <span>Objectif annuel (HT)</span>
+                  <span data-i18n="company.annual_target_ht">Objectif annuel (HT)</span>
                   <input id="co-annual-target-ht" type="number" step="0.01" placeholder="120000" />
                 </label>
               </div>
@@ -161,12 +161,12 @@
                 </label>
               </div>
               <div class="card">
-                <div class="card__title">Configuration Email (SMTP)</div>
+                <div class="card__title" data-i18n="company.smtp.title">Configuration Email (SMTP)</div>
 
                 <div class="form">
 
                   <label>
-                    <span>SMTP Host</span>
+                    <span data-i18n="company.smtp.host">SMTP Host</span>
                     <input
                       id="company-smtp-host"
                       type="text"
@@ -174,7 +174,7 @@
                   </label>
 
                   <label>
-                    <span>SMTP Port</span>
+                    <span data-i18n="company.smtp.port">SMTP Port</span>
                     <input
                       id="company-smtp-port"
                       type="number"
@@ -182,7 +182,7 @@
                   </label>
 
                   <label>
-                    <span>SMTP User</span>
+                    <span data-i18n="company.smtp.user">SMTP User</span>
                     <input
                       id="company-smtp-user"
                       type="email"
@@ -190,14 +190,14 @@
                   </label>
 
                   <label>
-                    <span>SMTP Password</span>
+                    <span data-i18n="company.smtp.password">SMTP Password</span>
                     <input
                       id="company-smtp-password"
                       type="password">
                   </label>
 
                   <label>
-                    <span>Nom expéditeur</span>
+                    <span data-i18n="company.smtp.from_name">Nom expéditeur</span>
                     <input
                       id="company-smtp-from-name"
                       type="text"
@@ -790,11 +790,34 @@
 
       <!-- Encaissements -->
       <section class="page" data-page="payments">
+        <div class="paymentsOverview">
+          <div class="kpiGrid paymentsKpis" id="p-paymentKpis"></div>
+
+          <div class="card paymentsInvoiceSummaryCard">
+            <div class="paymentsSummaryHeader">
+              <div>
+                <div class="card__title" data-i18n="payments.overview.invoices_title">Synthèse des factures</div>
+                <div class="hint" data-i18n="payments.overview.invoices_hint">Visualisez immédiatement les factures payées, partielles et à encaisser.</div>
+              </div>
+              <label class="paymentsStatusFilter">
+                <span data-i18n="payments.overview.filter">Afficher</span>
+                <select id="p-payment-status">
+                  <option value="all" data-i18n="payments.status.all">Toutes</option>
+                  <option value="paid" data-i18n="payments.status.paid">Payées</option>
+                  <option value="partial" data-i18n="payments.status.partial">Partielles</option>
+                  <option value="unpaid" data-i18n="payments.status.unpaid">À encaisser</option>
+                </select>
+              </label>
+            </div>
+            <div class="u-mt" id="p-invoiceSummary"></div>
+          </div>
+        </div>
+
         <div class="split" data-split>
           <div class="panel card">
-            <div class="card__title" data-i18n="payments.title">Facture à encaisser</div>
-            <div class="hint" data-i18n="payments.hint">
-              Obligation : sélectionner une facture (idéalement émise). Si brouillon → elle sera émise automatiquement au paiement.
+            <div class="card__title" data-i18n="payments.entry.title">Nouveau paiement</div>
+            <div class="hint" data-i18n="payments.entry.hint">
+              Sélectionnez une facture uniquement pour enregistrer un nouveau paiement.
             </div>
 
             <div class="form u-mt">
@@ -840,14 +863,14 @@
                 <button class="btn" type="button" data-action="payments:record" data-i18n="action.record_payment">Enregistrer l’encaissement</button>
               </div>
 
-              <div class="u-mt hint" id="p-invoiceHint" data-i18n="payments.select_invoice_hint_none">Sélectionne une facture pour voir le détail.</div>
+              <div class="u-mt hint" id="p-invoiceHint" data-i18n="payments.select_invoice_hint_none">Toutes les opérations sont visibles à droite. Sélectionnez une facture pour saisir un paiement.</div>
             </div>
           </div>
 
           <div class="panel">
             <div class="card">
-              <div class="card__title" data-i18n="payments.history.title">Historique encaissements</div>
-              <div class="hint" data-i18n="payments.history.hint">Encaissements enregistrés pour la facture sélectionnée.</div>
+              <div class="card__title" id="p-historyTitle" data-i18n="payments.history_all.title">Tous les paiements</div>
+              <div class="hint" id="p-historyHint" data-i18n="payments.history_all.hint">Historique global, toutes factures confondues.</div>
               <div class="u-mt" id="p-paymentsList"></div>
             </div>
           </div>
@@ -868,7 +891,7 @@
             <div id="inboundList" class="list"></div>
 
             <div class="hint u-mt" data-i18n="inbound.list.hint_actions">
-              Astuce : sélectionne une facture pour activer <strong>Accepter</strong> / <strong>Refuser</strong> dans la toolbar.
+              <span data-i18n="inbound.selection_tip">Astuce : sélectionnez une facture pour activer Accepter / Refuser dans la barre d’actions.</span>
             </div>
           </div>
 
@@ -878,8 +901,7 @@
             <div class="card u-mt">
               <div class="card__title" data-i18n="inbound.validation.title">Validation à la PA</div>
               <div class="hint" data-i18n="inbound.validation.hint">
-                <strong>Accepter</strong> / <strong>Refuser</strong> génère un message de statut à remonter
-                <strong>PA → PAE → émetteur</strong>. Le transport sera branché côté <code>inbound.ipc.js</code>.
+                <span data-i18n="inbound.workflow_hint">Accepter / Refuser génère un message de statut à transmettre à l’émetteur.</span>
                 <br />
                 Le refus demande un motif (obligatoire) + code optionnel.
               </div>
@@ -901,7 +923,7 @@
     <div class="form u-mt">
 
       <label>
-        <span>Langue du client</span>
+        <span data-i18n="exports.settings.client_language">Langue du client</span>
 
         <select id="ex-locale">
           <option value="fr" selected>Français</option>
@@ -937,7 +959,7 @@
       <div class="form u-mt">
 
         <label>
-          <span>Devis</span>
+          <span data-i18n="exports.quotes.label">Devis</span>
           <select id="ex-quote"></select>
         </label>
 
@@ -980,7 +1002,7 @@
       <div class="form u-mt">
 
         <label>
-          <span>Facture</span>
+          <span data-i18n="exports.invoices.label">Facture</span>
           <select id="ex-invoice"></select>
         </label>
 
@@ -1024,13 +1046,13 @@
       <section class="page" data-page="conformity">
         <div class="grid2">
           <div class="card">
-            <div class="card__title">Paramètres réforme</div>
+            <div class="card__title" data-i18n="conformity.settings.title">Paramètres réforme</div>
             <div class="hint" id="cf-eligibility-hint">—</div>
 
             <div class="u-mt grid2">
               <label class="field">
                 <div class="field__label">
-                  <span>Scope</span>
+                  <span data-i18n="conformity.scope.label">Scope</span>
                   <span class="hint" style="margin-left:8px;opacity:.75">FR / INTL</span>
                 </div>
                 <select id="cf-scope">
@@ -1042,13 +1064,13 @@
 
               <label class="field">
                 <div class="field__label">
-                  <span>Périodicité</span>
+                  <span data-i18n="conformity.periodicity.label">Périodicité</span>
                   <span class="hint" style="margin-left:8px;opacity:.75">D / M / B</span>
                 </div>
                 <select id="cf-periodicity">
-                  <option value="D">D — Quotidien</option>
-                  <option value="M">M — Mensuel</option>
-                  <option value="B">B — Bimestriel</option>
+                  <option value="D" data-i18n="conformity.periodicity.daily">D — Quotidien</option>
+                  <option value="M" data-i18n="conformity.periodicity.monthly">M — Mensuel</option>
+                  <option value="B" data-i18n="conformity.periodicity.bimonthly">B — Bimestriel</option>
                 </select>
                 <div class="hint" id="cf-help-periodicity"></div>
               </label>
@@ -1057,7 +1079,7 @@
             <div class="u-mt grid2">
               <label class="field">
                 <div class="field__label">
-                  <span>Archivage</span>
+                  <span data-i18n="conformity.archiving.label">Archivage</span>
                 </div>
                 <select id="cf-archiving">
                   <option value="ON">ON</option>
@@ -1068,13 +1090,13 @@
 
               <label class="field">
                 <div class="field__label">
-                  <span>Plateforme</span>
+                  <span data-i18n="conformity.platform.label">Plateforme</span>
                   <span class="hint" style="margin-left:8px;opacity:.75">PA / OTHER</span>
                 </div>
                 <select id="cf-platform">
-                  <option value="">— choisir —</option>
-                  <option value="PA">PA (Plateforme agréée)</option>
-                  <option value="OTHER">Autre (solution connectée)</option>
+                  <option value="" data-i18n="ui.choose">— choisir —</option>
+                  <option value="PA" data-i18n="conformity.platform.pa">PA (Plateforme agréée)</option>
+                  <option value="OTHER" data-i18n="conformity.platform.other">Autre (solution connectée)</option>
                 </select>
                 <div class="hint" id="cf-help-platform"></div>
               </label>
@@ -1083,22 +1105,22 @@
             <div class="u-mt grid2">
               <label class="field">
                 <div class="field__label">
-                  <span>Émet des factures B2C ?</span>
+                  <span data-i18n="conformity.b2c.label">Émet des factures B2C ?</span>
                 </div>
                 <select id="cf-emits-b2c">
-                  <option value="0">Non</option>
-                  <option value="1">Oui</option>
+                  <option value="0" data-i18n="common.no">Non</option>
+                  <option value="1" data-i18n="common.yes">Oui</option>
                 </select>
                 <div class="hint" id="cf-help-b2c"></div>
               </label>
 
               <label class="field">
                 <div class="field__label">
-                  <span>International (hors France) ?</span>
+                  <span data-i18n="conformity.intl.label">International (hors France) ?</span>
                 </div>
                 <select id="cf-has-international">
-                  <option value="0">Non</option>
-                  <option value="1">Oui</option>
+                  <option value="0" data-i18n="common.no">Non</option>
+                  <option value="1" data-i18n="common.yes">Oui</option>
                 </select>
                 <div class="hint" id="cf-help-intl"></div>
               </label>
@@ -1107,7 +1129,7 @@
             <div class="u-mt">
               <label class="field">
                 <div class="field__label">
-                  <span>Prochaine échéance (info)</span>
+                  <span data-i18n="conformity.next_due.label">Prochaine échéance (info)</span>
                 </div>
                 <input id="cf-next-due" type="date" />
                 <div class="hint" id="cf-help-nextdue"></div>
@@ -1115,31 +1137,31 @@
             </div>
 
             <div class="u-mt">
-              <div class="card__title">KPIs (file / flux)</div>
+              <div class="card__title" data-i18n="conformity.kpis.title">KPIs (file / flux)</div>
               <div class="totals">
-                <div class="totals__row"><span>Flux 8</span><strong id="cf-kpi-flux8">0</strong></div>
-                <div class="totals__row"><span>Flux 9</span><strong id="cf-kpi-flux9">0</strong></div>
-                <div class="totals__row"><span>Flux 10</span><strong id="cf-kpi-flux10">0</strong></div>
+                <div class="totals__row"><span data-i18n="conformity.kpis.flow8">Flux 8</span><strong id="cf-kpi-flux8">0</strong></div>
+                <div class="totals__row"><span data-i18n="conformity.kpis.flow9">Flux 9</span><strong id="cf-kpi-flux9">0</strong></div>
+                <div class="totals__row"><span data-i18n="conformity.kpis.flow10">Flux 10</span><strong id="cf-kpi-flux10">0</strong></div>
               </div>
-              <div class="hint">Ces compteurs doivent venir de calculs réels (pas juste déclaratifs).</div>
+              <div class="hint" data-i18n="conformity.kpis.hint">Ces compteurs doivent venir de calculs réels.</div>
             </div>
 
             <div class="u-mt" id="cf-missing-box" style="display:none;">
-              <div class="card__title" style="color: rgba(239,68,68,.95)">Champs à compléter</div>
+              <div class="card__title" style="color: rgba(239,68,68,.95)" data-i18n="conformity.missing.title">Champs à compléter</div>
               <div class="hint" id="cf-missing-list" style="color: rgba(239,68,68,.9)"></div>
             </div>
           </div>
 
           <div class="card">
-            <div class="card__title">Agent IA — assistant réforme</div>
+            <div class="card__title" data-i18n="conformity.ai.title">Agent IA — assistant réforme</div>
             <div class="hint">
               Je te pose quelques questions et je te dis si tu es concerné, et quoi remplir.
             </div>
 
             <div class="u-mt" style="display:flex;gap:8px;flex-wrap:wrap;">
-              <button class="btn" id="cf-ai-start">Démarrer diagnostic</button>
-              <button class="btn btn--secondary" id="cf-ai-recommend">Recommandations</button>
-              <button class="btn btn--ghost" id="cf-ai-check">Vérifier complétude</button>
+              <button class="btn" id="cf-ai-start" data-i18n="conformity.ai.start">Démarrer diagnostic</button>
+              <button class="btn btn--secondary" id="cf-ai-recommend" data-i18n="conformity.ai.recommend">Recommandations</button>
+              <button class="btn btn--ghost" id="cf-ai-check" data-i18n="conformity.ai.check">Vérifier complétude</button>
             </div>
 
             <div class="u-mt" id="cf-ai-chat"
@@ -1149,11 +1171,11 @@
             <div class="u-mt" style="display:flex;gap:8px;">
               <input id="cf-ai-input" type="text" placeholder="Réponds (ex: oui / non / je ne sais pas)…"
                      style="flex:1;border-radius:12px;border:1px solid rgba(255,255,255,.15);background:transparent;color:inherit;padding:10px;" />
-              <button class="btn btn--secondary" id="cf-ai-send">Envoyer</button>
+              <button class="btn btn--secondary" id="cf-ai-send" data-i18n="common.send">Envoyer</button>
             </div>
 
             <div class="u-mt">
-              <div class="card__title">Résumé</div>
+              <div class="card__title" data-i18n="conformity.ai.summary_title">Résumé</div>
               <div class="hint" id="cf-ai-summary">—</div>
             </div>
           </div>
@@ -1207,7 +1229,7 @@
           </div>
 
             <div class="hint u-mt" data-i18n="audit.tip">
-              Astuce : commence par <strong>Vérifier</strong> (hash/chain/HMAC si activé), puis <strong>Lire</strong>.
+              <span data-i18n="audit.tip">Astuce : commencez par Vérifier, puis Lire.</span>
             </div>
           </div>
 
@@ -1219,34 +1241,33 @@
 
             <div class="auditResults u-mt">
               <div class="auditResults__row">
-                <div class="hint">Verify</div>
+                <div class="hint" data-i18n="audit.results.verify">Vérification</div>
                 <div id="auditVerifyResult" class="auditResultPill">—</div>
               </div>
 
               <div class="auditResults__row">
-                <div class="hint">Events loaded</div>
+                <div class="hint" data-i18n="audit.results.events_loaded">Événements chargés</div>
                 <div id="auditReadResult" class="auditResultPill">—</div>
               </div>
 
               <div class="auditResults__row">
-                <div class="hint">Last seq</div>
+                <div class="hint" data-i18n="audit.results.last_seq">Dernière séquence</div>
                 <div id="auditLastSeq" class="auditResultMono">—</div>
               </div>
 
               <div class="auditResults__row">
-                <div class="hint">Last hash</div>
+                <div class="hint" data-i18n="audit.results.last_hash">Dernier hash</div>
                 <div id="auditLastHash" class="auditResultMono">—</div>
               </div>
 
               <div class="auditResults__log">
-                <div class="hint" style="opacity:.95;">Log</div>
-                <pre id="auditResultsLog" class="auditPre">Ready.</pre>
+                <div class="hint" style="opacity:.95;" data-i18n="audit.results.log">Journal</div>
+                <pre id="auditResultsLog" class="auditPre" data-i18n="audit.results.ready">Prêt.</pre>
               </div>
             </div>
 
             <div class="hint u-mt" style="opacity:.95;">
-              • <strong>audit:verify</strong> : vérifie chaîne + HMAC<br/>
-              • <strong>audit:read</strong> : lecture paginée (sinceSeq/limit)<br/>
+              <span data-i18n="audit.results.footer_hint">audit:verify vérifie la chaîne ; audit:read lit les événements.</span><br/>
               • Preuve “humaine” : exports (PDF/UBL) + audit.
             </div>
           </div>
@@ -1309,8 +1330,7 @@
         </label>
 
         <div class="hint u-mt" data-i18n="reject.hint">
-          Le refus est une décision <strong>acheteur</strong> (statut <code>REFUSED</code>).
-          <br/>Le commentaire devient <strong>obligatoire</strong> pour <strong>RF99</strong>.
+          <span data-i18n="reject.hint">Le refus est une décision de l’acheteur. Le commentaire est obligatoire pour RF99.</span>
         </div>
       </div>
 
@@ -1367,7 +1387,7 @@
         </div>
 
         <div class="hint u-mt" data-i18n="pay.modal.draft_hint">
-          Si la facture est en <strong>brouillon</strong>, elle sera <strong>validée automatiquement</strong> avant l’enregistrement du paiement.
+          <span data-i18n="pay.modal.draft_hint">Si la facture est un brouillon, elle sera automatiquement émise avant l’enregistrement du paiement.</span>
         </div>
       </div>
 
@@ -1382,8 +1402,8 @@
   <script src="./audit-ui.js"></script>
   <script src="./renderer/web-electron-shim.js"></script>
   <script src="./renderer/web-api-shim.js"></script>
-  <script src="./dashboard-ui.js"></script>
-  <script src="./app.js"></script>
+  <script src="./dashboard-ui.js?v=20260710-payments-i18n"></script>
+  <script src="./app.js?v=20260710-payments-i18n"></script>
 
   <div id="clientsImportModal" class="modal" aria-hidden="true">
     <div class="modal__backdrop" data-modal-close></div>

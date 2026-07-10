@@ -68,12 +68,13 @@ const I18N_FALLBACK = Object.freeze({
 function getLocale() {
   const langEl = document.documentElement?.getAttribute("lang");
   const raw = (langEl || window?.state?.locale || window?.state?.lang || "fr").toString().toLowerCase();
-  return raw.startsWith("en") ? "en" : "fr";
+  const locale = raw.slice(0, 2);
+  return ["fr", "en", "sr", "es", "it"].includes(locale) ? locale : "fr";
 }
 
 function t(key, fallback = "") {
   try {
-    if (typeof window.t === "function") return String(window.t(key) ?? fallback);
+    if (typeof window.__d2fT === "function") return String(window.__d2fT(key, fallback) ?? fallback);
     if (window.i18n && typeof window.i18n.t === "function") return String(window.i18n.t(key) ?? fallback);
   } catch {}
   const loc = getLocale();
@@ -100,7 +101,8 @@ function clamp(x, a, b) {
 }
 function fmtEUR(x) {
   try {
-    return new Intl.NumberFormat(getLocale() === "en" ? "en-GB" : "fr-FR", {
+    const numberLocale = { fr: "fr-FR", en: "en-GB", sr: "sr-Latn-RS", es: "es-ES", it: "it-IT" }[getLocale()] || "fr-FR";
+    return new Intl.NumberFormat(numberLocale, {
       style: "currency",
       currency: "EUR",
     }).format(n(x, 0));
@@ -109,7 +111,8 @@ function fmtEUR(x) {
   }
 }
 function fmtInt(x) {
-  return new Intl.NumberFormat(getLocale() === "en" ? "en-GB" : "fr-FR", { maximumFractionDigits: 0 }).format(n(x, 0));
+  const numberLocale = { fr: "fr-FR", en: "en-GB", sr: "sr-Latn-RS", es: "es-ES", it: "it-IT" }[getLocale()] || "fr-FR";
+  return new Intl.NumberFormat(numberLocale, { maximumFractionDigits: 0 }).format(n(x, 0));
 }
 function esc(s) {
   return String(s ?? "")
@@ -261,7 +264,7 @@ function renderLegacy(data) {
 
   const qBox = q("#dashQuotesKpis");
   if (qBox) {
-    const qs = data?.quotes || {};
+    const qs = data?.quotes?.counts || data?.quotes || {};
     qBox.innerHTML = `
       <div class="kpiGrid">
         <div class="kpi"><div class="kpi__label">${esc(t("kpi.quotes.draft", "Brouillons"))}</div><div class="kpi__value">${fmtInt(qs.draft)}</div></div>
@@ -299,7 +302,7 @@ function renderLegacy(data) {
             .map(
               (x) => `
             <div class="miniList__row">
-              <span class="miniList__label">${esc(String(x.method || "other")).toUpperCase()}</span>
+              <span class="miniList__label">${esc(t(`pay.method.${String(x.method || "other").toLowerCase()}`, String(x.method || "other")))}</span>
               <strong class="miniList__value">${fmtEUR(x.total)}</strong>
             </div>`
             )
@@ -451,6 +454,8 @@ async function refreshDashboard({ force = false } = {}) {
     const data = await fetchDashboardData();
     if (data?.legacy) renderLegacy(data.legacy);
     renderVisuals({ legacy: data?.legacy, metrics: data?.metrics });
+    const status = document.getElementById("appStatus");
+    if (status) status.textContent = t("status.ready", "Prêt");
 
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
@@ -463,6 +468,8 @@ async function refreshDashboard({ force = false } = {}) {
     });
   } catch (e) {
     console.error("[dashboard] refresh failed", e);
+    const status = document.getElementById("appStatus");
+    if (status) status.textContent = t("dashboard.error", "Erreur");
     if (visuals) {
       visuals.innerHTML = `
         <div class="card dashHero">

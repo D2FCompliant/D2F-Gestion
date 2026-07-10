@@ -3,7 +3,7 @@ export default function Home() {
     <main className="web-app-shell">
       <iframe
         className="web-app-frame"
-        src="/erp/index.html"
+        src="/erp/index.html?v=20260710-payments-i18n"
         title="D2F Gestion"
         allow="clipboard-read; clipboard-write"
       />

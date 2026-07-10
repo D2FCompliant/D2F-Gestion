@@ -91,29 +91,23 @@ function normalizeLabel(s) {
  */
 function t(keyPath, fallback = "", vars = null) {
   const lang = (state?.lang || getLang() || DEFAULT_LANG).toLowerCase();
-  const dict = I18N[lang] || I18N[DEFAULT_LANG] || {};
-
   const key = String(keyPath || "");
-
-  // ✅ 1) Support JSON à plat: dict["a.b.c"]
-  if (Object.prototype.hasOwnProperty.call(dict, key)) {
-    return formatMsg(dict[key], vars);
-  }
-
-  // ✅ 2) Support JSON imbriqué: dict.a.b.c
-  const parts = key.split(".");
-  let cur = dict;
-  for (const p of parts) {
-    if (!cur || typeof cur !== "object" || !(p in cur)) {
-      cur = null;
-      break;
+  const read = (dict) => {
+    if (!dict || typeof dict !== "object") return null;
+    if (Object.prototype.hasOwnProperty.call(dict, key)) return dict[key];
+    let cur = dict;
+    for (const part of key.split(".")) {
+      if (!cur || typeof cur !== "object" || !(part in cur)) return null;
+      cur = cur[part];
     }
-    cur = cur[p];
-  }
+    return cur;
+  };
 
-  const raw = cur == null ? fallback : cur;
+  const raw = read(I18N[lang]) ?? read(I18N[DEFAULT_LANG]) ?? fallback;
   return formatMsg(raw, vars);
 }
+
+window.__d2fT = t;
 // ----------------- I18N DOM APPLY -----------------
 
 function applyI18nToElement(el) {
@@ -359,6 +353,7 @@ function actionKeyFromId(actionId) {
   // invoices
   if (id === "invoices:toCreditNote") return "action.create_credit_note";
   if (id === "invoices:recordPayment") return "action.record_payment";
+  if (id === "payments:record") return "action.record_payment";
 
   // exports
   if (id === "exports:peppolXml") return "action.export_peppol_xml";
@@ -647,7 +642,7 @@ function renderToolbar(moduleKey) {
   langSel.addEventListener("change", async () => {
     const newLang = setLang(langSel.value);
 
-    await loadI18n(newLang);
+    await Promise.all([loadI18n(newLang), loadI18n(DEFAULT_LANG)]);
     applyStaticI18n(document);
     renderNavI18n();
 
@@ -1180,8 +1175,9 @@ function initApp() {
 document.addEventListener("DOMContentLoaded", initApp);
 
 async function computeAndRenderDashboard() {
+  const numberLocale = { fr: "fr-FR", en: "en-GB", sr: "sr-Latn-RS", es: "es-ES", it: "it-IT" }[state.lang] || "fr-FR";
   const eur = (x) =>
-    Number(x || 0).toLocaleString("fr-FR", { style: "currency", currency: "EUR" });
+    Number(x || 0).toLocaleString(numberLocale, { style: "currency", currency: "EUR" });
 
   const round2 = (x) => Math.round((Number(x || 0) + Number.EPSILON) * 100) / 100;
 
@@ -1328,24 +1324,24 @@ if (depAvgDaysEl) {
   if (qBox) {
     const q = state.dashboard.quotes?.counts || {};
     qBox.innerHTML =
-      `<div class="totals__row"><span>En cours</span><strong>${q.draft || 0}</strong></div>` +
-      `<div class="totals__row"><span>Acceptés</span><strong>${q.accepted || 0}</strong></div>` +
-      `<div class="totals__row"><span>Refusés</span><strong>${q.rejected || 0}</strong></div>`;
+      `<div class="totals__row"><span>${t("dash.quotes.in_progress", "En cours")}</span><strong>${q.draft || 0}</strong></div>` +
+      `<div class="totals__row"><span>${t("dash.quotes.accepted", "Acceptés")}</span><strong>${q.accepted || 0}</strong></div>` +
+      `<div class="totals__row"><span>${t("dash.quotes.refused", "Refusés")}</span><strong>${q.rejected || 0}</strong></div>`;
   }
 
   const iBox = document.getElementById("dashInvoicesKpis");
   if (iBox) {
     const inv = state.dashboard.invoices;
     iBox.innerHTML =
-      `<div class="totals__row"><span>Émises</span><strong>${inv.issued || 0}</strong></div>` +
-      `<div class="totals__row"><span>Payées</span><strong>${inv.paid || 0}</strong></div>` +
-      `<div class="totals__row"><span>En attente</span><strong>${inv.waiting || 0}</strong></div>`;
+      `<div class="totals__row"><span>${t("dash.invoices.issued", "Émises")}</span><strong>${inv.issued || 0}</strong></div>` +
+      `<div class="totals__row"><span>${t("dash.invoices.paid", "Payées")}</span><strong>${inv.paid || 0}</strong></div>` +
+      `<div class="totals__row"><span>${t("dash.invoices.waiting", "En attente")}</span><strong>${inv.waiting || 0}</strong></div>`;
   }
 
   const pBox = document.getElementById("dashPaymentsKpis");
   if (pBox) {
     pBox.innerHTML =
-      `<div class="totals__row"><span>Total</span><strong>${eur(state.dashboard.payments.total || 0)}</strong></div>`;
+      `<div class="totals__row"><span>${t("dash.payments.total", "Total encaissé")}</span><strong>${eur(state.dashboard.payments.total || 0)}</strong></div>`;
   }
 
   const byMethodBox = document.getElementById("dashPaymentsByMethod");
@@ -1357,7 +1353,7 @@ if (depAvgDaysEl) {
       .filter((m) => (Number(m.total || 0) || 0) > 0)
       .map(
         (m) =>
-          `<div class="totals__row"><span>${String(m.method || "other")}</span><strong>${eur(m.total || 0)}</strong></div>`
+          `<div class="totals__row"><span>${t(`pay.method.${String(m.method || "other").toLowerCase()}`, String(m.method || "other"))}</span><strong>${eur(m.total || 0)}</strong></div>`
       )
       .join("");
   }
@@ -2947,129 +2943,237 @@ function renderDashboard() {
 }
 
 /* ----------------- Payments page ----------------- */
+function paymentInvoiceAmount(invoice) {
+  const totalTtc = Number(invoice?.total_ttc ?? 0) || 0;
+  const prepaid = String(invoice?.type || "").toLowerCase() === "final"
+    ? Number(invoice?.prepaid_amount || 0) || 0
+    : 0;
+  if (totalTtc > 0) return Math.max(0, round2(totalTtc - prepaid));
+  return Math.max(0, Number(invoice?.amount_due || 0) || 0);
+}
+
+function paymentInvoiceStatus(invoice, paidAmount) {
+  const due = paymentInvoiceAmount(invoice);
+  if (due <= 0 || Number(paidAmount || 0) + 0.001 >= due) return "paid";
+  if (Number(paidAmount || 0) > 0) return "partial";
+  return "unpaid";
+}
+
+function paymentStatusText(status) {
+  return t(`payments.status.${status}`, status);
+}
+
+function renderPaymentOverview(invoices, payments) {
+  const kpisEl = document.getElementById("p-paymentKpis");
+  const summaryEl = document.getElementById("p-invoiceSummary");
+  const statusFilter = String(document.getElementById("p-payment-status")?.value || "all");
+  const receivables = (Array.isArray(invoices) ? invoices : []).filter((invoice) =>
+    String(invoice?.status || "").toLowerCase() === "issued" && String(invoice?.type || "").toLowerCase() !== "credit_note"
+  );
+  const paidByInvoice = new Map();
+  let totalPaid = 0;
+  for (const payment of Array.isArray(payments) ? payments : []) {
+    const invoiceId = String(payment?.invoice_id || payment?.invoiceId || "");
+    const amount = Number(payment?.amount || 0) || 0;
+    totalPaid += amount;
+    if (invoiceId) paidByInvoice.set(invoiceId, round2((paidByInvoice.get(invoiceId) || 0) + amount));
+  }
+
+  const rows = receivables.map((invoice) => {
+    const paid = Number(paidByInvoice.get(String(invoice.id)) || 0);
+    const due = paymentInvoiceAmount(invoice);
+    return {
+      invoice,
+      paid,
+      due,
+      remaining: Math.max(0, round2(due - paid)),
+      paymentStatus: paymentInvoiceStatus(invoice, paid),
+    };
+  });
+  const paidCount = rows.filter((row) => row.paymentStatus === "paid").length;
+  const outstanding = round2(rows.reduce((sum, row) => sum + row.remaining, 0));
+
+  if (kpisEl) {
+    const kpis = [
+      [t("payments.overview.total_paid", "Total encaissé"), `${money(totalPaid)} €`],
+      [t("payments.overview.operations", "Paiements enregistrés"), String((payments || []).length)],
+      [t("payments.overview.paid_invoices", "Factures payées"), `${paidCount} / ${rows.length}`],
+      [t("payments.overview.outstanding", "Reste à encaisser"), `${money(outstanding)} €`],
+    ];
+    kpisEl.innerHTML = kpis.map(([label, value]) => `
+      <div class="kpi">
+        <div class="kpi__label">${esc(label)}</div>
+        <div class="kpi__value">${esc(value)}</div>
+      </div>
+    `).join("");
+  }
+
+  if (!summaryEl) return;
+  const filtered = rows
+    .filter((row) => statusFilter === "all" || row.paymentStatus === statusFilter)
+    .sort((a, b) => b.remaining - a.remaining || String(b.invoice?.date || "").localeCompare(String(a.invoice?.date || "")));
+
+  if (!filtered.length) {
+    summaryEl.innerHTML = `<div class="hint">${t("payments.overview.no_invoices", "Aucune facture pour ce filtre.")}</div>`;
+    return;
+  }
+
+  summaryEl.innerHTML = `
+    <div class="paymentsTableWrap">
+      <div class="paymentsTable">
+        <div class="paymentsTable__row paymentsTable__row--head">
+          <div>${t("payments.col.invoice", "Facture")}</div>
+          <div>${t("payments.col.client", "Client")}</div>
+          <div>${t("payments.col.status", "Statut")}</div>
+          <div class="paymentsTable__amount">${t("payments.col.total", "Total")}</div>
+          <div class="paymentsTable__amount">${t("payments.col.paid", "Encaissé")}</div>
+          <div class="paymentsTable__amount">${t("payments.col.remaining", "Reste")}</div>
+        </div>
+        ${filtered.map((row) => {
+          const invoice = row.invoice || {};
+          const invoiceId = String(invoice.id || "");
+          return `
+            <div class="paymentsTable__row">
+              <div><button class="paymentInvoiceButton" type="button" data-payment-invoice="${esc(invoiceId)}">${esc(invoice.invoice_number || invoice.number || invoiceId)}</button></div>
+              <div class="paymentsTable__muted" title="${esc(invoice.client_name || "")}">${esc(invoice.client_name || "—")}</div>
+              <div><span class="paymentStatus paymentStatus--${row.paymentStatus}">${esc(paymentStatusText(row.paymentStatus))}</span></div>
+              <div class="paymentsTable__amount">${money(row.due)} €</div>
+              <div class="paymentsTable__amount">${money(row.paid)} €</div>
+              <div class="paymentsTable__amount">${money(row.remaining)} €</div>
+            </div>
+          `;
+        }).join("")}
+      </div>
+    </div>
+  `;
+
+  summaryEl.onclick = async (event) => {
+    const button = event.target?.closest?.("[data-payment-invoice]");
+    if (!button) return;
+    const invoiceId = String(button.getAttribute("data-payment-invoice") || "");
+    const select = document.getElementById("p-invoice");
+    if (!invoiceId || !select) return;
+    select.value = invoiceId;
+    state.payments.selectedInvoiceId = invoiceId;
+    await renderPaymentsPage();
+  };
+}
+
 async function renderPaymentsPage() {
-  const invoiceIdRaw = document.getElementById("p-invoice")?.value || state.selectedInvoiceId || "";
-  const invoiceId = String(invoiceIdRaw || "").trim();
-  state.selectedInvoiceId = invoiceId || null;
+  const invoiceId = String(document.getElementById("p-invoice")?.value || state.payments.selectedInvoiceId || "").trim();
+  state.payments.selectedInvoiceId = invoiceId || null;
 
   const hint = document.getElementById("p-invoiceHint");
   const listEl = document.getElementById("p-paymentsList");
+  const historyTitle = document.getElementById("p-historyTitle");
+  const historyHint = document.getElementById("p-historyHint");
+  if (!listEl) return;
+
+  listEl.innerHTML = `<div class="hint">${t("payments.loading", "Chargement…")}</div>`;
+
+  let allPayments = [];
+  try {
+    allPayments = await window.api.payments.listAll({});
+  } catch (error) {
+    state.payments.list = [];
+    listEl.innerHTML = `<div class="hint">${t("payments.load_error", "Impossible de charger les paiements.")}</div>`;
+    console.error(error);
+    return;
+  }
+
+  const unique = new Map();
+  for (const payment of Array.isArray(allPayments) ? allPayments : []) {
+    const key = String(payment?.id || "") || `${payment?.invoice_id || ""}__${payment?.date || ""}__${payment?.amount || ""}__${payment?.method || ""}`;
+    if (!unique.has(key)) unique.set(key, payment);
+  }
+  state.payments.all = Array.from(unique.values());
+  renderPaymentOverview(state.invoices || [], state.payments.all);
+
+  const invoiceMap = new Map((state.invoices || []).map((invoice) => [String(invoice.id || ""), invoice]));
+  const selectedInvoice = invoiceMap.get(invoiceId);
+  const selectedNumber = selectedInvoice?.invoice_number || selectedInvoice?.number || invoiceId;
 
   if (hint) {
     hint.textContent = invoiceId
-      ? t("payments.select_invoice_hint_one", "Facture sélectionnée: {id}", { id: invoiceId })
-      : t("payments.select_invoice_hint_none", "Sélectionne une facture...", {});
+      ? t("payments.select_invoice_hint_one", "Facture sélectionnée : {id}", { id: selectedNumber })
+      : t("payments.select_invoice_hint_none", "Toutes les opérations sont visibles. Sélectionnez une facture pour saisir un paiement.");
   }
+  if (historyTitle) historyTitle.textContent = invoiceId
+    ? t("payments.history_selected.title", "Paiements de la facture")
+    : t("payments.history_all.title", "Tous les paiements");
+  if (historyHint) historyHint.textContent = invoiceId
+    ? t("payments.history_selected.hint", "Historique de {invoice}.", { invoice: selectedNumber })
+    : t("payments.history_all.hint", "Historique global, toutes factures confondues.");
 
-  if (!listEl) return;
+  state.payments.list = invoiceId
+    ? state.payments.all.filter((payment) => String(payment?.invoice_id || payment?.invoiceId || "") === invoiceId)
+    : state.payments.all;
 
-  if (!invoiceId) {
-    state.payments.list = [];
-    listEl.innerHTML = `<div class="hint">${t("payments.no_invoice_selected", "Aucune facture sélectionnée.")}</div>`;
+  if (!state.payments.list.length) {
+    listEl.innerHTML = `<div class="hint">${invoiceId
+      ? t("payments.none_for_invoice", "Aucun paiement sur cette facture.")
+      : t("payments.none_all", "Aucun paiement enregistré.")}</div>`;
     return;
   }
 
-  listEl.innerHTML = `<div class="hint">${t("payments.loading", "Chargement...")}</div>`;
-
-  let rows = [];
-  try {
-    // ✅ signature preload: list({invoiceId}) OU list("invoiceId")
-    rows = await window.api.payments.list({ invoiceId });
-  } catch (e) {
-    state.payments.list = [];
-    listEl.innerHTML = `<div class="hint">Erreur chargement paiements: ${String(e?.message || e)}</div>`;
-    return;
-  }
-
-  // ✅ dédoublonne si la même ligne revient plusieurs fois (id ou clé composite)
-  const uniq = new Map();
-  for (const p of Array.isArray(rows) ? rows : []) {
-    const key =
-      String(p?.id || "") ||
-      `${String(p?.invoice_id || p?.invoiceId || "")}__${String(p?.date || "")}__${String(p?.amount || "")}__${String(p?.method || "")}__${String(p?.reference || "")}`;
-    if (!uniq.has(key)) uniq.set(key, p);
-  }
-  state.payments.list = Array.from(uniq.values());
-
-  if (state.payments.list.length === 0) {
-    listEl.innerHTML = `<div class="hint">${t("payments.none_for_invoice", "Aucun encaissement sur cette facture.")}</div>`;
-    return;
-  }
-
-  const labels = {
-    card: t("pay.method.card", "CB"),
+  const methodLabels = {
+    card: t("pay.method.card", "Carte"),
     transfer: t("pay.method.transfer", "Virement bancaire"),
     cash: t("pay.method.cash", "Espèces"),
     check: t("pay.method.check", "Chèque"),
     sepa: t("pay.method.sepa", "Prélèvement"),
     other: t("pay.method.other", "Autre"),
   };
-
-  const fmt = (x) => {
-    const v = Number(x || 0);
-    return Number.isFinite(v) ? v.toFixed(2) : "0.00";
-  };
-
-  const sorted = [...state.payments.list].sort((a, b) => {
-    const ca = String(a?.created_at || a?.createdAt || a?.date || "");
-    const cb = String(b?.created_at || b?.createdAt || b?.date || "");
-    return cb.localeCompare(ca);
-  });
+  const sorted = [...state.payments.list].sort((a, b) =>
+    String(b?.created_at || b?.date || "").localeCompare(String(a?.created_at || a?.date || ""))
+  );
 
   listEl.innerHTML = `
-    <div>
-      <div style="display:flex; gap:12px; font-weight:700; padding:8px 0; border-bottom:1px solid rgba(0,0,0,.15);">
-        <div style="width:110px;">${t("pay.col.date","Date")}</div>
-        <div style="width:190px;">${t("pay.col.method","Moyen")}</div>
-        <div style="flex:1;">${t("pay.col.reference","Référence / notes")}</div>
-        <div style="width:140px; text-align:right;">${t("pay.col.amount","Montant")}</div>
-        <div style="width:120px; text-align:right;">${t("pay.col.action","Action")}</div>
-      </div>
-
-      ${sorted.map((p) => {
-        const pid = String(p?.id || "");
-        const method = String(p?.method || "other").toLowerCase();
-        const cur = String(p?.currency || "EUR").toUpperCase();
-        const ref = String(p?.reference || p?.notes || "");
-        const date = String(p?.date || p?.payment_date || "");
-        const disabled = pid ? "" : "disabled";
-        return `
-          <div style="display:flex; gap:12px; padding:10px 0; border-bottom:1px solid rgba(0,0,0,.08); align-items:center;">
-            <div style="width:110px;">${date}</div>
-            <div style="width:190px;">${labels[method] || method}</div>
-            <div style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${ref}">${ref}</div>
-            <div style="width:140px; text-align:right;">${fmt(p?.amount)} ${cur}</div>
-            <div style="width:120px; text-align:right;">
-              <button type="button"
-                data-paydel="${pid}"
-                ${disabled}
-                style="padding:5px 10px; border:1px solid rgba(239,68,68,.95); background:transparent; color:rgba(239,68,68,.95); border-radius:10px; cursor:pointer;">
-                ${t("action.delete","Supprimer")}
-              </button>
+    <div class="paymentsTableWrap">
+      <div class="paymentsTable">
+        <div class="paymentsTable__row paymentsTable__row--head paymentsTable__row--payment">
+          <div>${t("pay.col.date", "Date")}</div>
+          <div>${t("payments.col.invoice", "Facture")}</div>
+          <div>${t("payments.col.client", "Client")}</div>
+          <div>${t("pay.col.method", "Moyen")}</div>
+          <div>${t("pay.col.reference", "Référence / notes")}</div>
+          <div class="paymentsTable__amount">${t("pay.col.amount", "Montant")}</div>
+          <div class="paymentsTable__amount">${t("pay.col.action", "Action")}</div>
+        </div>
+        ${sorted.map((payment) => {
+          const paymentId = String(payment?.id || "");
+          const linkedInvoice = invoiceMap.get(String(payment?.invoice_id || payment?.invoiceId || "")) || {};
+          const method = String(payment?.method || "other").toLowerCase();
+          const reference = String(payment?.reference || payment?.notes || "");
+          return `
+            <div class="paymentsTable__row paymentsTable__row--payment">
+              <div>${esc(String(payment?.date || payment?.payment_date || "—"))}</div>
+              <div>${esc(linkedInvoice.invoice_number || linkedInvoice.number || "—")}</div>
+              <div class="paymentsTable__muted" title="${esc(linkedInvoice.client_name || "")}">${esc(linkedInvoice.client_name || "—")}</div>
+              <div>${esc(methodLabels[method] || method)}</div>
+              <div class="paymentsTable__muted" title="${esc(reference)}">${esc(reference || "—")}</div>
+              <div class="paymentsTable__amount">${money(Number(payment?.amount || 0))} ${esc(String(payment?.currency || "EUR").toUpperCase())}</div>
+              <div class="paymentsTable__amount"><button type="button" class="paymentDeleteButton" data-paydel="${esc(paymentId)}" ${paymentId ? "" : "disabled"}>${t("action.delete", "Supprimer")}</button></div>
             </div>
-          </div>
-        `;
-      }).join("")}
+          `;
+        }).join("")}
+      </div>
     </div>
   `;
 
-  listEl.onclick = async (ev) => {
-    const btn = ev.target?.closest?.("[data-paydel]");
-    if (!btn) return;
-    const pid = String(btn.getAttribute("data-paydel") || "");
-    if (!pid) {
-      setStatus("Erreur: payment.id manquant (impossible de supprimer).");
-      return;
-    }
-
+  listEl.onclick = async (event) => {
+    const button = event.target?.closest?.("[data-paydel]");
+    if (!button) return;
+    const paymentId = String(button.getAttribute("data-paydel") || "");
+    if (!paymentId) return setStatus(t("payments.delete_missing_id", "Identifiant du paiement manquant."));
     try {
-      await window.api.payments.delete(pid);
+      await window.api.payments.delete(paymentId);
       await renderPaymentsPage();
       await refreshModule("dashboard").catch(() => {});
       setStatus(t("status.payment_deleted", "Paiement supprimé"));
-    } catch (e) {
-      setStatus(`Erreur suppression paiement: ${String(e?.message || e)}`);
-      console.error(e);
+    } catch (error) {
+      setStatus(t("payments.delete_error", "Impossible de supprimer le paiement."));
+      console.error(error);
     }
   };
 }
@@ -3778,22 +3882,26 @@ renderQuoteDraft();
 
   if (moduleKey === "payments") {
   state.invoices = (await window.api.invoices.list({})).map(normalizeInvoice);
+  const invoiceStatusLabels = {
+    draft: t("payments.invoice_status.draft", "Brouillon"),
+    issued: t("payments.invoice_status.issued", "Émise"),
+  };
 
   const sel = $("p-invoice");
-  const cur = String(sel?.value || state.selectedInvoiceId || "").trim();
+  const cur = String(sel?.value || state.payments.selectedInvoiceId || "").trim();
 
   setSelectOptions(
     $("p-invoice"),
     (state.invoices || []).map((i) => ({
       id: i.id,
-      label: `${i.invoice_number || i.id} — ${i.client_name || "—"} • ${money(i.total_ttc)} € • ${String(i.status || "draft")}`,
+      label: `${i.invoice_number || i.id} — ${i.client_name || "—"} • ${money(i.total_ttc)} € • ${invoiceStatusLabels[String(i.status || "draft")] || String(i.status || "draft")}`,
     })),
     cur || null
   );
 
   if ($("p-date")) $("p-date").value = $("p-date").value || new Date().toISOString().slice(0, 10);
 
-  state.selectedInvoiceId = String($("p-invoice")?.value || cur || "").trim() || null;
+  state.payments.selectedInvoiceId = String($("p-invoice")?.value || cur || "").trim() || null;
 
   // ✅ Le rendu fait le chargement (1 seule source de vérité)
   await renderPaymentsPage();
@@ -3802,10 +3910,16 @@ renderQuoteDraft();
   const pSel = $("p-invoice");
   if (pSel && !pSel._boundPaymentsChange) {
     pSel.addEventListener("change", async () => {
-      state.selectedInvoiceId = String(pSel.value || "").trim() || null;
+      state.payments.selectedInvoiceId = String(pSel.value || "").trim() || null;
       await renderPaymentsPage();
     });
     pSel._boundPaymentsChange = true;
+  }
+
+  const statusSel = $("p-payment-status");
+  if (statusSel && !statusSel._boundPaymentsStatusChange) {
+    statusSel.addEventListener("change", () => renderPaymentOverview(state.invoices || [], state.payments.all || []));
+    statusSel._boundPaymentsStatusChange = true;
   }
 
   return;
@@ -5926,7 +6040,7 @@ function init() {
     });
 
     // start
-    setStatus("Chargement du dashboard…");
+    setStatus(t("ui.loading_dashboard", "Chargement du tableau de bord…"));
     showPage("dashboard");
     setView("split");
 
@@ -5940,7 +6054,7 @@ function init() {
     document.addEventListener("DOMContentLoaded", () => {
   (async () => {
     try {
-      await loadI18n(state.lang || getLang());
+      await Promise.all([loadI18n(state.lang || getLang()), loadI18n(DEFAULT_LANG)]);
       applyStaticI18n(document);
 
       await init(); // si init est async, sinon init();

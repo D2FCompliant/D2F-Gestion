@@ -19,7 +19,7 @@ test("server-renders the D2F Gestion cockpit", async () => {
   assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
   const html = await response.text();
   assert.match(html, /<title>D2F Gestion — Pilotez votre activité<\/title>/i);
-  assert.match(html, /src="\/erp\/index\.html"/);
+  assert.match(html, /src="\/erp\/index\.html\?v=20260710-payments-i18n"/);
   assert.match(html, /title="D2F Gestion"/);
   assert.match(html, /og\.png/);
   assert.doesNotMatch(html, /codex-preview|Your site is taking shape|react-loading-skeleton/i);
@@ -48,4 +48,44 @@ test("keeps Supabase access server-side and ships its schema", async () => {
   assert.match(envExample, /SUPABASE_URL/);
   assert.match(legacyHtml, /D2F Gestion/);
   assert.match(legacyHtml, /web-api-shim\.js/);
+});
+
+test("ships a global payment overview and complete screen translations", async () => {
+  const [html, app, dashboard, ...dictionarySources] = await Promise.all([
+    readFile(new URL("../public/erp/index.html", import.meta.url), "utf8"),
+    readFile(new URL("../public/erp/app.js", import.meta.url), "utf8"),
+    readFile(new URL("../public/erp/dashboard-ui.js", import.meta.url), "utf8"),
+    ...["fr", "en", "sr", "es", "it"].map((locale) =>
+      readFile(new URL(`../renderer/i18n/${locale}.json`, import.meta.url), "utf8")
+    ),
+  ]);
+
+  assert.match(html, /id="p-paymentKpis"/);
+  assert.match(html, /id="p-invoiceSummary"/);
+  assert.match(html, /id="p-payment-status"/);
+  assert.match(app, /payments\.listAll/);
+  assert.match(app, /paymentInvoiceStatus/);
+
+  const source = [html, app, dashboard].join("\n");
+  const keys = new Set([
+    ...Array.from(source.matchAll(/data-i18n="([^"]+)"/g), (match) => match[1]),
+    ...Array.from(source.matchAll(/\bt\(\s*["']([^"']+)["']/g), (match) => match[1]),
+    ...Array.from(source.matchAll(/\btf\(\s*["']([^"']+)["']/g), (match) => match[1]),
+  ]);
+  for (const spec of Array.from(source.matchAll(/data-i18n-attr="([^"]+)"/g), (match) => match[1])) {
+    for (const part of spec.split(";")) {
+      const separator = part.indexOf(":");
+      if (separator >= 0) keys.add(part.slice(separator + 1).trim());
+    }
+  }
+  keys.delete("key.path");
+  for (const key of ["payments.status.all", "payments.status.paid", "payments.status.partial", "payments.status.unpaid"]) {
+    keys.add(key);
+  }
+
+  for (const [index, locale] of ["fr", "en", "sr", "es", "it"].entries()) {
+    const dictionary = JSON.parse(dictionarySources[index]);
+    const missing = [...keys].filter((key) => !key.includes("${") && !(key in dictionary));
+    assert.deepEqual(missing, [], `${locale} is missing screen translations: ${missing.join(", ")}`);
+  }
 });
