@@ -28,3 +28,7 @@ Pour un déploiement privé mono-utilisateur, `D2F_OWNER_EMAIL` fournit l’iden
 - `npm run dev` : développement local
 - `npm run build` : compilation de production
 - `npm test` : compilation et tests de rendu/sécurité
+
+## Import d’une base Electron existante
+
+Le script `scripts/migrate-sqlite-to-supabase.py` contrôle l’intégrité de la base SQLite, regroupe les lignes dans leurs devis/factures et effectue un upsert idempotent dans Supabase. Il fonctionne d’abord à blanc ; ajouter `--apply` après vérification du récapitulatif. Le mot de passe SMTP local n’est jamais transféré.

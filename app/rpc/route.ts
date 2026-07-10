@@ -290,7 +290,15 @@ async function dispatch(ownerEmail: string, method: string, args: unknown[]) {
   const entity = namespace as Entity;
   if (entities.has(entity)) {
     if (action === "list" || (entity === "payments" && action === "listAll")) return listRecords(ownerEmail, entity, object(first(args)));
-    if (action === "get" || action === "getFull") return getRecord(ownerEmail, entity, idFrom(first(args)));
+    if (action === "get") return getRecord(ownerEmail, entity, idFrom(first(args)));
+    if (action === "getFull") {
+      const record = await getRecord(ownerEmail, entity, idFrom(first(args)));
+      if (!record) return null;
+      const lines = Array.isArray(record.lines) ? record.lines : [];
+      if (entity === "quotes") return { quote: record, lines };
+      if (entity === "invoices") return { invoice: record, lines };
+      return record;
+    }
     if (["save", "upsert", "create", "update", "record"].includes(action)) return saveRecord(ownerEmail, entity, object(first(args)));
     if (["remove", "delete"].includes(action)) return removeRecord(ownerEmail, entity, idFrom(first(args)));
     if (entity === "clients" && action === "importCsv") {
