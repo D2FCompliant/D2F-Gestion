@@ -419,7 +419,7 @@
 
   async function doRead() {
     const sinceSeq = Number(el.since?.value || 0) || 0;
-    const limit = Number(el.limit?.value || 250) || 250;
+    const limit = Number(el.limit?.value || 500) || 500;
 
     try {
       const r = await window.api.audit.read({ sinceSeq, limit });

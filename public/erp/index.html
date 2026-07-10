@@ -15,7 +15,7 @@
                  object-src 'none';
                  base-uri 'none'">
 
-  <link rel="stylesheet" href="./styles.css?v=20260710-brand-2026" />
+  <link rel="stylesheet" href="./styles.css?v=20260710-audit-credit-v1" />
 </head>
 
 <body>
@@ -775,7 +775,7 @@
 
     <div class="card">
       <div class="card__title" data-i18n="dash.invoices.title">Factures</div>
-      <div class="hint" data-i18n="dash.invoices.hint">Émises / payées / en attente</div>
+      <div class="hint" data-i18n="dash.invoices.hint">Émises / payées / annulées par avoir / en attente</div>
       <div class="u-mt" id="dashInvoicesKpis"></div>
     </div>
 
@@ -806,6 +806,7 @@
                   <option value="paid" data-i18n="payments.status.paid">Payées</option>
                   <option value="partial" data-i18n="payments.status.partial">Partielles</option>
                   <option value="unpaid" data-i18n="payments.status.unpaid">À encaisser</option>
+                  <option value="credited" data-i18n="payments.status.credited">Annulées par avoir</option>
                 </select>
               </label>
             </div>
@@ -1205,7 +1206,7 @@
 
               <label class="auditField">
                 <span class="hint auditField__label" data-i18n="audit.limit">limit</span>
-                <input id="auditLimit" type="number" step="1" min="1" value="250" class="auditField__input" />
+                <input id="auditLimit" type="number" step="1" min="1" max="500" value="500" class="auditField__input" />
               </label>
 
               <button class="btn btn--secondary" type="button" id="auditBtnRead" data-i18n="audit.read">Lire</button>
@@ -1399,11 +1400,12 @@
   </div>
 
   <script src="./xp-z12-012.js"></script>
-  <script src="./audit-ui.js"></script>
+  <script src="./receivables.js?v=20260710-audit-credit-v1"></script>
+  <script src="./audit-ui.js?v=20260710-audit-credit-v1"></script>
   <script src="./renderer/web-electron-shim.js"></script>
   <script src="./renderer/web-api-shim.js"></script>
-  <script src="./dashboard-ui.js?v=20260710-brand-2026"></script>
-  <script src="./app.js?v=20260710-brand-2026"></script>
+  <script src="./dashboard-ui.js?v=20260710-audit-credit-v1"></script>
+  <script src="./app.js?v=20260710-audit-credit-v1"></script>
 
   <div id="clientsImportModal" class="modal" aria-hidden="true">
     <div class="modal__backdrop" data-modal-close></div>

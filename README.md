@@ -9,14 +9,15 @@ Cette branche conserve le logiciel Electron historique et ajoute une version acc
 - devis et lignes de devis ;
 - factures, acomptes et avoirs ;
 - encaissements ;
-- tableaux de bord et indicateurs.
+- tableaux de bord et indicateurs ;
+- piste d’audit append-only, chaînée par SHA-256 et signée par HMAC sur le site hébergé.
 
-Les fonctions dépendant du système local — sélection de fichiers, génération PDF/UBL, SMTP, connecteurs SFTP/PDP et audit sur disque — nécessitent un service serveur complémentaire et renvoient actuellement un message explicite dans le navigateur.
+Les fonctions dépendant du système local — sélection de fichiers, génération PDF/UBL, SMTP et connecteurs SFTP/PDP — nécessitent encore un service serveur complémentaire et renvoient un message explicite dans le navigateur.
 
 ## Configuration Supabase
 
 1. Créer un projet Supabase.
-2. Exécuter `supabase/migrations/20260710150000_init_d2f_gestion.sql` dans l’éditeur SQL.
+2. Exécuter les migrations du dossier `supabase/migrations` dans l’ordre dans l’éditeur SQL.
 3. Copier `.env.example` vers `.env.local` et renseigner l’URL du projet, la clé `service_role` et l’adresse e-mail locale.
 4. Lancer `npm run dev`.
 

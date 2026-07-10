@@ -32,6 +32,7 @@ const I18N_FALLBACK = Object.freeze({
     "kpi.quotes.rejected": "Refusés",
     "kpi.invoices.issued": "Émises",
     "kpi.invoices.paid": "Payées",
+    "kpi.invoices.credited": "Annulées par avoir",
     "kpi.invoices.waiting": "En attente",
   },
   en: {
@@ -61,6 +62,7 @@ const I18N_FALLBACK = Object.freeze({
     "kpi.quotes.rejected": "Rejected",
     "kpi.invoices.issued": "Issued",
     "kpi.invoices.paid": "Paid",
+    "kpi.invoices.credited": "Cancelled by credit note",
     "kpi.invoices.waiting": "Pending",
   },
 });
@@ -282,6 +284,7 @@ function renderLegacy(data) {
       <div class="kpiGrid">
         <div class="kpi"><div class="kpi__label">${esc(t("kpi.invoices.issued", "Émises"))}</div><div class="kpi__value">${fmtInt(inv.issued)}</div></div>
         <div class="kpi"><div class="kpi__label">${esc(t("kpi.invoices.paid", "Payées"))}</div><div class="kpi__value">${fmtInt(inv.paid)}</div></div>
+        <div class="kpi"><div class="kpi__label">${esc(t("kpi.invoices.credited", "Annulées par avoir"))}</div><div class="kpi__value">${fmtInt(inv.credited)}</div></div>
         <div class="kpi"><div class="kpi__label">${esc(t("kpi.invoices.waiting", "En attente"))}</div><div class="kpi__value">${fmtInt(inv.waiting)}</div></div>
       </div>
     `;

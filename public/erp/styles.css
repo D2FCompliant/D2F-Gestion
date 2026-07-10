@@ -680,12 +680,12 @@ textarea{ resize: vertical; }
   overflow:auto;
 }
 .paymentsTable{
-  min-width:760px;
+  min-width:900px;
   display:grid;
 }
 .paymentsTable__row{
   display:grid;
-  grid-template-columns:minmax(145px,1.1fr) minmax(150px,1.2fr) 110px 120px 120px 120px;
+  grid-template-columns:minmax(145px,1.1fr) minmax(150px,1.2fr) 145px 110px 110px 110px 110px;
   gap:12px;
   align-items:center;
   min-height:46px;
@@ -738,6 +738,11 @@ textarea{ resize: vertical; }
   color:#991b1b;
   background:#fee2e2;
   border-color:#fca5a5;
+}
+.paymentStatus--credited{
+  color:#155e75;
+  background:#ecfeff;
+  border-color:#67e8f9;
 }
 .paymentInvoiceButton{
   border:0;

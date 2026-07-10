@@ -1207,7 +1207,11 @@ async function computeAndRenderDashboard() {
   const qAccepted = quotes.filter((q) => canonicalQuoteStatus(q) === "accepted").length;
   const qRefused = quotes.filter((q) => canonicalQuoteStatus(q) === "rejected").length;
 
-  const issued = invoices.filter((i) => invoiceStatus(i) === "issued").length;
+  const receivableSummary = window.D2FReceivables.summarize(invoices, paymentsAll);
+  const issued = receivableSummary.rows.length;
+  const paid = receivableSummary.paidCount;
+  const credited = receivableSummary.creditedCount;
+  const waiting = receivableSummary.waitingCount;
   const ca = computeRecognizedRevenueHT(invoices);
 
   const paidByInvoice = new Map();
@@ -1217,28 +1221,14 @@ async function computeAndRenderDashboard() {
 
   for (const p of paymentsAll || []) {
     const iid = String(p.invoice_id || "");
-    const amt = Number(p.amount || 0) || 0;
-    if (!iid || !(amt > 0)) continue;
+    const amt = window.D2FReceivables.paymentSignedAmount(p);
+    if (Math.abs(amt) < window.D2FReceivables.EPSILON) continue;
 
-    paidByInvoice.set(iid, (paidByInvoice.get(iid) || 0) + amt);
+    if (iid) paidByInvoice.set(iid, (paidByInvoice.get(iid) || 0) + amt);
 
     const m = normalizePayMethod(p.method);
     byMethodAgg[m] = (byMethodAgg[m] || 0) + amt;
     totalPay += amt;
-  }
-
-  let paid = 0;
-  let waiting = 0;
-
-  for (const inv of invoices) {
-    if (invoiceStatus(inv) !== "issued") continue;
-
-    const prepaid = Number(inv.prepaid_amount || 0) || 0;
-    const payable = Math.max(0, (Number(inv.total_ttc || 0) || 0) - prepaid);
-    const paidAmt = Number(paidByInvoice.get(String(inv.id)) || 0) || 0;
-
-    if (paidAmt + 0.0001 >= payable) paid++;
-    else waiting++;
   }
 
   const depositsIssued = invoices.filter((i) => invoiceStatus(i) === "issued" && isDepositInvoice(i));
@@ -1276,7 +1266,7 @@ async function computeAndRenderDashboard() {
       amounts: res.quotes?.amounts_ht ?? { draft: 0, sent: 0, accepted: 0, rejected: 0, done: 0 },
     },
     
-    invoices: { issued, paid, waiting },
+    invoices: { issued, paid, credited, waiting },
     payments: { total: round2(totalPay), by_method: byMethodRows },
   };
 
@@ -1338,6 +1328,7 @@ if (depAvgDaysEl) {
     iBox.innerHTML =
       `<div class="totals__row"><span>${t("dash.invoices.issued", "Émises")}</span><strong>${inv.issued || 0}</strong></div>` +
       `<div class="totals__row"><span>${t("dash.invoices.paid", "Payées")}</span><strong>${inv.paid || 0}</strong></div>` +
+      `<div class="totals__row"><span>${t("dash.invoices.credited", "Annulées par avoir")}</span><strong>${inv.credited || 0}</strong></div>` +
       `<div class="totals__row"><span>${t("dash.invoices.waiting", "En attente")}</span><strong>${inv.waiting || 0}</strong></div>`;
   }
 
@@ -2888,6 +2879,7 @@ function renderDashboard() {
       <div class="totals">
         <div class="totals__row"><span>${t("dash.invoices.issued", "Émises")}</span><strong>${Number(i.issued || 0)}</strong></div>
         <div class="totals__row"><span>${t("dash.invoices.paid", "Payées")}</span><strong>${Number(i.paid || 0)}</strong></div>
+        <div class="totals__row"><span>${t("dash.invoices.credited", "Annulées par avoir")}</span><strong>${Number(i.credited || 0)}</strong></div>
         <div class="totals__row"><span>${t("dash.invoices.waiting", "En attente")}</span><strong>${Number(i.waiting || 0)}</strong></div>
       </div>
     `;
@@ -2946,22 +2938,6 @@ function renderDashboard() {
 }
 
 /* ----------------- Payments page ----------------- */
-function paymentInvoiceAmount(invoice) {
-  const totalTtc = Number(invoice?.total_ttc ?? 0) || 0;
-  const prepaid = String(invoice?.type || "").toLowerCase() === "final"
-    ? Number(invoice?.prepaid_amount || 0) || 0
-    : 0;
-  if (totalTtc > 0) return Math.max(0, round2(totalTtc - prepaid));
-  return Math.max(0, Number(invoice?.amount_due || 0) || 0);
-}
-
-function paymentInvoiceStatus(invoice, paidAmount) {
-  const due = paymentInvoiceAmount(invoice);
-  if (due <= 0 || Number(paidAmount || 0) + 0.001 >= due) return "paid";
-  if (Number(paidAmount || 0) > 0) return "partial";
-  return "unpaid";
-}
-
 function paymentStatusText(status) {
   return t(`payments.status.${status}`, status);
 }
@@ -2970,38 +2946,15 @@ function renderPaymentOverview(invoices, payments) {
   const kpisEl = document.getElementById("p-paymentKpis");
   const summaryEl = document.getElementById("p-invoiceSummary");
   const statusFilter = String(document.getElementById("p-payment-status")?.value || "all");
-  const receivables = (Array.isArray(invoices) ? invoices : []).filter((invoice) =>
-    String(invoice?.status || "").toLowerCase() === "issued" && String(invoice?.type || "").toLowerCase() !== "credit_note"
-  );
-  const paidByInvoice = new Map();
-  let totalPaid = 0;
-  for (const payment of Array.isArray(payments) ? payments : []) {
-    const invoiceId = String(payment?.invoice_id || payment?.invoiceId || "");
-    const amount = Number(payment?.amount || 0) || 0;
-    totalPaid += amount;
-    if (invoiceId) paidByInvoice.set(invoiceId, round2((paidByInvoice.get(invoiceId) || 0) + amount));
-  }
-
-  const rows = receivables.map((invoice) => {
-    const paid = Number(paidByInvoice.get(String(invoice.id)) || 0);
-    const due = paymentInvoiceAmount(invoice);
-    return {
-      invoice,
-      paid,
-      due,
-      remaining: Math.max(0, round2(due - paid)),
-      paymentStatus: paymentInvoiceStatus(invoice, paid),
-    };
-  });
-  const paidCount = rows.filter((row) => row.paymentStatus === "paid").length;
-  const outstanding = round2(rows.reduce((sum, row) => sum + row.remaining, 0));
+  const overview = window.D2FReceivables.summarize(invoices, payments);
+  const rows = overview.rows;
 
   if (kpisEl) {
     const kpis = [
-      [t("payments.overview.total_paid", "Total encaissé"), `${money(totalPaid)} €`],
-      [t("payments.overview.operations", "Paiements enregistrés"), String((payments || []).length)],
-      [t("payments.overview.paid_invoices", "Factures payées"), `${paidCount} / ${rows.length}`],
-      [t("payments.overview.outstanding", "Reste à encaisser"), `${money(outstanding)} €`],
+      [t("payments.overview.total_paid", "Total encaissé"), `${money(overview.totalPaid)} €`],
+      [t("payments.overview.operations", "Paiements enregistrés"), String(overview.operations)],
+      [t("payments.overview.paid_invoices", "Factures payées"), `${overview.paidCount} / ${overview.activeRows.length}`],
+      [t("payments.overview.outstanding", "Reste à encaisser"), `${money(overview.outstanding)} €`],
     ];
     kpisEl.innerHTML = kpis.map(([label, value]) => `
       <div class="kpi">
@@ -3029,6 +2982,7 @@ function renderPaymentOverview(invoices, payments) {
           <div>${t("payments.col.client", "Client")}</div>
           <div>${t("payments.col.status", "Statut")}</div>
           <div class="paymentsTable__amount">${t("payments.col.total", "Total")}</div>
+          <div class="paymentsTable__amount">${t("payments.col.credited", "Avoirs")}</div>
           <div class="paymentsTable__amount">${t("payments.col.paid", "Encaissé")}</div>
           <div class="paymentsTable__amount">${t("payments.col.remaining", "Reste")}</div>
         </div>
@@ -3040,7 +2994,8 @@ function renderPaymentOverview(invoices, payments) {
               <div><button class="paymentInvoiceButton" type="button" data-payment-invoice="${esc(invoiceId)}">${esc(invoice.invoice_number || invoice.number || invoiceId)}</button></div>
               <div class="paymentsTable__muted" title="${esc(invoice.client_name || "")}">${esc(invoice.client_name || "—")}</div>
               <div><span class="paymentStatus paymentStatus--${row.paymentStatus}">${esc(paymentStatusText(row.paymentStatus))}</span></div>
-              <div class="paymentsTable__amount">${money(row.due)} €</div>
+              <div class="paymentsTable__amount">${money(row.grossDue)} €</div>
+              <div class="paymentsTable__amount" title="${esc(row.creditNumbers.join(", "))}">${row.credited > 0 ? `-${money(row.credited)} €` : "—"}</div>
               <div class="paymentsTable__amount">${money(row.paid)} €</div>
               <div class="paymentsTable__amount">${money(row.remaining)} €</div>
             </div>
@@ -3885,19 +3840,19 @@ renderQuoteDraft();
 
   if (moduleKey === "payments") {
   state.invoices = (await window.api.invoices.list({})).map(normalizeInvoice);
-  const invoiceStatusLabels = {
-    draft: t("payments.invoice_status.draft", "Brouillon"),
-    issued: t("payments.invoice_status.issued", "Émise"),
-  };
+  state.payments.all = (await window.api.payments.listAll({})) || [];
 
   const sel = $("p-invoice");
   const cur = String(sel?.value || state.payments.selectedInvoiceId || "").trim();
+  const payableInvoices = window.D2FReceivables
+    .buildReceivableRows(state.invoices || [], state.payments.all || [])
+    .filter((row) => row.remaining > window.D2FReceivables.EPSILON);
 
   setSelectOptions(
     $("p-invoice"),
-    (state.invoices || []).map((i) => ({
-      id: i.id,
-      label: `${i.invoice_number || i.id} — ${i.client_name || "—"} • ${money(i.total_ttc)} € • ${invoiceStatusLabels[String(i.status || "draft")] || String(i.status || "draft")}`,
+    payableInvoices.map((row) => ({
+      id: row.invoice.id,
+      label: `${row.invoice.invoice_number || row.invoice.id} — ${row.invoice.client_name || "—"} • ${money(row.remaining)} € ${t("payments.col.remaining", "reste")}`,
     })),
     cur || null
   );
@@ -4399,6 +4354,13 @@ case "payments:refresh":
 case "payments:record": {
   const invoiceId = $("p-invoice")?.value || state.selectedInvoiceId;
   if (!invoiceId) throw new Error("Sélectionner une facture.");
+
+  const receivable = window.D2FReceivables
+    .buildReceivableRows(state.invoices || [], state.payments.all || [])
+    .find((row) => String(row.invoice?.id || "") === String(invoiceId));
+  if (!receivable || receivable.remaining <= window.D2FReceivables.EPSILON) {
+    throw new Error(t("payments.error.no_balance", "Cette facture ne présente plus de solde à encaisser."));
+  }
 
   const full = await window.api.invoices.getFull(invoiceId);
   const st = String(full?.invoice?.status || "draft").toLowerCase();

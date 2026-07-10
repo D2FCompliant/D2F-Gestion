@@ -108,7 +108,14 @@ function normalizeRecord(entity: Entity, raw: JsonRecord) {
     normalized.total_ttc = round2(totalHt + totalTva);
     if (entity === "invoices") {
       normalized.type = String(raw.type || "final");
-      normalized.amount_due = numberValue(raw.amount_due || normalized.total_ttc);
+      if (normalized.type === "credit_note") {
+        normalized.total_ht = -Math.abs(numberValue(normalized.total_ht));
+        normalized.total_tva = -Math.abs(numberValue(normalized.total_tva));
+        normalized.total_ttc = -Math.abs(numberValue(normalized.total_ttc));
+        normalized.amount_due = -Math.abs(numberValue(raw.amount_due || normalized.total_ttc));
+      } else {
+        normalized.amount_due = numberValue(raw.amount_due || normalized.total_ttc);
+      }
     }
   }
   if (entity === "payments") {
@@ -230,6 +237,90 @@ function recognizedRevenueHt(invoices: JsonRecord[], datePrefix = "") {
   }, 0));
 }
 
+function invoiceType(invoice: JsonRecord) {
+  return String(invoice.type || invoice.kind || "final").trim().toLowerCase();
+}
+
+function invoiceStatus(invoice: JsonRecord) {
+  return String(invoice.status || invoice.state || "draft").trim().toLowerCase();
+}
+
+function creditSourceId(creditNote: JsonRecord) {
+  const direct = creditNote.source_invoice_id || creditNote.sourceInvoiceId;
+  if (direct) return String(direct);
+  const meta = { ...jsonObject(creditNote.meta_json), ...object(creditNote.meta) };
+  const source = object(meta.source);
+  if (source.invoice_id || source.invoiceId) return String(source.invoice_id || source.invoiceId);
+  const links = Array.isArray(creditNote.links_from) ? creditNote.links_from : [];
+  const link = links.map(object).find((item) => String(item.link_type || "").toLowerCase() === "credit_of");
+  return link?.to_invoice_id ? String(link.to_invoice_id) : "";
+}
+
+function invoiceGrossAmount(invoice: JsonRecord) {
+  const totalTtc = Math.max(0, numberValue(invoice.total_ttc));
+  const prepaid = invoiceType(invoice) === "final" ? Math.max(0, numberValue(invoice.prepaid_amount)) : 0;
+  if (totalTtc > 0) return Math.max(0, round2(totalTtc - prepaid));
+  return Math.max(0, round2(numberValue(invoice.amount_due)));
+}
+
+function paymentSignedAmount(payment: JsonRecord) {
+  if (String(payment.status || "posted").toLowerCase() === "cancelled") return 0;
+  const amount = Math.abs(numberValue(payment.amount));
+  return String(payment.direction || "in").toLowerCase() === "out" ? -amount : amount;
+}
+
+function receivableRows(invoices: JsonRecord[], payments: JsonRecord[]) {
+  const creditsBySource = new Map<string, number>();
+  for (const creditNote of invoices) {
+    if (invoiceType(creditNote) !== "credit_note" || invoiceStatus(creditNote) !== "issued") continue;
+    const sourceId = creditSourceId(creditNote);
+    if (!sourceId) continue;
+    creditsBySource.set(sourceId, round2((creditsBySource.get(sourceId) || 0) + Math.abs(numberValue(creditNote.total_ttc || creditNote.amount_due))));
+  }
+  const paidByInvoice = new Map<string, number>();
+  for (const payment of payments) {
+    const invoiceId = String(payment.invoice_id || payment.invoiceId || "");
+    if (!invoiceId) continue;
+    paidByInvoice.set(invoiceId, round2((paidByInvoice.get(invoiceId) || 0) + paymentSignedAmount(payment)));
+  }
+  return invoices
+    .filter((invoice) => invoiceStatus(invoice) === "issued" && invoiceType(invoice) !== "credit_note")
+    .map((invoice) => {
+      const id = String(invoice.id || "");
+      const grossDue = invoiceGrossAmount(invoice);
+      const credited = Math.min(grossDue, Math.max(0, creditsBySource.get(id) || 0));
+      const netDue = Math.max(0, round2(grossDue - credited));
+      const paid = Math.max(0, round2(paidByInvoice.get(id) || 0));
+      const remaining = Math.max(0, round2(netDue - paid));
+      return { invoice, grossDue, credited, netDue, paid, remaining };
+    });
+}
+
+async function savePaymentRecord(ownerEmail: string, input: JsonRecord) {
+  const invoiceId = String(input.invoice_id || input.invoiceId || "");
+  if (!invoiceId) throw new Error("Facture manquante pour le paiement");
+  const invoice = await getRecord(ownerEmail, "invoices", invoiceId);
+  if (!invoice || invoiceStatus(invoice) !== "issued" || invoiceType(invoice) === "credit_note") {
+    throw new Error("Le paiement doit être rattaché à une facture émise");
+  }
+  const direction = String(input.direction || "in").toLowerCase();
+  const status = String(input.status || "posted").toLowerCase();
+  if (direction !== "out" && status !== "cancelled") {
+    const [invoices, payments] = await Promise.all([
+      listRecords(ownerEmail, "invoices"),
+      listRecords(ownerEmail, "payments"),
+    ]);
+    const otherPayments = payments.filter((payment) => String(payment.id || "") !== String(input.id || ""));
+    const row = receivableRows(invoices, otherPayments).find((candidate) => String(candidate.invoice.id || "") === invoiceId);
+    if (!row || row.remaining <= .001) throw new Error("Cette facture ne présente plus de solde à encaisser");
+    const requested = Math.abs(numberValue(input.amount));
+    if (requested > row.remaining + .001) {
+      throw new Error(`Le paiement dépasse le solde restant de ${row.remaining.toFixed(2)} EUR`);
+    }
+  }
+  return saveRecord(ownerEmail, "payments", input);
+}
+
 async function dashboard(ownerEmail: string) {
   const [quotes, invoices, payments] = await Promise.all([
     listRecords(ownerEmail, "quotes"), listRecords(ownerEmail, "invoices"), listRecords(ownerEmail, "payments"),
@@ -240,20 +331,19 @@ async function dashboard(ownerEmail: string) {
     acc[key] = round2((acc[key] || 0) + numberValue(quote.total_ht));
     return acc;
   }, {});
-  const issued = invoices.filter((invoice) => invoice.status === "issued");
-  const paymentTotal = round2(payments.reduce((sum, payment) => sum + (payment.direction === "out" ? -1 : 1) * numberValue(payment.amount), 0));
-  const paidByInvoice = payments.reduce<Record<string, number>>((acc, payment) => {
-    const id = String(payment.invoice_id || "");
-    acc[id] = round2((acc[id] || 0) + numberValue(payment.amount));
-    return acc;
-  }, {});
-  const paid = issued.filter((invoice) => numberValue(paidByInvoice[String(invoice.id)]) + .001 >= numberValue(invoice.amount_due || invoice.total_ttc)).length;
-  const deposits = issued.filter((invoice) => invoice.type === "deposit");
-  const depositsTotal = round2(deposits.reduce((sum, invoice) => sum + numberValue(invoice.total_ttc), 0));
-  const depositsPaid = round2(deposits.reduce((sum, invoice) => sum + Math.min(numberValue(invoice.total_ttc), numberValue(paidByInvoice[String(invoice.id)])), 0));
+  const rows = receivableRows(invoices, payments);
+  const paymentTotal = round2(payments.reduce((sum, payment) => sum + paymentSignedAmount(payment), 0));
+  const paid = rows.filter((row) => row.netDue > .001 && row.paid + .001 >= row.netDue).length;
+  const credited = rows.filter((row) => row.credited > .001 && row.netDue <= .001).length;
+  const waiting = rows.filter((row) => row.remaining > .001).length;
+  const deposits = rows.filter((row) => invoiceType(row.invoice) === "deposit");
+  const depositsTotal = round2(deposits.reduce((sum, row) => sum + row.netDue, 0));
+  const depositsPaid = round2(deposits.reduce((sum, row) => sum + Math.min(row.netDue, row.paid), 0));
   const byMethod = Object.entries(payments.reduce<Record<string, number>>((acc, payment) => {
+    const amount = paymentSignedAmount(payment);
+    if (!amount) return acc;
     const method = String(payment.method || "other");
-    acc[method] = round2((acc[method] || 0) + numberValue(payment.amount));
+    acc[method] = round2((acc[method] || 0) + amount);
     return acc;
   }, {})).map(([method, total]) => ({ method, total }));
   return {
@@ -262,7 +352,7 @@ async function dashboard(ownerEmail: string) {
     ca_recognized_ht: recognizedRevenueHt(invoices),
     deposits: { total_ttc: depositsTotal, issued_ttc: depositsTotal, paid_ttc: depositsPaid, waiting_ttc: round2(depositsTotal - depositsPaid), overdue_ttc: 0 },
     quotes: { counts: { draft: quoteCounts.draft || 0, sent: quoteCounts.sent || 0, accepted: quoteCounts.accepted || 0, rejected: quoteCounts.rejected || 0, done: (quoteCounts.sent || 0) + (quoteCounts.accepted || 0) + (quoteCounts.rejected || 0) }, amounts: quoteAmounts, amounts_ht: quoteAmounts },
-    invoices: { issued: issued.length, paid, waiting: Math.max(0, issued.length - paid) },
+    invoices: { issued: rows.length, paid, credited, waiting },
     payments: { total: paymentTotal, by_method: byMethod },
   };
 }
@@ -273,13 +363,13 @@ async function dashboardMetrics(ownerEmail: string, yearInput: unknown) {
   const months = Array.from({ length: 12 }, (_, index) => `${year}-${String(index + 1).padStart(2, "0")}`);
   const issued = invoices.filter((item) => item.status === "issued" && String(item.date || "").startsWith(String(year)));
   const yearPayments = payments.filter((item) => String(item.date || "").startsWith(String(year)));
-  const cashMonthly = months.map((ym) => ({ ym, cash_deposit: 0, cash_final: 0, cash_total: round2(yearPayments.filter((item) => String(item.date || "").startsWith(ym)).reduce((sum, item) => sum + numberValue(item.amount), 0)) }));
+  const cashMonthly = months.map((ym) => ({ ym, cash_deposit: 0, cash_final: 0, cash_total: round2(yearPayments.filter((item) => String(item.date || "").startsWith(ym)).reduce((sum, item) => sum + paymentSignedAmount(item), 0)) }));
   let running = 0;
   const cashCumulative = cashMonthly.map((item) => ({ ym: item.ym, cash_cum: running = round2(running + item.cash_total) }));
   const meta = object(company.meta);
   const annualTarget = numberValue(company.annual_target_ht || meta.annual_target_ht) || null;
   const targetCumulative = months.map((ym, index) => ({ ym, target_cum: annualTarget ? round2(annualTarget * (index + 1) / 12) : 0 }));
-  const cashTotal = round2(yearPayments.reduce((sum, item) => sum + numberValue(item.amount), 0));
+  const cashTotal = round2(yearPayments.reduce((sum, item) => sum + paymentSignedAmount(item), 0));
   const finalRevenue = recognizedRevenueHt(invoices, String(year));
   const depositRevenue = round2(issued.filter((item) => item.type === "deposit").reduce((sum, item) => sum + numberValue(item.total_ttc), 0));
   return {
@@ -288,6 +378,160 @@ async function dashboardMetrics(ownerEmail: string, yearInput: unknown) {
     ytd: { recognized: { ca_recognized_ht_ytd: finalRevenue }, cash: { cash_deposit_ytd: 0, cash_final_ytd: cashTotal, cash_total_ytd: cashTotal }, revenue_issued: { revenue_deposit_ytd: depositRevenue, revenue_final_ytd: finalRevenue, revenue_total_ytd: round2(finalRevenue + depositRevenue) } },
     series: { cash_monthly: cashMonthly, cash_cumulative: cashCumulative, target_cumulative: targetCumulative, recognized_ht_monthly: months.map((ym) => ({ ym, recognized_ht: recognizedRevenueHt(invoices, ym) })) },
   };
+}
+
+function bytesToHex(bytes: ArrayBuffer) {
+  return Array.from(new Uint8Array(bytes), (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+async function sha256Hex(value: string) {
+  return bytesToHex(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value)));
+}
+
+async function hmacSha256Hex(secret: string, value: string) {
+  if (!secret) return null;
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  return bytesToHex(await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(value)));
+}
+
+function isMutationMethod(method: string) {
+  const [, action = ""] = method.split(":");
+  return [
+    "save", "upsert", "create", "update", "record", "remove", "delete", "importCsv", "duplicate",
+    "setStatus", "issue", "createFromQuote", "createDeposit", "createCreditNote", "setInboundConfig",
+    "setConformityConfig", "saveConfig",
+  ].includes(action);
+}
+
+function auditEntityType(method: string) {
+  const namespace = method.split(":")[0] || "application";
+  return ({ clients: "client", items: "item", quotes: "quote", invoices: "invoice", payments: "payment" } as Record<string, string>)[namespace] || namespace;
+}
+
+function auditEntityId(method: string, args: unknown[], result: unknown) {
+  const resultObject = object(result);
+  const input = object(first(args));
+  if (method.startsWith("company:")) return "1";
+  return String(resultObject.id || input.id || input.invoice_id || input.invoiceId || input.quote_id || input.quoteId || idFrom(first(args)) || "");
+}
+
+function auditPayload(method: string, args: unknown[], result: unknown) {
+  const input = object(first(args));
+  const output = object(result);
+  const forbidden = /password|secret|token|smtp|base64|content|logo/i;
+  const fields = Object.keys(input).filter((key) => !forbidden.test(key)).sort();
+  return {
+    method,
+    fields,
+    status: String(output.status || input.status || ""),
+    document_number: String(output.invoice_number || output.number || input.invoice_number || input.number || ""),
+    invoice_id: String(output.invoice_id || input.invoice_id || input.invoiceId || ""),
+    amount: input.amount == null ? null : numberValue(input.amount),
+  };
+}
+
+async function appendAuditEvent(ownerEmail: string, method: string, args: unknown[], result: unknown) {
+  const supabase = getSupabaseAdmin();
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const { data: previous, error: previousError } = await supabase
+      .from("d2f_audit_events")
+      .select("seq,hash")
+      .eq("owner_email", ownerEmail)
+      .order("seq", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (previousError) throw previousError;
+    const seq = numberValue(previous?.seq) + 1;
+    const prevHash = previous?.hash ? String(previous.hash) : null;
+    const core = {
+      ts: new Date().toISOString(),
+      seq,
+      actor: ownerEmail,
+      action: method.replace(":", "."),
+      entityType: auditEntityType(method),
+      entityId: auditEntityId(method, args, result),
+      refs: {},
+      payload: auditPayload(method, args, result),
+      prev_hash: prevHash,
+      app: { surface: "web", version: "2026.07" },
+    };
+    const canonicalText = JSON.stringify(core);
+    const hash = await sha256Hex(canonicalText);
+    const hmac = await hmacSha256Hex(process.env.D2F_AUDIT_HMAC_SECRET || "", canonicalText);
+    const event = { ...core, hash, ...(hmac ? { hmac } : {}) };
+    const { error } = await supabase.from("d2f_audit_events").insert({
+      owner_email: ownerEmail,
+      seq,
+      event_time: core.ts,
+      actor: core.actor,
+      action: core.action,
+      entity_type: core.entityType,
+      entity_id: core.entityId,
+      prev_hash: prevHash,
+      hash,
+      hmac,
+      canonical_text: canonicalText,
+      event,
+    });
+    if (!error) return event;
+    if (error.code !== "23505" && error.code !== "P0001") throw error;
+  }
+  throw new Error("Impossible d’ajouter l’événement à la piste d’audit");
+}
+
+async function readAuditEvents(ownerEmail: string, input: JsonRecord) {
+  const supabase = getSupabaseAdmin();
+  const sinceSeq = Math.max(0, Math.floor(numberValue(input.sinceSeq)));
+  const limit = Math.max(1, Math.min(500, Math.floor(numberValue(input.limit) || 500)));
+  const { data, error } = await supabase
+    .from("d2f_audit_events")
+    .select("seq,event")
+    .eq("owner_email", ownerEmail)
+    .gt("seq", sinceSeq)
+    .order("seq", { ascending: true })
+    .limit(limit);
+  if (error) throw error;
+  const events = (data || []).map((row) => object(row.event));
+  const nextSinceSeq = events.length ? numberValue(events[events.length - 1].seq) : sinceSeq;
+  return { ok: true, events, entries: events, nextSinceSeq };
+}
+
+async function verifyAuditEvents(ownerEmail: string) {
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from("d2f_audit_events")
+    .select("seq,prev_hash,hash,hmac,canonical_text,event")
+    .eq("owner_email", ownerEmail)
+    .order("seq", { ascending: true })
+    .limit(10000);
+  if (error) throw error;
+  let previousHash: string | null = null;
+  let previousSeq = 0;
+  let hmacVerified = 0;
+  const secret = process.env.D2F_AUDIT_HMAC_SECRET || "";
+  for (const [index, row] of (data || []).entries()) {
+    const seq = numberValue(row.seq);
+    if (seq !== previousSeq + 1) return { ok: false, index, error: "seq broken" };
+    if ((row.prev_hash || null) !== previousHash) return { ok: false, index, error: "chain broken" };
+    if (await sha256Hex(String(row.canonical_text || "")) !== row.hash) return { ok: false, index, error: "hash mismatch" };
+    const event = object(row.event);
+    if (String(event.hash || "") !== String(row.hash || "")) return { ok: false, index, error: "event mismatch" };
+    if (row.hmac) {
+      if (!secret || await hmacSha256Hex(secret, String(row.canonical_text || "")) !== row.hmac) {
+        return { ok: false, index, error: "hmac mismatch" };
+      }
+      hmacVerified += 1;
+    }
+    previousHash = String(row.hash || "");
+    previousSeq = seq;
+  }
+  return { ok: true, count: previousSeq, entries: previousSeq, last_seq: previousSeq, last_hash: previousHash, hmac_verified: hmacVerified };
 }
 
 function previewResult(method: string) {
@@ -334,6 +578,9 @@ async function dispatch(ownerEmail: string, method: string, args: unknown[]) {
       if (entity === "invoices") return { invoice: record, lines };
       return record;
     }
+    if (entity === "payments" && ["save", "upsert", "create", "update", "record"].includes(action)) {
+      return savePaymentRecord(ownerEmail, object(first(args)));
+    }
     if (["save", "upsert", "create", "update", "record"].includes(action)) return saveRecord(ownerEmail, entity, object(first(args)));
     if (["remove", "delete"].includes(action)) return removeRecord(ownerEmail, entity, idFrom(first(args)));
     if (entity === "clients" && action === "importCsv") {
@@ -355,8 +602,11 @@ async function dispatch(ownerEmail: string, method: string, args: unknown[]) {
       const id = idFrom(first(args));
       const source = await getRecord(ownerEmail, "invoices", id);
       if (!source) throw new Error("Facture introuvable");
-      const count = (await listRecords(ownerEmail, "invoices")).filter((item) => item.status === "issued").length + 1;
-      return saveRecord(ownerEmail, "invoices", { ...source, status: "issued", invoice_number: source.invoice_number || `F-${new Date().getFullYear()}-${String(count).padStart(4, "0")}`, issued_at: new Date().toISOString() });
+      const allInvoices = await listRecords(ownerEmail, "invoices");
+      const isCreditNote = invoiceType(source) === "credit_note";
+      const count = allInvoices.filter((item) => item.status === "issued" && (invoiceType(item) === "credit_note") === isCreditNote).length + 1;
+      const prefix = isCreditNote ? "AV" : "F";
+      return saveRecord(ownerEmail, "invoices", { ...source, status: "issued", invoice_number: source.invoice_number || `${prefix}${new Date().getFullYear()}-${String(count).padStart(4, "0")}`, issued_at: new Date().toISOString() });
     }
     if (entity === "invoices" && action === "createFromQuote") {
       const quote = await getRecord(ownerEmail, "quotes", idFrom(first(args)));
@@ -378,9 +628,9 @@ async function dispatch(ownerEmail: string, method: string, args: unknown[]) {
       return round2(payments.reduce((sum, payment) => sum + numberValue(payment.amount), 0));
     }
   }
-  if (method === "audit:path") return { path: "Supabase / d2f_records" };
-  if (method === "audit:read") return { events: [], nextSeq: 0 };
-  if (method === "audit:verify") return { ok: true, storage: "supabase" };
+  if (method === "audit:path") return { ok: true, logPath: "Supabase • piste d’audit sécurisée" };
+  if (method === "audit:read") return readAuditEvents(ownerEmail, object(first(args)));
+  if (method === "audit:verify") return verifyAuditEvents(ownerEmail);
   if (method.startsWith("files:") || method.includes("exportPdf") || method.includes("exportUbl") || method.startsWith("email:")) {
     throw new Error("Cette fonction de fichier ou d’envoi nécessite encore un service serveur dédié dans la version web.");
   }
@@ -397,7 +647,9 @@ export async function POST(request: Request) {
     method = String(body.method || "");
     const args = Array.isArray(body.args) ? body.args : [];
     if (!method || !method.includes(":")) return reply("Méthode RPC invalide", 400);
-    return reply(await dispatch(ownerEmail, method, args));
+    const result = await dispatch(ownerEmail, method, args);
+    if (isMutationMethod(method)) await appendAuditEvent(ownerEmail, method, args, result);
+    return reply(result);
   } catch (error) {
     if (error instanceof SupabaseConfigurationError) {
       const fallback = previewResult(method);
