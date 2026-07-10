@@ -19,25 +19,27 @@ test("server-renders the D2F Gestion cockpit", async () => {
   assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
   const html = await response.text();
   assert.match(html, /<title>D2F Gestion — Pilotez votre activité<\/title>/i);
-  assert.match(html, /Vue d’ensemble/);
-  assert.match(html, /Revenu mensuel/);
-  assert.match(html, /Dossiers en cours/);
+  assert.match(html, /src="\/erp\/index\.html"/);
+  assert.match(html, /title="D2F Gestion"/);
   assert.match(html, /og\.png/);
   assert.doesNotMatch(html, /codex-preview|Your site is taking shape|react-loading-skeleton/i);
 });
 
 test("keeps Supabase access server-side and ships its schema", async () => {
-  const [route, client, migration, envExample] = await Promise.all([
-    readFile(new URL("../app/api/dashboard/route.ts", import.meta.url), "utf8"),
+  const [route, client, migration, envExample, legacyHtml] = await Promise.all([
+    readFile(new URL("../app/rpc/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../lib/supabase/server.ts", import.meta.url), "utf8"),
     readFile(new URL("../supabase/migrations/20260710150000_init_d2f_gestion.sql", import.meta.url), "utf8"),
     readFile(new URL("../.env.example", import.meta.url), "utf8"),
+    readFile(new URL("../public/erp/index.html", import.meta.url), "utf8"),
   ]);
-  assert.match(route, /oai-authenticated-user-email|GET\(request/);
+  assert.match(route, /clients|items|quotes|invoices|payments/);
+  assert.match(route, /getOwnerEmail/);
   assert.match(client, /SUPABASE_SERVICE_ROLE_KEY/);
   assert.match(client, /persistSession: false/);
   assert.match(migration, /enable row level security/);
-  assert.match(migration, /revoke all on public\.clients from anon, authenticated/);
+  assert.match(migration, /revoke all on public\.d2f_records from anon, authenticated/);
   assert.match(envExample, /SUPABASE_URL/);
-  assert.doesNotMatch(new URL("../app/page.tsx", import.meta.url).pathname, /service.role/i);
+  assert.match(legacyHtml, /D2F Gestion/);
+  assert.match(legacyHtml, /web-api-shim\.js/);
 });

@@ -307,7 +307,7 @@
   "dash.cashflow_ytd.max_month": "Max {amount} month {month}",
 
   "dash.revenue_ytd.title": "Recognized revenue (YTD) — by month",
-  "dash.revenue_ytd.unavailable": "Not available via dashboard:metrics (use dashboard:get for total YTD)."
+  "dash.revenue_ytd.unavailable": "Not available via dashboard:metrics (use dashboard:get for total YTD).",
 
   "payments.title": "Invoice to collect",
   "payments.hint": "Required: select an invoice (ideally issued). If draft → it will be automatically issued when recording the payment.",
