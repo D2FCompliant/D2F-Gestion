@@ -22,6 +22,16 @@ function object(value: unknown): JsonRecord {
   return value && typeof value === "object" && !Array.isArray(value) ? value as JsonRecord : {};
 }
 
+function jsonObject(value: unknown): JsonRecord {
+  if (value && typeof value === "object" && !Array.isArray(value)) return value as JsonRecord;
+  if (typeof value !== "string" || !value.trim()) return {};
+  try {
+    return object(JSON.parse(value));
+  } catch {
+    return {};
+  }
+}
+
 function first(args: unknown[]) {
   return args[0];
 }
@@ -174,7 +184,20 @@ async function getCompany(ownerEmail: string) {
   const supabase = getSupabaseAdmin();
   const { data, error } = await supabase.from("d2f_company").select("data,created_at,updated_at").eq("owner_email", ownerEmail).maybeSingle();
   if (error) throw error;
-  return data ? { ...defaultCompany(), ...object(data.data), created_at: data.created_at, updated_at: data.updated_at } : defaultCompany();
+  if (!data) return defaultCompany();
+  const company = object(data.data);
+  const meta = { ...jsonObject(company.meta_json), ...object(company.meta) };
+  const useCaseMeta = jsonObject(company.use_case_meta_json);
+  const conformity = { ...object(useCaseMeta.conformity), ...object(company.conformity) };
+  return {
+    ...defaultCompany(),
+    ...company,
+    meta,
+    conformity,
+    annual_target_ht: numberValue(company.annual_target_ht ?? meta.annual_target_ht),
+    created_at: data.created_at,
+    updated_at: data.updated_at,
+  };
 }
 
 async function saveCompany(ownerEmail: string, input: JsonRecord) {
@@ -193,6 +216,18 @@ function groupCount(records: JsonRecord[], field: string) {
     acc[key] = (acc[key] || 0) + 1;
     return acc;
   }, {});
+}
+
+function recognizedRevenueHt(invoices: JsonRecord[], datePrefix = "") {
+  const byId = new Map(invoices.map((invoice) => [String(invoice.id || ""), invoice]));
+  return round2(invoices.reduce((sum, invoice) => {
+    if (invoice.status !== "issued") return sum;
+    if (datePrefix && !String(invoice.date || "").startsWith(datePrefix)) return sum;
+    if (invoice.type === "final") return sum + numberValue(invoice.total_ht);
+    if (invoice.type !== "credit_note") return sum;
+    const source = byId.get(String(invoice.source_invoice_id || ""));
+    return source?.type === "final" ? sum + numberValue(invoice.total_ht) : sum;
+  }, 0));
 }
 
 async function dashboard(ownerEmail: string) {
@@ -224,7 +259,7 @@ async function dashboard(ownerEmail: string) {
   return {
     ok: true,
     currency: "EUR",
-    ca_recognized_ht: round2(issued.filter((invoice) => invoice.type === "final").reduce((sum, invoice) => sum + numberValue(invoice.total_ht), 0)),
+    ca_recognized_ht: recognizedRevenueHt(invoices),
     deposits: { total_ttc: depositsTotal, issued_ttc: depositsTotal, paid_ttc: depositsPaid, waiting_ttc: round2(depositsTotal - depositsPaid), overdue_ttc: 0 },
     quotes: { counts: { draft: quoteCounts.draft || 0, sent: quoteCounts.sent || 0, accepted: quoteCounts.accepted || 0, rejected: quoteCounts.rejected || 0, done: (quoteCounts.sent || 0) + (quoteCounts.accepted || 0) + (quoteCounts.rejected || 0) }, amounts: quoteAmounts, amounts_ht: quoteAmounts },
     invoices: { issued: issued.length, paid, waiting: Math.max(0, issued.length - paid) },
@@ -245,13 +280,13 @@ async function dashboardMetrics(ownerEmail: string, yearInput: unknown) {
   const annualTarget = numberValue(company.annual_target_ht || meta.annual_target_ht) || null;
   const targetCumulative = months.map((ym, index) => ({ ym, target_cum: annualTarget ? round2(annualTarget * (index + 1) / 12) : 0 }));
   const cashTotal = round2(yearPayments.reduce((sum, item) => sum + numberValue(item.amount), 0));
-  const finalRevenue = round2(issued.filter((item) => item.type !== "deposit").reduce((sum, item) => sum + numberValue(item.total_ttc), 0));
+  const finalRevenue = recognizedRevenueHt(invoices, String(year));
   const depositRevenue = round2(issued.filter((item) => item.type === "deposit").reduce((sum, item) => sum + numberValue(item.total_ttc), 0));
   return {
     ok: true, currency: "EUR", year,
     target: { annual_target_ht: annualTarget, pct_of_target_cash_ytd: annualTarget ? Math.min(1, cashTotal / annualTarget) : 0, cash_ytd: cashTotal, remaining_to_target: annualTarget ? Math.max(0, annualTarget - cashTotal) : null },
-    ytd: { recognized: { ca_recognized_ht_ytd: round2(issued.reduce((sum, item) => sum + numberValue(item.total_ht), 0)) }, cash: { cash_deposit_ytd: 0, cash_final_ytd: cashTotal, cash_total_ytd: cashTotal }, revenue_issued: { revenue_deposit_ytd: depositRevenue, revenue_final_ytd: finalRevenue, revenue_total_ytd: round2(finalRevenue + depositRevenue) } },
-    series: { cash_monthly: cashMonthly, cash_cumulative: cashCumulative, target_cumulative: targetCumulative, recognized_ht_monthly: months.map((ym) => ({ ym, recognized_ht: round2(issued.filter((item) => String(item.date || "").startsWith(ym)).reduce((sum, item) => sum + numberValue(item.total_ht), 0)) })) },
+    ytd: { recognized: { ca_recognized_ht_ytd: finalRevenue }, cash: { cash_deposit_ytd: 0, cash_final_ytd: cashTotal, cash_total_ytd: cashTotal }, revenue_issued: { revenue_deposit_ytd: depositRevenue, revenue_final_ytd: finalRevenue, revenue_total_ytd: round2(finalRevenue + depositRevenue) } },
+    series: { cash_monthly: cashMonthly, cash_cumulative: cashCumulative, target_cumulative: targetCumulative, recognized_ht_monthly: months.map((ym) => ({ ym, recognized_ht: recognizedRevenueHt(invoices, ym) })) },
   };
 }
 

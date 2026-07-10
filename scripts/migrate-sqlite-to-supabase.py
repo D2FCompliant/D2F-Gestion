@@ -122,6 +122,14 @@ def build_records(connection: sqlite3.Connection, owner: str) -> tuple[dict[str,
     company_rows = rows(connection, "company")
     company = serializable(company_rows[0]) if company_rows else {"id": "1"}
     company["id"] = "1"
+    company_meta = json_value(company.get("meta_json"), {})
+    use_case_meta = json_value(company.get("use_case_meta_json"), {})
+    company["meta"] = company_meta
+    company["annual_target_ht"] = company.get("annual_target_ht") or company_meta.get("annual_target_ht") or 0
+    company["conformity"] = {
+        **(use_case_meta.get("conformity") or {}),
+        **json_value(company.get("conformity"), {}),
+    }
     company["smtp_password"] = ""
     company["logo_path"] = None
 

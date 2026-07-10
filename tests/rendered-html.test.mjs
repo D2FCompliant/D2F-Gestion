@@ -35,6 +35,8 @@ test("keeps Supabase access server-side and ships its schema", async () => {
   ]);
   assert.match(route, /clients|items|quotes|invoices|payments/);
   assert.match(route, /getOwnerEmail/);
+  assert.match(route, /recognizedRevenueHt/);
+  assert.match(route, /meta_json/);
   assert.match(client, /SUPABASE_SERVICE_ROLE_KEY/);
   assert.match(client, /persistSession: false/);
   assert.ok(
