@@ -23,6 +23,8 @@ export function getSupabaseAdmin() {
 export function getOwnerEmail(request: Request) {
   const forwardedEmail = request.headers.get("oai-authenticated-user-email")?.trim().toLowerCase();
   if (forwardedEmail) return forwardedEmail;
+  const configuredOwner = process.env.D2F_OWNER_EMAIL?.trim().toLowerCase();
+  if (configuredOwner) return configuredOwner;
   if (process.env.NODE_ENV !== "production") {
     return (process.env.LOCAL_OWNER_EMAIL || "demo@d2f.local").trim().toLowerCase();
   }

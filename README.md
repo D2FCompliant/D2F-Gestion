@@ -21,6 +21,7 @@ Les fonctions dépendant du système local — sélection de fichiers, générat
 4. Lancer `npm run dev`.
 
 La clé `service_role` reste exclusivement côté serveur. Les tables refusent tout accès direct aux rôles navigateur ; chaque requête est isolée par l’adresse e-mail authentifiée transmise par l’hébergement.
+Pour un déploiement privé mono-utilisateur, `D2F_OWNER_EMAIL` fournit l’identité stable de secours lorsque l’hébergement ne transmet pas d’en-tête utilisateur.
 
 ## Commandes web
 
