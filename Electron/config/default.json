@@ -1,0 +1,8 @@
+{
+  "mode": "saas",
+  "updates": {
+    "provider": "generic",
+    "urlSaas": "https://updates.d2f.com/d2f-gestion/",
+    "urlOnPrem": "https://intranet/updates/d2f-gestion/"
+  }
+}
