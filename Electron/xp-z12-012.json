@@ -1,0 +1,20 @@
+{
+  "version": "XP Z12-012 Annexe A v1.2",
+  "status": "REFUSEE",
+  "reasons": [
+    { "code": "RF01", "label": "Facture non conforme à la commande", "commentRequired": false },
+    { "code": "RF02", "label": "Montant de facture erroné", "commentRequired": false },
+    { "code": "RF03", "label": "Taux ou montant de TVA erroné", "commentRequired": false },
+    { "code": "RF04", "label": "Double facturation", "commentRequired": false },
+    { "code": "RF05", "label": "Facture déjà payée", "commentRequired": false },
+    { "code": "RF06", "label": "Coordonnées bancaires erronées", "commentRequired": false },
+    { "code": "RF07", "label": "Créancier incorrect", "commentRequired": false },
+    { "code": "RF08", "label": "Livraison non effectuée", "commentRequired": false },
+    { "code": "RF09", "label": "Livraison partielle", "commentRequired": false },
+    { "code": "RF10", "label": "Marché ou contrat clos", "commentRequired": false },
+    { "code": "RF11", "label": "Référence de commande invalide", "commentRequired": false },
+    { "code": "RF12", "label": "Informations obligatoires manquantes", "commentRequired": false },
+    { "code": "RF13", "label": "Données incohérentes", "commentRequired": false },
+    { "code": "RF99", "label": "Autre motif de refus", "commentRequired": true }
+  ]
+}

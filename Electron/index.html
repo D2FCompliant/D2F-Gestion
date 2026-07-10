@@ -1,0 +1,1454 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title data-i18n="app.window_title">D2F – Gestion</title>
+
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self';
+                 script-src 'self';
+                 style-src 'self' 'unsafe-inline';
+                 img-src 'self' data: file:;
+                 font-src 'self' data:;
+                 connect-src 'self';
+                 object-src 'none';
+                 base-uri 'none'">
+
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand__mark">
+        <img
+          src="../renderer/Assets/Logo.png"
+          alt="Logo D2F Gestion"
+          class="brand__logo"
+        />
+      </div>
+
+      <div class="brand__title">
+        <div class="brand__name">D2F Gestion</div>
+        <div class="brand__subtitle">Conforme EN16931</div>
+      </div>
+    </div>
+
+    <div class="topbar__right">
+      <div class="segmented" role="tablist" data-i18n-attr="aria-label:topbar.view" aria-label="Affichage">
+        <button class="segmented__btn is-active" type="button" data-view="split" data-i18n="topbar.view.split">Split</button>
+        <button class="segmented__btn" type="button" data-view="single" data-i18n="topbar.view.single">Focus</button>
+      </div>
+      <div class="pill" id="appStatus" data-i18n="status.ready">Prêt</div>
+    </div>
+  </header>
+
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="sidebar__section">
+        <div class="sidebar__label" data-i18n="sidebar.modules">Modules</div>
+        <nav class="nav" id="navModules">
+          <button class="nav__item" data-module="company"><span class="nav__icon">🏢</span><span data-i18n="app.title.company">Société</span></button>
+          <button class="nav__item" data-module="dashboard"><span class="nav__icon">📊</span><span data-i18n="app.title.dashboard">Dashboard</span></button>
+          <button class="nav__item" data-module="clients"><span class="nav__icon">👥</span><span data-i18n="app.title.clients">Clients</span></button>
+          <button class="nav__item" data-module="items"><span class="nav__icon">🧩</span><span data-i18n="app.title.items">Articles</span></button>
+          <button class="nav__item is-active" data-module="quotes"><span class="nav__icon">📝</span><span data-i18n="app.title.quotes">Devis</span></button>
+          <button class="nav__item" data-module="invoices"><span class="nav__icon">🧾</span><span data-i18n="app.title.invoices">Factures</span></button>
+          <button class="nav__item" data-module="payments"><span class="nav__icon">💳</span><span data-i18n="app.title.payments">Encaissements</span></button>
+          <button class="nav__item" data-module="inbound"><span class="nav__icon">📥</span><span data-i18n="app.title.inbound">Fournisseurs</span></button>
+          <button class="nav__item" data-module="exports"><span class="nav__icon">🚀</span><span data-i18n="app.title.exports">Exports</span></button>
+          <button class="nav__item" data-module="conformity"><span class="nav__icon">✅</span><span data-i18n="app.title.conformity">e-Reporting</span></button>
+          <button class="nav__item" data-module="audit"><span class="nav__icon">📜</span><span data-i18n="app.title.audit">PAF / Trace</span></button>
+        </nav>
+      </div>
+
+      <div class="sidebar__section">
+        <div class="sidebar__label" data-i18n="sidebar.shortcuts">Raccourcis</div>
+        <div class="shortcutGrid">
+          <button class="shortcut" type="button" data-action="global:search">
+            <span class="shortcut__k">⌘K</span>
+            <span class="shortcut__t" data-i18n="toolbar.search">Recherche</span>
+          </button>
+          <button class="shortcut" type="button" data-action="global:new">
+            <span class="shortcut__k">⌘N</span>
+            <span class="shortcut__t" data-i18n="action.new">Nouveau</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="sidebar__section">
+        <div class="hint" data-i18n="sidebar.hint.toolbar_changes">
+          Les boutons changent selon la page.
+        </div>
+      </div>
+    </aside>
+
+    <main class="workspace">
+      <div class="workspace__header">
+        <div>
+          <h1 class="workspace__title" id="pageTitle" data-i18n="app.title.quotes">Devis</h1>
+          <p class="workspace__desc" id="pageDesc" data-i18n="app.desc.quotes">Éditeur devis + transformation en facture.</p>
+        </div>
+        <div class="toolbar" id="toolbar"></div>
+      </div>
+
+      <!-- Société -->
+      <section class="page" data-page="company">
+        <div class="grid2">
+          <div class="card">
+            <div class="card__title" data-i18n="company.identity.title">Identité (EN16931 BG-4)</div>
+            <div class="form">
+              <label>
+                <span data-i18n="company.legal_name">Raison sociale (BT-27) *</span>
+                <input id="co-legal-name" type="text" data-i18n-attr="placeholder:company.legal_name_ph" placeholder="D2F Compliant d.o.o" />
+              </label>
+              <div class="row2">
+                <label>
+                  <span data-i18n="company.legal_id">ID légal (SIREN / RSB / autre) *</span>
+                  <input id="co-legal-id" type="text" data-i18n-attr="placeholder:common.ellipsis" placeholder="..." />
+                </label>
+                <label>
+                  <span data-i18n="company.vat_id">ID TVA (BT-32) *</span>
+                  <input id="co-vat-id" type="text" data-i18n-attr="placeholder:company.vat_id_ph" placeholder="FRxx..." />
+                </label>
+                <label>
+                  <span data-i18n="company.vat_regime">Régime TVA (DGFiP)</span>
+                  <select id="co-vat-regime">
+                    <option value="REAL_NORMAL_MONTHLY" data-i18n="company.vat_regime.real_normal_monthly">Réel normal (mensuel)</option>
+                    <option value="REAL_NORMAL_QUARTERLY" data-i18n="company.vat_regime.real_normal_quarterly">Réel normal (option trimestrielle)</option>
+                    <option value="SIMPLIFIED" data-i18n="company.vat_regime.simplified">Réel simplifié</option>
+                    <option value="FRANCHISE" data-i18n="company.vat_regime.franchise">Franchise en base</option>
+                  </select>
+                </label>
+              </div>
+              <label class="u-mt">
+                <span>Meta JSON (optionnel)</span>
+                <textarea id="co-meta-json" rows="6" placeholder='{"objective_annual_ca":250000}'></textarea>
+              </label>
+              <div class="row2">
+                <label>
+                  <span data-i18n="company.country">Pays (BT-31) *</span>
+                  <input id="co-country" type="text" data-i18n-attr="placeholder:company.country_ph" placeholder="RS" />
+                </label>
+                <label>
+                  <span data-i18n="company.currency">Devise</span>
+                  <input id="co-currency" type="text" data-i18n-attr="placeholder:company.currency_ph" placeholder="EUR" />
+                </label>
+              </div>
+              <div class="row2">
+                <label>
+                  <span>Objectif annuel (HT)</span>
+                  <input id="co-annual-target-ht" type="number" step="0.01" placeholder="120000" />
+                </label>
+              </div>
+              <label>
+                <span data-i18n="company.street">Adresse (BT-29) *</span>
+                <input id="co-street" type="text" data-i18n-attr="placeholder:company.street_ph" placeholder="Rue..." />
+              </label>
+              <label>
+                <span data-i18n="company.street2">Complément</span>
+                <input id="co-street2" type="text" data-i18n-attr="placeholder:common.empty" placeholder="" />
+              </label>
+              <div class="row2">
+                <label>
+                  <span data-i18n="company.postal_code">CP *</span>
+                  <input id="co-postal" type="text" data-i18n-attr="placeholder:common.empty" placeholder="" />
+                </label>
+                <label>
+                  <span data-i18n="company.city">Ville *</span>
+                  <input id="co-city" type="text" data-i18n-attr="placeholder:common.empty" placeholder="" />
+                </label>
+              </div>
+              <div class="card">
+                <div class="card__title">Configuration Email (SMTP)</div>
+
+                <div class="form">
+
+                  <label>
+                    <span>SMTP Host</span>
+                    <input
+                      id="company-smtp-host"
+                      type="text"
+                      placeholder="smtp.office365.com">
+                  </label>
+
+                  <label>
+                    <span>SMTP Port</span>
+                    <input
+                      id="company-smtp-port"
+                      type="number"
+                      value="587">
+                  </label>
+
+                  <label>
+                    <span>SMTP User</span>
+                    <input
+                      id="company-smtp-user"
+                      type="email"
+                      placeholder="contact@entreprise.com">
+                  </label>
+
+                  <label>
+                    <span>SMTP Password</span>
+                    <input
+                      id="company-smtp-password"
+                      type="password">
+                  </label>
+
+                  <label>
+                    <span>Nom expéditeur</span>
+                    <input
+                      id="company-smtp-from-name"
+                      type="text"
+                      placeholder="D2F Compliant">
+                  </label>
+
+                </div>
+              </div>
+              <div class="row2">
+                <label>
+                  <span data-i18n="common.email">Email</span>
+                  <input id="co-email" type="email" data-i18n-attr="placeholder:company.email_ph" placeholder="contact@..." />
+                </label>
+                <label>
+                  <span data-i18n="common.phone">Téléphone</span>
+                  <input id="co-phone" type="text" data-i18n-attr="placeholder:company.phone_ph" placeholder="+381 ..." />
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card__title" data-i18n="company.branding.title">Branding PDF</div>
+            <div class="hint" data-i18n="company.branding.hint">
+              Le logo est <strong>uniquement</strong> pour les PDF (devis/factures).
+            </div>
+
+            <div class="u-mt">
+              <div class="upload">
+                <div class="upload__preview" aria-hidden="true">
+                  <img id="companyLogoPreview" class="logoPreview" alt="Logo entreprise" data-i18n-attr="alt:company.branding.logo_alt" />
+                  <span id="companyLogoFallback" class="upload__badge" data-i18n="company.branding.logo_badge">LOGO</span>
+                </div>
+
+                <div class="upload__meta">
+                  <div class="upload__title" data-i18n="company.branding.logo_title">Logo entreprise</div>
+                  <div class="upload__subtitle" data-i18n="company.branding.logo_subtitle">PNG/SVG haute résolution recommandé</div>
+                  <div class="upload__actions">
+                    <button class="btn btn--secondary" type="button" data-action="company:chooseLogo" data-i18n="action.choose_logo">Choisir…</button>
+                    <button class="btn btn--ghost" type="button" data-action="company:clearLogo" data-i18n="action.clear_logo">Retirer</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="u-mt">
+              <label class="toggle">
+                <input id="co-show-logo" type="checkbox" checked />
+                <span data-i18n="company.branding.show_logo">Afficher le logo sur devis et factures</span>
+              </label>
+            </div>
+
+            <div class="u-mt">
+              <div class="palette">
+                <button class="swatch is-active" style="--sw:#6366f1" data-action="theme:accent:indigo" data-i18n-attr="aria-label:theme.indigo" aria-label="Indigo"></button>
+                <button class="swatch" style="--sw:#06b6d4" data-action="theme:accent:cyan" data-i18n-attr="aria-label:theme.cyan" aria-label="Cyan"></button>
+                <button class="swatch" style="--sw:#22c55e" data-action="theme:accent:green" data-i18n-attr="aria-label:theme.green" aria-label="Green"></button>
+                <button class="swatch" style="--sw:#f97316" data-action="theme:accent:orange" data-i18n-attr="aria-label:theme.orange" aria-label="Orange"></button>
+                <button class="swatch" style="--sw:#ec4899" data-action="theme:accent:pink" data-i18n-attr="aria-label:theme.pink" aria-label="Pink"></button>
+              </div>
+              <div class="hint u-mt--sm" data-i18n="company.branding.accent_hint">Accent UI (optionnel).</div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card__title" data-i18n="company.cgv.title">CGV & Paiement (PDF)</div>
+            <div class="hint" data-i18n="company.cgv.hint">Ces informations seront imprimées sur les PDF devis & factures.</div>
+
+            <div class="form u-mt">
+              <label>
+                <span data-i18n="company.cgv.text">CGV (texte imprimé)</span>
+                <textarea id="co-cgv-text" rows="6" data-i18n-attr="placeholder:company.cgv.ph" placeholder="Conditions générales de vente…"></textarea>
+              </label>
+
+              <div class="row2">
+                <label>
+                  <span data-i18n="company.bank.name">Banque</span>
+                  <input id="co-bank-name" type="text" data-i18n-attr="placeholder:company.bank.name_ph" placeholder="Nom de la banque" />
+                </label>
+                <label>
+                  <span data-i18n="company.bank.holder">Titulaire du compte</span>
+                  <input id="co-bank-holder" type="text" data-i18n-attr="placeholder:company.bank.holder_ph" placeholder="D2F Compliant d.o.o" />
+                </label>
+              </div>
+
+              <label>
+                <span data-i18n="company.bank.iban">IBAN</span>
+                <input id="co-bank-iban" type="text" data-i18n-attr="placeholder:company.bank.iban_ph" placeholder="RS..." />
+              </label>
+
+              <label>
+                <span data-i18n="company.bank.bic">BIC / SWIFT</span>
+                <input id="co-bank-bic" type="text" data-i18n-attr="placeholder:common.ellipsis" placeholder="..." />
+              </label>
+
+              <label>
+                <span data-i18n="company.bank.extra">Infos complémentaires (optionnel)</span>
+                <input id="co-bank-extra" type="text" data-i18n-attr="placeholder:company.bank.extra_ph" placeholder="Référence virement / domiciliation…" />
+              </label>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Clients -->
+      <section class="page" data-page="clients">
+        <div class="split" data-split>
+          <div class="panel card">
+            <div class="card__title" data-i18n="clients.list_title">Liste des clients</div>
+            <div class="searchRow">
+              <input id="clientsSearch" class="search" type="search" data-i18n-attr="placeholder:clients.search_ph" placeholder="Rechercher un client…" />
+              <button class="btn btn--secondary" type="button" data-action="clients:new" data-i18n="action.new">Nouveau</button>
+              <button class="btn btn--secondary" type="button" data-action="clients:importCsv" data-i18n="clients.import.open_btn">Importer CSV…</button>
+            </div>
+            <div id="clientsList" class="list"></div>
+          </div>
+
+          <div class="panel card">
+            <div class="card__title" data-i18n="clients.form_title">Fiche client (EN16931 BG-7)</div>
+            <div class="form">
+              <input id="cl-id" type="hidden" />
+
+              <label>
+                <span data-i18n="clients.customer_type">Type client</span>
+                <select id="cl-customer-type">
+                  <option value="B2C" data-i18n="clients.customer_type.b2c">B2C (Particulier)</option>
+                  <option value="B2B" data-i18n="clients.customer_type.b2b">B2B (Entreprise)</option>
+                  <option value="B2G" data-i18n="clients.customer_type.b2g">B2G (Administration)</option>
+                </select>
+              </label>
+
+              <label>
+                <span data-i18n="clients.name">Nom / Société (BT-44) *</span>
+                <input id="cl-name" type="text" data-i18n-attr="placeholder:clients.name_ph" placeholder="ACME SARL" />
+              </label>
+
+              <div class="row2">
+                <label>
+                  <span data-i18n="common.email">Email</span>
+                  <input id="cl-email" type="email" data-i18n-attr="placeholder:common.ellipsis" placeholder="..." />
+                </label>
+                <label>
+                  <span data-i18n="common.phone">Téléphone</span>
+                  <input id="cl-phone" type="text" data-i18n-attr="placeholder:common.ellipsis" placeholder="..." />
+                </label>
+              </div>
+
+              <div class="row2">
+                <label>
+                  <span data-i18n="clients.country">Pays (BT-55) *</span>
+                  <input id="cl-country" type="text" data-i18n-attr="placeholder:clients.country_ph" placeholder="FR" />
+                </label>
+                <label>
+                  <span data-i18n="clients.vat_subject">Assujetti TVA</span>
+                  <select id="cl-vat-subject">
+                    <option value="1" data-i18n="common.yes_b2b">Oui (B2B)</option>
+                    <option value="0" data-i18n="common.no_b2c">Non (B2C)</option>
+                  </select>
+                </label>
+              </div>
+
+              <div class="row2">
+                <label>
+                  <span data-i18n="clients.vat_intra">TVA Intracom (BT-48 si B2B UE) *</span>
+                  <input id="cl-vat-id" type="text" data-i18n-attr="placeholder:clients.vat_intra_ph" placeholder="FR..." />
+                </label>
+                <label>
+                  <span data-i18n="clients.legal_id">ID légal *</span>
+                  <input id="cl-legal-id" type="text" data-i18n-attr="placeholder:common.ellipsis" placeholder="..." />
+                </label>
+              </div>
+
+              <label>
+                <span data-i18n="clients.street">Adresse (BT-50)*</span>
+                <input id="cl-street" type="text" data-i18n-attr="placeholder:clients.street_ph" placeholder="10 avenue ..." />
+              </label>
+              <label>
+                <span data-i18n="clients.street2">Complément</span>
+                <input id="cl-street2" type="text" data-i18n-attr="placeholder:common.empty" placeholder="" />
+              </label>
+              <div class="row2">
+                <label><span data-i18n="common.postal_code">CP *</span><input id="cl-postal" type="text" /></label>
+                <label><span data-i18n="common.city">Ville *</span><input id="cl-city" type="text" /></label>
+              </div>
+
+              <div class="u-mt">
+                <div class="card__title" style="margin-top:14px;" data-i18n="clients.payments_quotes.title">Règlement & Devis</div>
+                <div class="hint" data-i18n="clients.payments_quotes.hint">Paramètres client utilisés par défaut sur devis & factures.</div>
+
+                <div class="row2 u-mt">
+                  <label>
+                    <span data-i18n="clients.payment_term">Condition de règlement</span>
+                    <select id="cl-payment-term">
+                      <option value="" data-i18n="clients.payment_term.auto">(auto)</option>
+                      <option value="DUE_ON_RECEIPT" data-i18n="payterm.due_on_receipt">À réception de facture (B2C)</option>
+                      <option value="NET_15" data-i18n="payterm.net_15">Paiement à 15 jours (B2B)</option>
+                      <option value="NET_30" data-i18n="payterm.net_30">Paiement à 30 jours (B2B)</option>
+                      <option value="NEGOTIATED" data-i18n="payterm.negotiated">Négocié / spécifique (B2G)</option>
+                    </select>
+                  </label>
+
+                  <label>
+                    <span data-i18n="clients.payment_days">Jours (optionnel)</span>
+                    <input id="cl-payment-days" type="number" step="1" min="0" data-i18n-attr="placeholder:clients.payment_days_ph" placeholder="0 / 15 / 30..." />
+                  </label>
+                </div>
+
+                <label class="u-mt">
+                  <span data-i18n="clients.payment_text">Texte conditions de paiement (surtout B2B)</span>
+                  <textarea id="cl-payment-text" rows="3" data-i18n-attr="placeholder:clients.payment_text_ph" placeholder="Ex : Paiement à 45 jours fin de mois après service fait…"></textarea>
+                </label>
+
+                <div class="row2 u-mt">
+                  <label>
+                    <span data-i18n="clients.quote_validity_days">Validité devis par défaut (jours)</span>
+                    <input id="cl-quote-validity-days" type="number" step="1" min="0" data-i18n-attr="placeholder:clients.quote_validity_days_ph" placeholder="30" />
+                  </label>
+
+                  <label>
+                    <span data-i18n="common.info">Info</span>
+                    <input id="cl-info" type="text" data-i18n-attr="placeholder:common.ellipsis" placeholder="..." />
+                  </label>
+                </div>
+              </div>
+
+              <label>
+                <span data-i18n="common.notes">Notes</span>
+                <textarea id="cl-notes" rows="4" data-i18n-attr="placeholder:common.notes_ph" placeholder="Remarques…"></textarea>
+              </label>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Articles -->
+      <section class="page" data-page="items">
+        <div class="split" data-split>
+          <div class="panel card">
+            <div class="card__title" data-i18n="items.list_title">Liste articles</div>
+            <div class="searchRow">
+              <input id="itemsSearch" class="search" type="search" data-i18n-attr="placeholder:items.search_ph" placeholder="Rechercher un article…" />
+              <button class="btn btn--secondary" type="button" data-action="items:new" data-i18n="action.new">Nouveau</button>
+            </div>
+            <div id="itemsList" class="list"></div>
+          </div>
+
+          <div class="panel card">
+            <div class="card__title" data-i18n="items.form_title">Article (sources lignes)</div>
+            <div class="form">
+              <input id="it-id" type="hidden" />
+              <div class="row2">
+                <label><span data-i18n="items.ref">Référence *</span><input id="it-ref" type="text" data-i18n-attr="placeholder:items.ref_ph" placeholder="ART-001" /></label>
+                <label>
+                  <span data-i18n="items.type">Type</span>
+                  <select id="it-type">
+                    <option value="simple" data-i18n="items.type.simple">Simple</option>
+                    <option value="composed" data-i18n="items.type.composed">Composé</option>
+                  </select>
+                </label>
+              </div>
+
+              <label>
+                <span data-i18n="items.nature">Nature</span>
+                <select id="it-item-type">
+                  <option value="SERVICE" data-i18n="items.nature.service">Service</option>
+                  <option value="GOODS" data-i18n="items.nature.goods">Bien</option>
+                </select>
+              </label>
+
+              <label><span data-i18n="items.label">Libellé (BT-126) *</span><input id="it-label" type="text" data-i18n-attr="placeholder:items.label_ph" placeholder="Prestation / Produit" /></label>
+
+              <div class="row2">
+                <label><span data-i18n="items.price_ht">Prix HT</span><input id="it-price" type="number" step="0.01" data-i18n-attr="placeholder:common.money_ph" placeholder="0.00" /></label>
+                <label><span data-i18n="items.vat_percent">TVA %</span><input id="it-tva" type="number" step="0.01" data-i18n-attr="placeholder:items.vat_percent_ph" placeholder="20" /></label>
+              </div>
+
+              <div class="row2">
+                <label><span data-i18n="items.unit">Unité (UN/ECE)</span><input id="it-unit" type="text" data-i18n-attr="placeholder:items.unit_ph" placeholder="C62, HUR, DAY..." /></label>
+                <label>
+                  <span data-i18n="common.active">Actif</span>
+                  <select id="it-active">
+                    <option value="1" data-i18n="common.yes">Oui</option>
+                    <option value="0" data-i18n="common.no">Non</option>
+                  </select>
+                </label>
+              </div>
+
+              <label><span data-i18n="items.desc_pdf">Description (PDF)</span><textarea id="it-desc" rows="5" data-i18n-attr="placeholder:items.desc_pdf_ph" placeholder="Texte imprimé…"></textarea></label>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Devis -->
+      <section class="page is-active" data-page="quotes">
+        <div class="split" data-split>
+          <div class="panel card">
+            <div class="card__title" data-i18n="quotes.list_title">Liste des devis</div>
+            <div class="searchRow">
+              <input id="quotesSearch" class="search" type="search" data-i18n-attr="placeholder:quotes.search_ph" placeholder="Rechercher un devis…" />
+              <button class="btn btn--secondary" type="button" data-action="quotes:new" data-i18n="action.new">Nouveau</button>
+            </div>
+            <div id="quotesList" class="list"></div>
+          </div>
+
+          <div class="panel card">
+            <div class="card__title">
+              <span data-i18n="quotes.editor_title">Éditeur Devis</span>
+              <span id="q-status-badge" class="q-status-badge" style="display:none;"></span>
+            </div>
+
+            <div class="form">
+              <input id="q-id" type="hidden" />
+              <div class="row2">
+                <label><span data-i18n="common.date">Date</span><input id="q-date" type="date" /></label>
+                <label>
+                  <span data-i18n="common.client">Client</span>
+                  <select id="q-client"></select>
+                </label>
+              </div>
+
+              <div class="table">
+                <div class="table__head">
+                  <div data-i18n="lines.desc">Désignation</div>
+                  <div class="t-right" data-i18n="lines.qty">Qté</div>
+                  <div class="t-right" data-i18n="lines.unit_price_ht">PU HT</div>
+                  <div class="t-right" data-i18n="lines.vat_percent">TVA%</div>
+                  <div class="t-right" data-i18n="lines.line_total_ht">Ptot HT</div>
+                  <div></div>
+                </div>
+                <div id="q-lines"></div>
+              </div>
+
+              <div class="composer">
+                <select id="q-add-article" class="composer__select"></select>
+                <input id="q-add-qty" class="composer__qty" type="number" step="1" value="1" />
+                <button class="btn btn--secondary" type="button" data-action="quotes:addLine" data-i18n="quotes.add_line">Ajouter</button>
+              </div>
+
+              <div class="row2">
+                <label>
+                  <span data-i18n="vat.mode.label">TVA (mode)</span>
+                  <select id="q-vat-mode">
+                    <option value="AUTO" data-i18n="vat.mode.auto">AUTO</option>
+                    <option value="VAT" data-i18n="vat.mode.vat">TVA domestique</option>
+                    <option value="REVERSE_CHARGE" data-i18n="vat.mode.reverse_charge">Autoliquidation</option>
+                    <option value="NO_VAT" data-i18n="vat.mode.no_vat">Sans TVA</option>
+                    <option value="EXEMPT" data-i18n="vat.mode.exempt">Exonéré</option>
+                  </select>
+                </label>
+                <label>
+                  <span data-i18n="vat.effective">TVA effective</span>
+                  <input id="q-vat-effective" type="text" disabled value="AUTO" />
+                </label>
+              </div>
+
+              <div class="u-mt">
+                <div class="hint" data-i18n="quotes.deposit_hint">Facture d’acompte : choisir % ou montant TTC.</div>
+
+                <div class="row2">
+                  <label>
+                    <span data-i18n="quotes.deposit_mode">Mode acompte</span>
+                    <div class="inlineRadios">
+                      <label class="inlineRadio">
+                        <input type="radio" name="deposit-mode" id="q-deposit-mode-percent" value="percent" checked />
+                        <span>%</span>
+                      </label>
+                      <label class="inlineRadio">
+                        <input type="radio" name="deposit-mode" id="q-deposit-mode-amount" value="amount" />
+                        <span data-i18n="quotes.deposit_amount_ttc">Montant TTC</span>
+                      </label>
+                    </div>
+                  </label>
+
+                  <label>
+                    <span data-i18n="quotes.deposit_value">Valeur acompte</span>
+                    <input id="q-deposit-value" type="number" step="0.01" value="30" />
+                  </label>
+                </div>
+              </div>
+
+              <div class="card__title" style="margin-top:14px;" data-i18n="quotes.conditions.title">Conditions</div>
+
+              <div class="row2 u-mt">
+                <label>
+                  <span data-i18n="quotes.conditions.validity_days">Validité (jours)</span>
+                  <input id="q-validity-days" type="number" step="1" min="0" data-i18n-attr="placeholder:quotes.conditions.validity_days_ph" placeholder="30" />
+                </label>
+                <label>
+                  <span data-i18n="quotes.conditions.valid_until">Valable jusqu’au</span>
+                  <input id="q-valid-until" type="date" />
+                </label>
+              </div>
+
+              <label class="u-mt">
+                <span data-i18n="quotes.conditions.payment_text">Conditions de paiement (imprimées)</span>
+                <textarea id="q-payment-text" rows="2" data-i18n-attr="placeholder:quotes.conditions.payment_text_ph" placeholder="Ex : Paiement à réception de facture…"></textarea>
+              </label>
+
+              <div class="totals">
+                <div class="totals__row"><span data-i18n="totals.ht">Total HT</span><strong id="q-total-ht">0.00</strong></div>
+                <div class="totals__row"><span data-i18n="totals.vat">Total TVA</span><strong id="q-total-tva">0.00</strong></div>
+                <div class="totals__row"><span data-i18n="totals.ttc">Total TTC</span><strong id="q-total-ttc">0.00</strong></div>
+              </div>
+
+              <!-- ✅ Acomptes (corrigé : structure HTML bien fermée + IDs OK) -->
+              <div class="u-mt">
+                <div class="card__title" style="margin-top:14px;" data-i18n="quotes.deposits.title">Acomptes</div>
+                <div class="hint" id="q-deposits-hint" data-i18n="quotes.deposits.hint">Aucun acompte généré pour ce devis.</div>
+
+                <div class="totals u-mt--sm" id="q-deposits-box" style="display:none;">
+                  <div class="totals__row">
+                    <span data-i18n="quotes.deposits.total">Total acomptes (TTC)</span>
+                    <strong id="q-deposits-total">0,00 €</strong>
+                  </div>
+                </div>
+
+                <div class="u-mt--sm" id="q-deposits-list"></div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Factures -->
+      <section class="page" data-page="invoices">
+        <div class="split" data-split>
+          <div class="panel card">
+            <div class="card__title" data-i18n="invoices.list_title">Liste des factures</div>
+            <div class="searchRow">
+              <input id="invoicesSearch" class="search" type="search" data-i18n-attr="placeholder:invoices.search_ph" placeholder="Rechercher une facture…" />
+              <button class="btn btn--secondary" type="button" data-action="invoices:new" data-i18n="invoices.new">Nouvelle</button>
+            </div>
+            <div id="invoicesList" class="list"></div>
+          </div>
+
+          <div class="panel card">
+            <div class="card__title" data-i18n="invoices.editor_title">Éditeur Facture (EN16931)</div>
+
+            <div class="form">
+              <input id="i-id" type="hidden" />
+              <div class="row2">
+                <label><span data-i18n="invoices.date">Date (BT-2)</span><input id="i-date" type="date" /></label>
+                <label><span data-i18n="invoices.client">Client (BG-7)</span><select id="i-client"></select></label>
+              </div>
+
+              <div class="row2">
+                <label>
+                  <span data-i18n="vat.mode.label">TVA (mode)</span>
+                  <select id="i-vat-mode">
+                    <option value="AUTO" data-i18n="vat.mode.auto">AUTO</option>
+                    <option value="VAT" data-i18n="vat.mode.vat">TVA domestique</option>
+                    <option value="REVERSE_CHARGE" data-i18n="vat.mode.reverse_charge">Autoliquidation</option>
+                    <option value="NO_VAT" data-i18n="vat.mode.no_vat">Sans TVA</option>
+                    <option value="EXEMPT" data-i18n="vat.mode.exempt">Exonéré</option>
+                  </select>
+                </label>
+                <label>
+                  <span data-i18n="vat.effective">TVA effective</span>
+                  <input id="i-vat-effective" type="text" disabled value="AUTO" />
+                </label>
+              </div>
+
+              <div class="table">
+                <div class="table__head">
+                  <div data-i18n="lines.desc">Désignation</div>
+                  <div class="t-right" data-i18n="lines.qty">Qté</div>
+                  <div class="t-right" data-i18n="lines.unit_price_ht">PU HT</div>
+                  <div class="t-right" data-i18n="lines.vat_percent">TVA%</div>
+                  <div class="t-right" data-i18n="lines.line_total_ht">Ptot HT</div>
+                  <div></div>
+                </div>
+                <div id="i-lines"></div>
+              </div>
+
+              <div class="composer">
+                <select id="i-add-article" class="composer__select"></select>
+                <input id="i-add-qty" class="composer__qty" type="number" step="1" value="1" />
+                <button class="btn btn--secondary" type="button" data-action="invoices:addLine" data-i18n="invoices.add_line">Ajouter</button>
+              </div>
+
+              <div class="card__title" style="margin-top:14px;" data-i18n="invoices.payment.title">Paiement</div>
+
+              <div class="row2 u-mt">
+                <label>
+                  <span data-i18n="invoices.payment.due_date">Échéance</span>
+                  <input id="i-due-date" type="date" />
+                </label>
+                <label>
+                  <span data-i18n="invoices.payment.term">Condition</span>
+                  <input id="i-payment-term" type="text" disabled value="" />
+                </label>
+              </div>
+
+              <label class="u-mt">
+                <span data-i18n="invoices.payment.text">Conditions de paiement (imprimées)</span>
+                <textarea id="i-payment-text" rows="2" data-i18n-attr="placeholder:common.ellipsis" placeholder="..."></textarea>
+              </label>
+
+              <div class="totals">
+                <div class="totals__row"><span data-i18n="invoices.totals.ht">Total HT (BT-112)</span><strong id="i-total-ht">0.00</strong></div>
+                <div class="totals__row"><span data-i18n="invoices.totals.vat">Total TVA (BT-115)</span><strong id="i-total-tva">0.00</strong></div>
+                <div class="totals__row"><span data-i18n="invoices.totals.ttc">Total TTC (BT-116)</span><strong id="i-total-ttc">0.00</strong></div>
+              </div>
+              
+              <div class="u-mt">
+                <div class="card__title" style="margin-top:14px;" data-i18n="invoices.deposits.title">Acomptes</div>
+                <div class="hint" id="i-deposits-hint" data-i18n="invoices.deposits.hint">Aucun acompte rattaché à cette facture.</div>
+
+                <div class="totals u-mt--sm" id="i-deposits-box" style="display:none;">
+                  <div class="totals__row">
+                    <span data-i18n="invoices.deposits.prepaid">Total acomptes (TTC)</span>
+                    <strong id="i-prepaid-amount">0,00</strong>
+                  </div>
+                  <div class="totals__row">
+                    <span data-i18n="invoices.deposits.due">Reste à payer (TTC)</span>
+                    <strong id="i-amount-due">0,00</strong>
+                  </div>
+                </div>
+
+                <div class="u-mt--sm" id="i-deposits-list"></div>
+              </div>
+              <div class="hint" data-i18n="invoices.issue_blocked_hint">
+                Émission bloquée si Société/Client/Lignes incomplets (contrôle EN16931 côté renderer + IPC).
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+<!-- Dashboard -->
+<section class="page" data-page="dashboard">
+  <div class="grid2">
+    <div class="card card--accent">
+      <div class="card__title" data-i18n="dash.deposits.total_ttc">Total acomptes (TTC)</div>
+
+      <div style="font-weight:950; font-size:28px; margin-top:10px;" id="dash-deposits-total">
+        0,00 €
+      </div>
+
+      <div class="totals u-mt">
+        <div class="totals__row">
+          <span data-i18n="dash.deposits.rate">Taux d’encaissement</span>
+          <strong id="dash-deposits-rate" class="kpi">0,0 %</strong>
+        </div>
+
+      <div class="totals__row">
+        <span data-i18n="dash.deposits.received_ttc">Acomptes encaissés (TTC)</span>
+        <strong id="dash-deposits-paid">0,00 €</strong>
+      </div>
+
+      <div class="totals__row">
+        <span data-i18n="dash.deposits.remaining_ttc">Reste à encaisser (TTC)</span>
+        <strong id="dash-deposits-waiting">0,00 €</strong>
+      </div>
+
+      <div class="totals__row">
+        <span data-i18n="dash.deposits.overdue_ttc">En retard</span>
+        <strong id="dash-deposits-overdue">0,00 €</strong>
+      </div>
+
+      <div class="totals__row">
+        <span data-i18n="dash.deposits.avg_days">Délai moyen d’encaissement</span>
+        <strong id="dash-deposits-avgdays" data-i18n="dash.deposits.avg_days_na">—</strong>
+      </div>
+    </div>
+  </div>
+
+    <div class="card">
+      <div class="card__title" data-i18n="dash.quotes.title">Devis</div>
+      <div class="hint" data-i18n="dash.quotes.hint">Brouillon / En cours / acceptés / refusés</div>
+      <div class="u-mt" id="dashQuotesKpis"></div>
+    </div>
+
+    <div class="card">
+      <div class="card__title" data-i18n="dash.invoices.title">Factures</div>
+      <div class="hint" data-i18n="dash.invoices.hint">Émises / payées / en attente</div>
+      <div class="u-mt" id="dashInvoicesKpis"></div>
+    </div>
+
+    <div class="card card--accent">
+      <div class="card__title" data-i18n="dash.payments.title">Encaissements</div>
+      <div class="hint" data-i18n="dash.payments.hint">Total + répartition par mode</div>
+      <div class="u-mt" id="dashPaymentsKpis"></div>
+      <div class="u-mt" id="dashPaymentsByMethod"></div>
+    </div>
+  </div>
+</section>
+
+      <!-- Encaissements -->
+      <section class="page" data-page="payments">
+        <div class="split" data-split>
+          <div class="panel card">
+            <div class="card__title" data-i18n="payments.title">Facture à encaisser</div>
+            <div class="hint" data-i18n="payments.hint">
+              Obligation : sélectionner une facture (idéalement émise). Si brouillon → elle sera émise automatiquement au paiement.
+            </div>
+
+            <div class="form u-mt">
+              <label>
+                <span data-i18n="payments.invoice">Facture</span>
+                <select id="p-invoice"></select>
+              </label>
+
+              <div class="row2">
+                <label>
+                  <span data-i18n="payments.date">Date encaissement</span>
+                  <input id="p-date" type="date" />
+                </label>
+                <label>
+                  <span data-i18n="payments.amount">Montant</span>
+                  <input id="p-amount" type="number" step="0.01" data-i18n-attr="placeholder:common.money_ph" placeholder="0.00" />
+                </label>
+              </div>
+
+              <div class="row2">
+                <label>
+                  <span data-i18n="payments.method">Mode</span>
+                  <select id="p-method">
+                    <option value="card" data-i18n="pay.method.card">CB</option>
+                    <option value="transfer" data-i18n="pay.method.transfer">Virement</option>
+                    <option value="cash" data-i18n="pay.method.cash">Espèces</option>
+                    <option value="check" data-i18n="pay.method.check">Chèque</option>
+                    <option value="other" selected data-i18n="pay.method.other">Autre</option>
+                  </select>
+                </label>
+                <label>
+                  <span data-i18n="payments.reference">Référence</span>
+                  <input id="p-reference" type="text" data-i18n-attr="placeholder:payments.reference_ph" placeholder="Réf banque / transaction..." />
+                </label>
+              </div>
+
+              <label>
+                <span data-i18n="common.notes">Notes</span>
+                <input id="p-notes" type="text" data-i18n-attr="placeholder:ui.optional" placeholder="Optionnel" />
+              </label>
+
+              <div class="u-mt">
+                <button class="btn" type="button" data-action="payments:record" data-i18n="action.record_payment">Enregistrer l’encaissement</button>
+              </div>
+
+              <div class="u-mt hint" id="p-invoiceHint" data-i18n="payments.select_invoice_hint_none">Sélectionne une facture pour voir le détail.</div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="card">
+              <div class="card__title" data-i18n="payments.history.title">Historique encaissements</div>
+              <div class="hint" data-i18n="payments.history.hint">Encaissements enregistrés pour la facture sélectionnée.</div>
+              <div class="u-mt" id="p-paymentsList"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Réception -->
+      <section class="page" data-page="inbound">
+        <div class="split" data-split>
+          <div class="panel card">
+            <div class="card__title" data-i18n="inbound.list.title">Factures reçues</div>
+            <div class="searchRow">
+              <input id="inboundSearch" class="search" type="search" data-i18n-attr="placeholder:inbound.search_ph" placeholder="Rechercher (n° / fournisseur / statut)…" />
+              <button class="btn btn--secondary" type="button" data-action="inbound:refresh" data-i18n="action.refresh">Rafraîchir</button>
+              <button class="btn btn--secondary" type="button" data-action="inbound:import" data-i18n="action.import">Importer…</button>
+            </div>
+
+            <div id="inboundList" class="list"></div>
+
+            <div class="hint u-mt" data-i18n="inbound.list.hint_actions">
+              Astuce : sélectionne une facture pour activer <strong>Accepter</strong> / <strong>Refuser</strong> dans la toolbar.
+            </div>
+          </div>
+
+          <div class="panel">
+            <div id="inboundDetail"></div>
+
+            <div class="card u-mt">
+              <div class="card__title" data-i18n="inbound.validation.title">Validation à la PA</div>
+              <div class="hint" data-i18n="inbound.validation.hint">
+                <strong>Accepter</strong> / <strong>Refuser</strong> génère un message de statut à remonter
+                <strong>PA → PAE → émetteur</strong>. Le transport sera branché côté <code>inbound.ipc.js</code>.
+                <br />
+                Le refus demande un motif (obligatoire) + code optionnel.
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+<!-- Exports -->
+<section class="page" data-page="exports">
+
+  <!-- Préférences -->
+  <div class="card export-settings">
+
+    <div class="card__title">
+      Préférences d'envoi
+    </div>
+
+    <div class="form u-mt">
+
+      <label>
+        <span>Langue du client</span>
+
+        <select id="ex-locale">
+          <option value="fr" selected>Français</option>
+          <option value="en">English</option>
+          <option value="es">Español</option>
+          <option value="it">Italiano</option>
+          <option value="sr">Srpski</option>
+        </select>
+      </label>
+
+      <div class="hint u-mt">
+        Utilisée pour les PDF et les emails envoyés au client.
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- Cartes métier -->
+  <div class="grid2 export-grid">
+
+    <!-- DEVIS -->
+    <div class="card card--accent">
+
+      <div class="card__title">
+        📝 Devis
+      </div>
+
+      <div class="hint">
+        Préparation et transmission des devis.
+      </div>
+
+      <div class="form u-mt">
+
+        <label>
+          <span>Devis</span>
+          <select id="ex-quote"></select>
+        </label>
+
+        <button
+          class="btn export-action"
+          type="button"
+          data-action="exports:pdfQuote">
+          📄 Générer PDF
+        </button>
+
+        <button
+          class="btn btn--secondary export-action"
+          type="button"
+          data-action="exports:openSelectedQuote">
+          👁 Prévisualiser
+        </button>
+
+        <button
+          class="btn btn--secondary export-action"
+          type="button"
+          data-action="exports:mailQuote">
+          📧 Envoyer au client (Génère le PDF et envoi le mail)
+        </button>
+
+      </div>
+
+    </div>
+
+    <!-- FACTURES -->
+    <div class="card card--accent2">
+
+      <div class="card__title">
+        🧾 Factures
+      </div>
+
+      <div class="hint">
+        Gestion des factures et facturation électronique.
+      </div>
+
+      <div class="form u-mt">
+
+        <label>
+          <span>Facture</span>
+          <select id="ex-invoice"></select>
+        </label>
+
+        <button
+          class="btn export-action"
+          type="button"
+          data-action="exports:pdfInvoice">
+          📄 Générer PDF
+        </button>
+
+        <button
+          class="btn btn--secondary export-action"
+          type="button"
+          data-action="exports:openSelectedInvoice">
+          👁 Prévisualiser
+        </button>
+
+        <button
+          class="btn btn--secondary export-action"
+          type="button"
+          data-action="exports:mailInvoice">
+          📧 Envoyer au client 
+        </button>
+
+        <button
+          class="btn btn--primary export-action"
+          type="button"
+          data-action="exports:peppolSend">
+          📤 Transmettre au format structuré
+        </button>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</section>
+
+      <!-- Conformity -->
+      <section class="page" data-page="conformity">
+        <div class="grid2">
+          <div class="card">
+            <div class="card__title">Paramètres réforme</div>
+            <div class="hint" id="cf-eligibility-hint">—</div>
+
+            <div class="u-mt grid2">
+              <label class="field">
+                <div class="field__label">
+                  <span>Scope</span>
+                  <span class="hint" style="margin-left:8px;opacity:.75">FR / INTL</span>
+                </div>
+                <select id="cf-scope">
+                  <option value="FR">FR</option>
+                  <option value="INTL">INTL</option>
+                </select>
+                <div class="hint" id="cf-help-scope"></div>
+              </label>
+
+              <label class="field">
+                <div class="field__label">
+                  <span>Périodicité</span>
+                  <span class="hint" style="margin-left:8px;opacity:.75">D / M / B</span>
+                </div>
+                <select id="cf-periodicity">
+                  <option value="D">D — Quotidien</option>
+                  <option value="M">M — Mensuel</option>
+                  <option value="B">B — Bimestriel</option>
+                </select>
+                <div class="hint" id="cf-help-periodicity"></div>
+              </label>
+            </div>
+
+            <div class="u-mt grid2">
+              <label class="field">
+                <div class="field__label">
+                  <span>Archivage</span>
+                </div>
+                <select id="cf-archiving">
+                  <option value="ON">ON</option>
+                  <option value="OFF">OFF</option>
+                </select>
+                <div class="hint" id="cf-help-archiving"></div>
+              </label>
+
+              <label class="field">
+                <div class="field__label">
+                  <span>Plateforme</span>
+                  <span class="hint" style="margin-left:8px;opacity:.75">PA / OTHER</span>
+                </div>
+                <select id="cf-platform">
+                  <option value="">— choisir —</option>
+                  <option value="PA">PA (Plateforme agréée)</option>
+                  <option value="OTHER">Autre (solution connectée)</option>
+                </select>
+                <div class="hint" id="cf-help-platform"></div>
+              </label>
+            </div>
+
+            <div class="u-mt grid2">
+              <label class="field">
+                <div class="field__label">
+                  <span>Émet des factures B2C ?</span>
+                </div>
+                <select id="cf-emits-b2c">
+                  <option value="0">Non</option>
+                  <option value="1">Oui</option>
+                </select>
+                <div class="hint" id="cf-help-b2c"></div>
+              </label>
+
+              <label class="field">
+                <div class="field__label">
+                  <span>International (hors France) ?</span>
+                </div>
+                <select id="cf-has-international">
+                  <option value="0">Non</option>
+                  <option value="1">Oui</option>
+                </select>
+                <div class="hint" id="cf-help-intl"></div>
+              </label>
+            </div>
+
+            <div class="u-mt">
+              <label class="field">
+                <div class="field__label">
+                  <span>Prochaine échéance (info)</span>
+                </div>
+                <input id="cf-next-due" type="date" />
+                <div class="hint" id="cf-help-nextdue"></div>
+              </label>
+            </div>
+
+            <div class="u-mt">
+              <div class="card__title">KPIs (file / flux)</div>
+              <div class="totals">
+                <div class="totals__row"><span>Flux 8</span><strong id="cf-kpi-flux8">0</strong></div>
+                <div class="totals__row"><span>Flux 9</span><strong id="cf-kpi-flux9">0</strong></div>
+                <div class="totals__row"><span>Flux 10</span><strong id="cf-kpi-flux10">0</strong></div>
+              </div>
+              <div class="hint">Ces compteurs doivent venir de calculs réels (pas juste déclaratifs).</div>
+            </div>
+
+            <div class="u-mt" id="cf-missing-box" style="display:none;">
+              <div class="card__title" style="color: rgba(239,68,68,.95)">Champs à compléter</div>
+              <div class="hint" id="cf-missing-list" style="color: rgba(239,68,68,.9)"></div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card__title">Agent IA — assistant réforme</div>
+            <div class="hint">
+              Je te pose quelques questions et je te dis si tu es concerné, et quoi remplir.
+            </div>
+
+            <div class="u-mt" style="display:flex;gap:8px;flex-wrap:wrap;">
+              <button class="btn" id="cf-ai-start">Démarrer diagnostic</button>
+              <button class="btn btn--secondary" id="cf-ai-recommend">Recommandations</button>
+              <button class="btn btn--ghost" id="cf-ai-check">Vérifier complétude</button>
+            </div>
+
+            <div class="u-mt" id="cf-ai-chat"
+                 style="height:360px;overflow:auto;border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:12px;">
+            </div>
+
+            <div class="u-mt" style="display:flex;gap:8px;">
+              <input id="cf-ai-input" type="text" placeholder="Réponds (ex: oui / non / je ne sais pas)…"
+                     style="flex:1;border-radius:12px;border:1px solid rgba(255,255,255,.15);background:transparent;color:inherit;padding:10px;" />
+              <button class="btn btn--secondary" id="cf-ai-send">Envoyer</button>
+            </div>
+
+            <div class="u-mt">
+              <div class="card__title">Résumé</div>
+              <div class="hint" id="cf-ai-summary">—</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Audit -->
+      <section class="page" data-page="audit">
+        <div class="grid2">
+          <div class="card">
+            <div class="card__title" data-i18n="audit.title">Lecteur de trace (PAF)</div>
+            <div class="hint" data-i18n="audit.hint">
+              Lecture du journal d’audit chaîné (append-only). Utile pour preuve PAF (empreintes SHA-256, séquences, actions).
+            </div>
+
+            <div class="auditToolbar">
+              <div class="auditToolbar__left">
+                <span class="auditPill" id="auditPathPill" data-i18n="audit.path_loading">log: (chargement…)</span>
+                <span class="auditPill" id="auditStatusPill" data-i18n="audit.status_ready">statut: prêt</span>
+              </div>
+
+            <div class="auditToolbar__right">
+              <label class="auditField">
+                <span class="hint auditField__label" data-i18n="audit.sinceSeq">sinceSeq</span>
+                <input id="auditSinceSeq" type="number" step="1" min="0" value="0" class="auditField__input" />
+              </label>
+
+              <label class="auditField">
+                <span class="hint auditField__label" data-i18n="audit.limit">limit</span>
+                <input id="auditLimit" type="number" step="1" min="1" value="250" class="auditField__input" />
+              </label>
+
+              <button class="btn btn--secondary" type="button" id="auditBtnRead" data-i18n="audit.read">Lire</button>
+              <button class="btn btn--secondary" type="button" id="auditBtnVerify" data-i18n="audit.verify">Vérifier</button>
+              <button class="btn btn--ghost" type="button" id="auditBtnCopy" data-i18n="audit.copy_json">Copier JSON</button>
+            </div>
+          </div>
+
+          <div class="auditGrid">
+            <div class="card auditCard">
+              <div class="card__title auditCard__title" data-i18n="audit.events">Événements</div>
+              <div class="hint auditCard__hint" data-i18n="audit.events_hint">Clique un item pour voir le détail.</div>
+              <div id="auditList" class="auditList"></div>
+            </div>
+
+            <div class="card auditCard">
+              <div class="card__title auditCard__title" data-i18n="audit.detail">Détail</div>
+              <div class="hint auditCard__hint" data-i18n="audit.detail_hint">JSON brut d’un événement (hash, prev_hash, seq, action…).</div>
+              <pre id="auditDetail" class="auditPre">{}</pre>
+            </div>
+          </div>
+
+            <div class="hint u-mt" data-i18n="audit.tip">
+              Astuce : commence par <strong>Vérifier</strong> (hash/chain/HMAC si activé), puis <strong>Lire</strong>.
+            </div>
+          </div>
+
+          <div class="card card--accent" id="auditResultsCard">
+            <div class="card__title" data-i18n="audit.controls.title">PAF – résultats</div>
+            <div class="hint" data-i18n="audit.controls.hint">
+              Résumé “preuve” : état de la chaîne, compteurs, derniers identifiants, et journal des actions.
+            </div>
+
+            <div class="auditResults u-mt">
+              <div class="auditResults__row">
+                <div class="hint">Verify</div>
+                <div id="auditVerifyResult" class="auditResultPill">—</div>
+              </div>
+
+              <div class="auditResults__row">
+                <div class="hint">Events loaded</div>
+                <div id="auditReadResult" class="auditResultPill">—</div>
+              </div>
+
+              <div class="auditResults__row">
+                <div class="hint">Last seq</div>
+                <div id="auditLastSeq" class="auditResultMono">—</div>
+              </div>
+
+              <div class="auditResults__row">
+                <div class="hint">Last hash</div>
+                <div id="auditLastHash" class="auditResultMono">—</div>
+              </div>
+
+              <div class="auditResults__log">
+                <div class="hint" style="opacity:.95;">Log</div>
+                <pre id="auditResultsLog" class="auditPre">Ready.</pre>
+              </div>
+            </div>
+
+            <div class="hint u-mt" style="opacity:.95;">
+              • <strong>audit:verify</strong> : vérifie chaîne + HMAC<br/>
+              • <strong>audit:read</strong> : lecture paginée (sinceSeq/limit)<br/>
+              • Preuve “humaine” : exports (PDF/UBL) + audit.
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+      <footer class="footer">
+        <div class="footer__left" data-i18n="footer.left">© 2025 - D2F Compliant doo</div>
+        <div class="footer__right" data-i18n="footer.right">Label SC et Label PA</div>
+      </footer>
+    </main>
+  </div>
+
+  <!-- Modal refus inbound -->
+  <div class="modal" id="rejectModal" aria-hidden="true" tabindex="-1">
+    <div class="modal__backdrop" data-modal-close></div>
+
+    <div class="modal__panel" role="dialog" aria-modal="true" aria-labelledby="rejectTitle">
+      <div class="modal__header">
+        <div class="modal__title" id="rejectTitle" data-i18n="reject.modal.title">Refuser la facture (acheteur – XP Z12-012)</div>
+        <button class="icon-btn" type="button" data-modal-close data-i18n-attr="aria-label:ui.close" aria-label="Fermer">✕</button>
+      </div>
+
+      <div class="modal__body">
+        <div class="grid2-modal">
+          <label class="field">
+            <div class="field__label">
+              <span data-i18n="reject.kind.label">Décision</span>
+              <span class="hint field__hint" data-i18n="reject.kind.hint">qui émet le statut</span>
+            </div>
+            <select id="rejectKind">
+              <option value="CREDITOR" data-i18n="reject.kind.creditor">Refus acheteur / créancier</option>
+              <option value="PLATFORM" data-i18n="reject.kind.platform">Rejet plateforme</option>
+            </select>
+          </label>
+
+          <label class="field">
+            <div class="field__label">
+              <span data-i18n="reject.code.label">Motif (code RFxx)</span>
+              <span class="hint field__hint" data-i18n="reject.code.norm">AFNOR</span>
+            </div>
+            <select id="rejectCodeSelect">
+              <option value="" data-i18n="ui.choose_reason">— choisir un motif —</option>
+            </select>
+          </label>
+
+          <label class="field">
+            <div class="field__label"><span data-i18n="reject.norm.label">Référence</span></div>
+            <input id="rejectNorm" type="text" disabled value="XP Z12-012 Annexe A v1.2" />
+          </label>
+        </div>
+
+        <label class="field u-mt">
+          <div class="field__label">
+            <span data-i18n="reject.comment.label">Commentaire</span>
+            <span id="rejectCommentReq" class="field__req" data-i18n="reject.comment_optional">commentaire facultatif</span>
+          </div>
+          <textarea id="rejectComment" rows="5" data-i18n-attr="placeholder:reject.comment_ph" placeholder="Ex: Montant incorrect, doublon, TVA erronée…"></textarea>
+        </label>
+
+        <div class="hint u-mt" data-i18n="reject.hint">
+          Le refus est une décision <strong>acheteur</strong> (statut <code>REFUSED</code>).
+          <br/>Le commentaire devient <strong>obligatoire</strong> pour <strong>RF99</strong>.
+        </div>
+      </div>
+
+      <div class="modal__footer">
+        <button class="btn btn--ghost" type="button" data-modal-close data-i18n="ui.cancel">Annuler</button>
+        <button class="btn btn--danger" type="button" id="rejectConfirmBtn" data-i18n="reject.confirm">Refuser</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal encaissement -->
+  <div class="modal" id="paymentModal" aria-hidden="true" tabindex="-1">
+    <div class="modal__backdrop" data-modal-close></div>
+
+    <div class="modal__panel" role="dialog" aria-modal="true" aria-labelledby="paymentTitle">
+      <div class="modal__header">
+        <div class="modal__title" id="paymentTitle" data-i18n="pay.modal.title">Enregistrer un encaissement</div>
+        <button class="icon-btn" type="button" data-modal-close data-i18n-attr="aria-label:ui.close" aria-label="Fermer">✕</button>
+      </div>
+
+      <div class="modal__body">
+        <div class="grid2-modal">
+          <label class="field">
+            <div class="field__label">
+              <span data-i18n="pay.modal.amount">Montant encaissé</span>
+              <span class="hint field__hint" data-i18n="pay.modal.partial_or_total">partiel ou total</span>
+            </div>
+            <input id="payAmount" type="number" step="0.01" data-i18n-attr="placeholder:common.money_ph" placeholder="0.00" />
+          </label>
+
+          <label class="field">
+            <div class="field__label"><span data-i18n="pay.modal.date">Date</span></div>
+            <input id="payDate" type="date" />
+          </label>
+        </div>
+
+        <div class="grid2-modal u-mt">
+          <label class="field">
+            <div class="field__label"><span data-i18n="pay.modal.method">Mode</span></div>
+            <select id="payMethod">
+              <option value="CARD" data-i18n="pay.method.card">Carte</option>
+              <option value="TRANSFER" data-i18n="pay.method.transfer">Virement</option>
+              <option value="CASH" data-i18n="pay.method.cash">Espèces</option>
+              <option value="CHECK" data-i18n="pay.method.check">Chèque</option>
+              <option value="SEPA" data-i18n="pay.method.sepa">Prélèvement</option>
+              <option value="OTHER" data-i18n="pay.method.other">Autre</option>
+            </select>
+          </label>
+
+          <label class="field">
+            <div class="field__label"><span data-i18n="pay.modal.reference_optional">Référence (optionnel)</span></div>
+            <input id="payRef" type="text" data-i18n-attr="placeholder:pay.modal.reference_placeholder" placeholder="Transaction / remittance…" />
+          </label>
+        </div>
+
+        <div class="hint u-mt" data-i18n="pay.modal.draft_hint">
+          Si la facture est en <strong>brouillon</strong>, elle sera <strong>validée automatiquement</strong> avant l’enregistrement du paiement.
+        </div>
+      </div>
+
+      <div class="modal__footer">
+        <button class="btn btn--ghost" type="button" data-modal-close data-i18n="ui.cancel">Annuler</button>
+        <button class="btn" type="button" id="payConfirmBtn" data-i18n="pay.modal.confirm">Enregistrer</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="./xp-z12-012.js"></script>
+  <script src="./audit-ui.js"></script>
+  <script src="./renderer/web-electron-shim.js"></script>
+  <script src="./renderer/web-api-shim.js"></script>
+  <script src="./dashboard-ui.js"></script>
+  <script src="./app.js"></script>
+
+  <div id="clientsImportModal" class="modal" aria-hidden="true">
+    <div class="modal__backdrop" data-modal-close></div>
+
+    <div class="modal__panel" role="dialog" aria-modal="true" aria-labelledby="clientsImportTitle">
+      <div class="modal__header">
+        <div class="modal__title" id="clientsImportTitle" data-i18n="clients.import.title">Importer des clients (CSV)</div>
+        <button class="icon-btn" type="button" data-modal-close data-i18n-attr="aria-label:ui.close" aria-label="Fermer">✕</button>
+      </div>
+
+      <div class="modal__body">
+        <div class="grid2-modal">
+          <label class="field">
+            <div class="field__label">
+              <span data-i18n="clients.import.file">Fichier CSV</span>
+            </div>
+            <input id="clImportFile" type="file" accept=".csv,text/csv" />
+            <div class="hint" data-i18n="clients.import.file_hint">UTF-8 recommandé. Séparateurs supportés: , ; tab |</div>
+          </label>
+
+          <label class="field">
+            <div class="field__label"><span data-i18n="clients.import.options">Options</span></div>
+            <select id="clImportDelimiter">
+              <option value="auto" data-i18n="clients.import.delim_auto">Auto-détection</option>
+              <option value=",">,</option>
+              <option value=";">;</option>
+              <option value="\t" data-i18n="clients.import.delim_tab">Tab</option>
+              <option value="|">|</option>
+            </select>
+
+            <div class="toggle u-mt--sm">
+              <input id="clImportHasHeader" type="checkbox" checked />
+              <label for="clImportHasHeader" data-i18n="clients.import.has_header">La première ligne contient les en-têtes</label>
+            </div>
+
+            <div class="toggle">
+              <input id="clImportUpdateExisting" type="checkbox" checked />
+              <label for="clImportUpdateExisting" data-i18n="clients.import.update_existing">Mettre à jour si email/VAT/ID existe</label>
+            </div>
+          </label>
+        </div>
+
+        <div class="u-mt">
+          <div class="card__title" data-i18n="clients.import.mapping">Correspondance des colonnes</div>
+          <div id="clImportMapping" class="auditPre" style="min-height: 160px;"></div>
+        </div>
+
+        <div class="u-mt">
+          <div class="card__title" data-i18n="clients.import.preview">Prévisualisation</div>
+          <div id="clImportPreview" class="auditPre" style="min-height: 180px;"></div>
+        </div>
+
+        <div class="u-mt">
+          <div class="card__title" data-i18n="clients.import.report">Rapport</div>
+          <div id="clImportReport" class="auditPre" style="min-height: 120px;"></div>
+        </div>
+      </div>
+
+      <div class="modal__footer">
+        <button class="btn btn--ghost" type="button" data-modal-close data-i18n="ui.cancel">Annuler</button>
+        <button class="btn" type="button" id="clImportAnalyzeBtn" data-i18n="clients.import.analyze">Analyser</button>
+        <button class="btn btn--secondary" type="button" id="clImportRunBtn" data-i18n="clients.import.run">Importer</button>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>
