@@ -658,7 +658,10 @@ function renderToolbar(moduleKey) {
     }
 
     renderToolbar(cur);
-    refreshModule(cur).catch(() => {});
+    await refreshModule(cur).catch(() => {});
+    if (cur === "dashboard" && typeof window.d2fDashboardRefresh === "function") {
+      await window.d2fDashboardRefresh();
+    }
     setStatus(t("status.language_changed", "Langue changée"));
   });
 

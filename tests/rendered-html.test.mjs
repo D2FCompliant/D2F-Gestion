@@ -19,7 +19,7 @@ test("server-renders the D2F Gestion cockpit", async () => {
   assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
   const html = await response.text();
   assert.match(html, /<title>D2F Gestion — Pilotez votre activité<\/title>/i);
-  assert.match(html, /src="\/erp\/index\.html\?v=20260710-payments-i18n"/);
+  assert.match(html, /src="\/erp\/index\.html\?v=20260710-payments-i18n-2"/);
   assert.match(html, /title="D2F Gestion"/);
   assert.match(html, /og\.png/);
   assert.doesNotMatch(html, /codex-preview|Your site is taking shape|react-loading-skeleton/i);
