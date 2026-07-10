@@ -1,0 +1,126 @@
+{
+  "name": "d2f-gestion",
+  "version": "1.0.0",
+  "private": true,
+  "main": "Electron/main.js",
+  "scripts": {
+    "postinstall": "electron-builder install-app-deps",
+    "dev": "ELECTRON_DEV=1 electron .",
+    "start": "electron .",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder",
+    "clean": "rm -rf dist node_modules/.cache"
+  },
+  "overrides": {
+    "node-gyp": "^10.0.0"
+  },
+  "dependencies": {
+    "better-sqlite3": "^9.4.0",
+    "electron-updater": "^6.6.2",
+    "express": "^5.2.1",
+    "fast-xml-parser": "^5.3.3",
+    "fs-extra": "^11.3.3",
+    "keytar": "^7.9.0",
+    "node-fetch": "^2.7.0",
+    "nodemailer": "^9.0.1",
+    "pdfjs-dist": "^5.4.449",
+    "pdfkit": "^0.17.2",
+    "raw-body": "^3.0.2",
+    "saxon-js": "^2.7.0",
+    "ssh2-sftp-client": "^12.0.1",
+    "xslt-processor": "^4.8.5"
+  },
+  "devDependencies": {
+    "@electron/rebuild": "^3.7.2",
+    "electron": "^20.3.0",
+    "electron-builder": "^24.13.3",
+    "electron-rebuild": "^3.2.9"
+  },
+  "build": {
+    "appId": "com.d2f.gestion",
+    "productName": "D2F Gestion",
+    "copyright": "© D2F Compliant d.o.o",
+    "directories": {
+      "output": "dist"
+    },
+    "publish": [
+      {
+        "provider": "generic",
+        "url": "https://updates.d2f.com/d2f-gestion/"
+      }
+    ],
+    "files": [
+      "Electron/**",
+      "inbound/**",
+      "renderer/**",
+      "index.html",
+      "styles.css",
+      "app.js",
+      "package.json",
+      "!dist/**",
+      "!.git/**",
+      "!**/*.map",
+      "!**/node_modules/.cache/**"
+    ],
+    "extraResources": [
+      {
+        "from": "Electron/resources/rejection-reasons.xp-z12-012.v1.2.json",
+        "to": "rejection-reasons.xp-z12-012.v1.2.json"
+      },
+      {
+        "from": "renderer/i18n",
+        "to": "i18n"
+      },
+      {
+        "from": "Electron/config/default.json",
+        "to": "config/default.json"
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    },
+    "asar": true,
+    "npmRebuild": true,
+    "mac": {
+      "icon": "build/icon.icns",
+      "category": "public.app-category.business",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        }
+      ],
+      "identity": null
+    },
+    "dmg": {
+      "writeUpdateInfo": false
+    }
+  }
+}
