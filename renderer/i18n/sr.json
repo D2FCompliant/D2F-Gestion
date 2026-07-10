@@ -411,7 +411,7 @@
   "audit.controls.hint": "Za audit: append-only, ulančan, vremenski označen, idealno zapečaćen.",
   "audit.controls.bullets": "• audit:verify: proverava lanac i HMAC ako postoji\n• audit:read: paginirano čitanje (sinceSeq/limit)\n• Dokaz: exports (PDF/UBL) + audit.",
 
-  "footer.left": "© 2025 - D2F Compliant doo",
+  "footer.left": "© D2F Compliant d.o.o 2026",
   "footer.right": "SC oznaka i PA oznaka",
 
   "exports.pdf_quote_ok": "PDF ponude izvezen: {path}",

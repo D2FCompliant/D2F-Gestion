@@ -411,7 +411,7 @@
   "audit.controls.hint": "Per l’audit: append-only, concatenato, con marca temporale, idealmente sigillato.",
   "audit.controls.bullets": "• audit:verify: verifica la catena e l’HMAC se presente\n• audit:read: lettura paginata (sinceSeq/limit)\n• Prova: exports (PDF/UBL) + audit.",
 
-  "footer.left": "© 2025 - D2F Compliant doo",
+  "footer.left": "© D2F Compliant d.o.o 2026",
   "footer.right": "Marcatura SC e marcatura PA",
 
   "exports.pdf_quote_ok": "PDF del preventivo esportato: {path}",

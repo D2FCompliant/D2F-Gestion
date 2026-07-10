@@ -438,7 +438,7 @@
   "audit.controls.hint": "For audit: append-only, chained, timestamped, ideally sealed.",
   "audit.controls.bullets": "• audit:verify : verifies the chain and HMAC if present\n• audit:read : paginated read (sinceSeq/limit)\n• Evidence: exports (PDF/UBL) + audit.",
 
-  "footer.left": "© 2025 - D2F Compliant doo",
+  "footer.left": "© D2F Compliant d.o.o 2026",
   "footer.right": "SC Label and PA Label",
 
   "exports.pdf_quote_ok": "Quote PDF exported: {path}",
