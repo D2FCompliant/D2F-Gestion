@@ -37,6 +37,10 @@ test("keeps Supabase access server-side and ships its schema", async () => {
   assert.match(route, /getOwnerEmail/);
   assert.match(client, /SUPABASE_SERVICE_ROLE_KEY/);
   assert.match(client, /persistSession: false/);
+  assert.ok(
+    client.indexOf("D2F_OWNER_EMAIL") < client.indexOf("oai-authenticated-user-email"),
+    "the configured D2F owner must take precedence over the hosting identity",
+  );
   assert.match(migration, /enable row level security/);
   assert.match(migration, /revoke all on public\.d2f_records from anon, authenticated/);
   assert.match(envExample, /SUPABASE_URL/);
