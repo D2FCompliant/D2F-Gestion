@@ -3949,9 +3949,8 @@ textarea{ resize: vertical; }
   }
 }
 
-/* Company – compact settings dashboard without stretched empty cards */
-.companyOverviewGrid,
-.companyOperationsGrid{
+/* Company – independent columns and compact disclosure sections */
+.companySettingsColumns{
   display:grid;
   grid-template-columns:minmax(0,1.08fr) minmax(360px,.92fr);
   gap:14px;
@@ -3959,23 +3958,108 @@ textarea{ resize: vertical; }
   align-items:start;
 }
 
-.companyOperationsGrid{ margin-top:14px; }
-
-.companySideStack,
-.companyConnectorStack{
-  display:grid;
-  gap:14px;
+.companyPrimaryStack,
+.companySecondaryStack{
+  display:flex;
   min-width:0;
-  align-content:start;
+  flex-direction:column;
+  gap:14px;
 }
 
 .companyIdentityCard,
 .companyBrandingCard,
-.companySmtpCard,
-.companyTermsCard,
-.companyOperationsGrid .integrationCard{
-  align-self:start;
+.companyDisclosureCard{ align-self:stretch; }
+
+.companyDisclosureCard{
+  overflow:hidden;
+  padding:0;
 }
+
+.companySectionSummary{
+  display:flex;
+  min-height:54px;
+  align-items:center;
+  gap:10px;
+  padding:12px 14px;
+  cursor:pointer;
+  list-style:none;
+  user-select:none;
+}
+
+.companySectionSummary::-webkit-details-marker,
+.companyAdvancedDisclosure > summary::-webkit-details-marker{ display:none; }
+
+.companySectionSummary > span:first-child{
+  min-width:0;
+  flex:1;
+  color:var(--text);
+  font-weight:950;
+  line-height:1.25;
+}
+
+.companySectionSummary::after{
+  content:"+";
+  display:grid;
+  width:26px;
+  height:26px;
+  flex:0 0 26px;
+  place-items:center;
+  border:1px solid rgba(11,18,32,.10);
+  border-radius:999px;
+  background:rgba(99,102,241,.07);
+  color:#5154b8;
+  font-size:18px;
+  font-weight:800;
+}
+
+.companyDisclosureCard[open] > .companySectionSummary::after{ content:"−"; }
+
+.companyDisclosureCard[open] > .companySectionSummary{
+  border-bottom:1px solid rgba(11,18,32,.08);
+  background:rgba(99,102,241,.035);
+}
+
+.companyDisclosureBody{ padding:12px 14px 14px; }
+
+.companyConnectionBadge{
+  max-width:46%;
+  overflow:hidden;
+  padding:4px 8px;
+  border:1px solid rgba(11,18,32,.10);
+  border-radius:999px;
+  background:rgba(11,18,32,.045);
+  color:var(--muted);
+  font-size:10px;
+  font-weight:850;
+  line-height:1.2;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.companyAdvancedDisclosure{
+  border:1px solid rgba(11,18,32,.10);
+  border-radius:14px;
+  background:rgba(99,102,241,.035);
+}
+
+.companyAdvancedDisclosure > summary{
+  padding:9px 11px;
+  cursor:pointer;
+  color:var(--muted2);
+  font-size:12px;
+  font-weight:800;
+  list-style:none;
+}
+
+.companyAdvancedDisclosure > summary::after{
+  content:"+";
+  float:right;
+  color:#5154b8;
+  font-size:15px;
+}
+
+.companyAdvancedDisclosure[open] > summary::after{ content:"−"; }
+.companyAdvancedDisclosure textarea{ margin:0 10px 10px; width:calc(100% - 20px); }
 
 .companyBrandingCard .upload{
   padding:10px;
@@ -4007,14 +4091,21 @@ textarea{ resize: vertical; }
 .companySmtpForm{ gap:9px; }
 
 @media (max-width:1100px){
-  .companyOverviewGrid,
-  .companyOperationsGrid{
-    grid-template-columns:minmax(0,1fr);
+  .companySettingsColumns{
+    display:flex;
+    flex-direction:column;
     gap:10px;
   }
 
-  .companySideStack,
-  .companyConnectorStack{ gap:10px; }
+  .companyPrimaryStack,
+  .companySecondaryStack{ display:contents; }
+
+  .companyIdentityCard{ order:1; }
+  .companyBrandingCard{ order:2; }
+  .companySmtpCard{ order:3; }
+  .companyTermsCard{ order:4; }
+  #company-einvoice-card{ order:5; }
+  .companyArchiveCard{ order:6; }
 }
 
 @media (max-width:760px){
@@ -4038,6 +4129,13 @@ textarea{ resize: vertical; }
     min-height:40px;
     font-size:14px;
   }
+
+  .companySectionSummary{
+    min-height:58px;
+    padding:12px;
+  }
+
+  .companyConnectionBadge{ max-width:42%; }
 }
 
 @media (max-width:380px){

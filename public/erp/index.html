@@ -15,7 +15,7 @@
                  object-src 'none';
                  base-uri 'none'">
 
-  <link rel="stylesheet" href="./styles.css?v=20260716-company-v13" />
+  <link rel="stylesheet" href="./styles.css?v=20260716-company-v14" />
 </head>
 
 <body>
@@ -80,7 +80,8 @@
 
       <!-- Société -->
       <section class="page" data-page="company">
-        <div class="companyOverviewGrid">
+        <div class="companySettingsColumns">
+          <div class="companyPrimaryStack">
           <div class="card companyIdentityCard">
             <div class="card__title" data-i18n="company.identity.title">Identité (EN16931 BG-4)</div>
             <div class="form">
@@ -107,10 +108,10 @@
                   </select>
                 </label>
               </div>
-              <label class="u-mt">
-                <span data-i18n="company.meta_json">Meta JSON (optionnel)</span>
+              <details class="companyAdvancedDisclosure">
+                <summary data-i18n="company.meta_json">Meta JSON (optionnel)</summary>
                 <textarea id="co-meta-json" rows="3" placeholder='{"objective_annual_ca":250000}'></textarea>
-              </label>
+              </details>
               <div class="row2">
                 <label>
                   <span data-i18n="company.country">Pays (BT-31) *</span>
@@ -159,7 +160,45 @@
             </div>
           </div>
 
-          <div class="companySideStack">
+          <details class="card companyTermsCard companyDisclosureCard">
+            <summary class="companySectionSummary">
+              <span data-i18n="company.cgv.title">CGV & Paiement (PDF)</span>
+            </summary>
+            <div class="companyDisclosureBody">
+              <div class="hint" data-i18n="company.cgv.hint">Ces informations seront imprimées sur les PDF devis & factures.</div>
+              <div class="form u-mt">
+                <label>
+                  <span data-i18n="company.cgv.text">CGV (texte imprimé)</span>
+                  <textarea id="co-cgv-text" rows="4" data-i18n-attr="placeholder:company.cgv.ph" placeholder="Conditions générales de vente…"></textarea>
+                </label>
+                <div class="row2">
+                  <label>
+                    <span data-i18n="company.bank.name">Banque</span>
+                    <input id="co-bank-name" type="text" data-i18n-attr="placeholder:company.bank.name_ph" placeholder="Nom de la banque" />
+                  </label>
+                  <label>
+                    <span data-i18n="company.bank.holder">Titulaire du compte</span>
+                    <input id="co-bank-holder" type="text" data-i18n-attr="placeholder:company.bank.holder_ph" placeholder="D2F Compliant d.o.o" />
+                  </label>
+                </div>
+                <label>
+                  <span data-i18n="company.bank.iban">IBAN</span>
+                  <input id="co-bank-iban" type="text" data-i18n-attr="placeholder:company.bank.iban_ph" placeholder="RS..." />
+                </label>
+                <label>
+                  <span data-i18n="company.bank.bic">BIC / SWIFT</span>
+                  <input id="co-bank-bic" type="text" data-i18n-attr="placeholder:common.ellipsis" placeholder="..." />
+                </label>
+                <label>
+                  <span data-i18n="company.bank.extra">Infos complémentaires (optionnel)</span>
+                  <input id="co-bank-extra" type="text" data-i18n-attr="placeholder:company.bank.extra_ph" placeholder="Référence virement / domiciliation…" />
+                </label>
+              </div>
+            </div>
+          </details>
+          </div>
+
+          <div class="companySecondaryStack">
           <div class="card companyBrandingCard">
             <div class="card__title" data-i18n="company.branding.title">Branding PDF</div>
             <div class="hint" data-i18n="company.branding.hint">
@@ -203,9 +242,11 @@
             </div>
           </div>
 
-          <div class="card companySmtpCard">
-            <div class="card__title" data-i18n="company.smtp.title">Configuration Email (SMTP)</div>
-            <div class="form companySmtpForm">
+          <details class="card companySmtpCard companyDisclosureCard">
+            <summary class="companySectionSummary">
+              <span data-i18n="company.smtp.title">Configuration Email (SMTP)</span>
+            </summary>
+            <div class="form companySmtpForm companyDisclosureBody">
               <div class="row2">
                 <label>
                   <span data-i18n="company.smtp.host">SMTP Host</span>
@@ -231,52 +272,14 @@
                 <input id="company-smtp-from-name" type="text" placeholder="D2F Compliant">
               </label>
             </div>
-          </div>
-          </div>
-        </div>
+          </details>
 
-        <div class="companyOperationsGrid">
-          <div class="card companyTermsCard">
-            <div class="card__title" data-i18n="company.cgv.title">CGV & Paiement (PDF)</div>
-            <div class="hint" data-i18n="company.cgv.hint">Ces informations seront imprimées sur les PDF devis & factures.</div>
-
-            <div class="form u-mt">
-              <label>
-                <span data-i18n="company.cgv.text">CGV (texte imprimé)</span>
-                <textarea id="co-cgv-text" rows="4" data-i18n-attr="placeholder:company.cgv.ph" placeholder="Conditions générales de vente…"></textarea>
-              </label>
-
-              <div class="row2">
-                <label>
-                  <span data-i18n="company.bank.name">Banque</span>
-                  <input id="co-bank-name" type="text" data-i18n-attr="placeholder:company.bank.name_ph" placeholder="Nom de la banque" />
-                </label>
-                <label>
-                  <span data-i18n="company.bank.holder">Titulaire du compte</span>
-                  <input id="co-bank-holder" type="text" data-i18n-attr="placeholder:company.bank.holder_ph" placeholder="D2F Compliant d.o.o" />
-                </label>
-              </div>
-
-              <label>
-                <span data-i18n="company.bank.iban">IBAN</span>
-                <input id="co-bank-iban" type="text" data-i18n-attr="placeholder:company.bank.iban_ph" placeholder="RS..." />
-              </label>
-
-              <label>
-                <span data-i18n="company.bank.bic">BIC / SWIFT</span>
-                <input id="co-bank-bic" type="text" data-i18n-attr="placeholder:common.ellipsis" placeholder="..." />
-              </label>
-
-              <label>
-                <span data-i18n="company.bank.extra">Infos complémentaires (optionnel)</span>
-                <input id="co-bank-extra" type="text" data-i18n-attr="placeholder:company.bank.extra_ph" placeholder="Référence virement / domiciliation…" />
-              </label>
-            </div>
-          </div>
-
-          <div class="companyConnectorStack">
-          <div class="card integrationCard" id="company-einvoice-card">
-            <div class="card__title" id="cf-pa-title" data-i18n="integrations.country.title">Connexion nationale de facturation électronique</div>
+          <details class="card integrationCard companyDisclosureCard" id="company-einvoice-card">
+            <summary class="companySectionSummary">
+              <span id="cf-pa-title" data-i18n="integrations.country.title">Connexion nationale de facturation électronique</span>
+              <span class="companyConnectionBadge" id="cf-pa-status" data-i18n="integrations.not_configured">Non configuré</span>
+            </summary>
+            <div class="companyDisclosureBody">
             <div class="hint" id="cf-pa-hint" data-i18n="integrations.country.hint">Le profil attendu est déterminé par le pays déclaré dans la fiche entreprise.</div>
             <div class="countryProfile u-mt">
               <span data-i18n="integrations.country_profile">Profil réglementaire</span>
@@ -306,13 +309,17 @@
               </div>
               <label class="check"><input id="cf-pa-enabled" type="checkbox" /><span data-i18n="integrations.enabled">Connecteur activé</span></label>
               <div class="actions"><button class="btn" id="cf-pa-save" type="button" data-i18n="action.save">Enregistrer</button><button class="btn btn--secondary" id="cf-pa-test" type="button" data-i18n="integrations.test">Tester la connexion</button></div>
-              <div class="hint" id="cf-pa-status" data-i18n="integrations.not_configured">Non configuré</div>
               <div class="hint integrationDisclaimer" data-i18n="integrations.test_disclaimer">Une configuration enregistrée n’est pas une preuve de conformité. Le statut connecté exige un test dans l’environnement du prestataire ; la production exige ensuite ses habilitations et recettes métier.</div>
             </div>
-          </div>
+            </div>
+          </details>
 
-          <div class="card integrationCard">
-            <div class="card__title" data-i18n="integrations.archive.title">Archivage électronique à valeur probante</div>
+          <details class="card integrationCard companyArchiveCard companyDisclosureCard">
+            <summary class="companySectionSummary">
+              <span data-i18n="integrations.archive.title">Archivage électronique à valeur probante</span>
+              <span class="companyConnectionBadge" id="cf-archive-status" data-i18n="integrations.not_configured">Non configuré</span>
+            </summary>
+            <div class="companyDisclosureBody">
             <div class="hint" data-i18n="integrations.archive.hint">Dépôt automatique des PDF dans le SAE choisi avec conservation du reçu de dépôt.</div>
             <div class="form u-mt">
               <div class="row2">
@@ -329,9 +336,9 @@
               </div>
               <label class="check"><input id="cf-archive-enabled" type="checkbox" /><span data-i18n="integrations.enabled">Connecteur activé</span></label>
               <div class="actions"><button class="btn" id="cf-archive-save" type="button" data-i18n="action.save">Enregistrer</button><button class="btn btn--secondary" id="cf-archive-test" type="button" data-i18n="integrations.test">Tester la connexion</button></div>
-              <div class="hint" id="cf-archive-status" data-i18n="integrations.not_configured">Non configuré</div>
             </div>
-          </div>
+            </div>
+          </details>
           </div>
         </div>
 
@@ -1548,7 +1555,7 @@
   <script src="./renderer/web-electron-shim.js?v=20260716-web-pdf-pa-v1"></script>
   <script src="./renderer/web-api-shim.js?v=20260716-web-pdf-pa-v1"></script>
   <script src="./dashboard-ui.js?v=20260716-web-pdf-pa-v1"></script>
-  <script src="./app.js?v=20260716-company-v13"></script>
+  <script src="./app.js?v=20260716-company-v14"></script>
 
   <div id="clientsImportModal" class="modal" aria-hidden="true">
     <div class="modal__backdrop" data-modal-close></div>
