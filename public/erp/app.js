@@ -790,6 +790,13 @@ function showPage(key) {
   for (const p of dom.pages()) p.classList.toggle("is-active", p.dataset.page === key);
   document.querySelectorAll(".nav__item").forEach((b) => b.classList.toggle("is-active", b.dataset.module === key));
 
+  const activeNavItem = document.querySelector(`.nav__item[data-module="${key}"]`);
+  if (activeNavItem && window.matchMedia?.("(max-width: 760px)").matches) {
+    window.requestAnimationFrame(() => {
+      activeNavItem.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+    });
+  }
+
   const elTitle = dom.title();
   const elDesc = dom.desc();
 
@@ -3195,13 +3202,13 @@ function renderPaymentOverview(invoices, payments) {
           const invoiceId = String(invoice.id || "");
           return `
             <div class="paymentsTable__row">
-              <div><button class="paymentInvoiceButton" type="button" data-payment-invoice="${esc(invoiceId)}">${esc(invoice.invoice_number || invoice.number || invoiceId)}</button></div>
-              <div class="paymentsTable__muted" title="${esc(invoice.client_name || "")}">${esc(invoice.client_name || "—")}</div>
-              <div><span class="paymentStatus paymentStatus--${row.paymentStatus}">${esc(paymentStatusText(row.paymentStatus))}</span></div>
-              <div class="paymentsTable__amount">${money(row.grossDue)} €</div>
-              <div class="paymentsTable__amount" title="${esc(row.creditNumbers.join(", "))}">${row.credited > 0 ? `-${money(row.credited)} €` : "—"}</div>
-              <div class="paymentsTable__amount">${money(row.paid)} €</div>
-              <div class="paymentsTable__amount">${money(row.remaining)} €</div>
+              <div data-label="${esc(t("payments.col.invoice", "Facture"))}"><button class="paymentInvoiceButton" type="button" data-payment-invoice="${esc(invoiceId)}">${esc(invoice.invoice_number || invoice.number || invoiceId)}</button></div>
+              <div class="paymentsTable__muted" data-label="${esc(t("payments.col.client", "Client"))}" title="${esc(invoice.client_name || "")}">${esc(invoice.client_name || "—")}</div>
+              <div data-label="${esc(t("payments.col.status", "Statut"))}"><span class="paymentStatus paymentStatus--${row.paymentStatus}">${esc(paymentStatusText(row.paymentStatus))}</span></div>
+              <div class="paymentsTable__amount" data-label="${esc(t("payments.col.total", "Total"))}">${money(row.grossDue)} €</div>
+              <div class="paymentsTable__amount" data-label="${esc(t("payments.col.credited", "Avoirs"))}" title="${esc(row.creditNumbers.join(", "))}">${row.credited > 0 ? `-${money(row.credited)} €` : "—"}</div>
+              <div class="paymentsTable__amount" data-label="${esc(t("payments.col.paid", "Encaissé"))}">${money(row.paid)} €</div>
+              <div class="paymentsTable__amount" data-label="${esc(t("payments.col.remaining", "Reste"))}">${money(row.remaining)} €</div>
             </div>
           `;
         }).join("")}
@@ -3309,13 +3316,13 @@ async function renderPaymentsPage() {
           const reference = String(payment?.reference || payment?.notes || "");
           return `
             <div class="paymentsTable__row paymentsTable__row--payment">
-              <div>${esc(String(payment?.date || payment?.payment_date || "—"))}</div>
-              <div>${esc(linkedInvoice.invoice_number || linkedInvoice.number || "—")}</div>
-              <div class="paymentsTable__muted" title="${esc(linkedInvoice.client_name || "")}">${esc(linkedInvoice.client_name || "—")}</div>
-              <div>${esc(methodLabels[method] || method)}</div>
-              <div class="paymentsTable__muted" title="${esc(reference)}">${esc(reference || "—")}</div>
-              <div class="paymentsTable__amount">${money(Number(payment?.amount || 0))} ${esc(String(payment?.currency || "EUR").toUpperCase())}</div>
-              <div class="paymentsTable__amount"><button type="button" class="paymentDeleteButton" data-paydel="${esc(paymentId)}" ${paymentId ? "" : "disabled"}>${t("action.delete", "Supprimer")}</button></div>
+              <div data-label="${esc(t("pay.col.date", "Date"))}">${esc(String(payment?.date || payment?.payment_date || "—"))}</div>
+              <div data-label="${esc(t("payments.col.invoice", "Facture"))}">${esc(linkedInvoice.invoice_number || linkedInvoice.number || "—")}</div>
+              <div class="paymentsTable__muted" data-label="${esc(t("payments.col.client", "Client"))}" title="${esc(linkedInvoice.client_name || "")}">${esc(linkedInvoice.client_name || "—")}</div>
+              <div data-label="${esc(t("pay.col.method", "Moyen"))}">${esc(methodLabels[method] || method)}</div>
+              <div class="paymentsTable__muted" data-label="${esc(t("pay.col.reference", "Référence / notes"))}" title="${esc(reference)}">${esc(reference || "—")}</div>
+              <div class="paymentsTable__amount" data-label="${esc(t("pay.col.amount", "Montant"))}">${money(Number(payment?.amount || 0))} ${esc(String(payment?.currency || "EUR").toUpperCase())}</div>
+              <div class="paymentsTable__amount" data-label="${esc(t("pay.col.action", "Action"))}"><button type="button" class="paymentDeleteButton" data-paydel="${esc(paymentId)}" ${paymentId ? "" : "disabled"}>${t("action.delete", "Supprimer")}</button></div>
             </div>
           `;
         }).join("")}
@@ -3392,7 +3399,7 @@ function renderLines(container, lines, onChange, onRemove, readOnly = false) {
         }
       </div>
 
-      <div class="t-right">
+      <div class="t-right" data-label="${esc(t("lines.qty", "Qté"))}">
         <input
           class="cell-input"
           data-k="quantity"
@@ -3404,7 +3411,7 @@ function renderLines(container, lines, onChange, onRemove, readOnly = false) {
         >
       </div>
 
-      <div class="t-right">
+      <div class="t-right" data-label="${esc(t("lines.unit_price_ht", "PU HT"))}">
         <input
           class="cell-input"
           data-k="unit_price_ht"
@@ -3416,7 +3423,7 @@ function renderLines(container, lines, onChange, onRemove, readOnly = false) {
         >
       </div>
 
-      <div class="t-right">
+      <div class="t-right" data-label="${esc(t("lines.vat_percent", "TVA%"))}">
         <input
           class="cell-input"
           data-k="tva_percent"
@@ -3428,7 +3435,7 @@ function renderLines(container, lines, onChange, onRemove, readOnly = false) {
         >
       </div>
 
-      <div class="t-right">
+      <div class="t-right" data-label="${esc(t("lines.line_total_ht", "Total HT"))}">
         <strong data-linetotal="${idx}">${money(lt.ht)}</strong>
       </div>
 

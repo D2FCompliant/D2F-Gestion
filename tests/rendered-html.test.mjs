@@ -26,8 +26,28 @@ test("server-renders the D2F Gestion cockpit", async () => {
   assert.doesNotMatch(html, /codex-preview|Your site is taking shape|react-loading-skeleton/i);
 
   const shell = await readFile(new URL("../app/session-shell.tsx", import.meta.url), "utf8");
-  assert.match(shell, /src="\/erp\/index\.html\?v=20260716-quote-lifecycle-v5"/);
+  assert.match(shell, /src="\/erp\/index\.html\?v=20260716-mobile-v7"/);
   assert.match(shell, /title="D2F Gestion"/);
+});
+
+test("ships a touch-first smartphone layout", async () => {
+  const [styles, app, shellStyles, html] = await Promise.all([
+    readFile(new URL("../public/erp/styles.css", import.meta.url), "utf8"),
+    readFile(new URL("../public/erp/app.js", import.meta.url), "utf8"),
+    readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
+    readFile(new URL("../public/erp/index.html", import.meta.url), "utf8"),
+  ]);
+  assert.match(html, /styles\.css\?v=20260716-mobile-v7/);
+  assert.match(html, /app\.js\?v=20260716-mobile-v7/);
+  assert.match(styles, /@media \(max-width: 760px\)/);
+  assert.match(styles, /position:fixed;\s*z-index:1000;\s*left:0;\s*right:0;\s*bottom:0/);
+  assert.match(styles, /grid-template-columns:minmax\(0,1fr\) minmax\(0,1fr\) !important/);
+  assert.match(styles, /\.paymentsTable__row--head\{ display:none !important; \}/);
+  assert.match(app, /scrollIntoView\(\{ behavior: "smooth", block: "nearest", inline: "center" \}\)/);
+  assert.match(app, /data-label="\$\{esc\(t\("lines\.qty"/);
+  assert.match(app, /data-label="\$\{esc\(t\("payments\.col\.invoice"/);
+  assert.match(shellStyles, /\.app-session-shell \{ grid-template-rows:64px minmax\(0,1fr\); \}/);
+  assert.match(shellStyles, /\.auth-brand h1 \{ font-size:27px/);
 });
 
 test("keeps Supabase access tenant-scoped and server-side", async () => {

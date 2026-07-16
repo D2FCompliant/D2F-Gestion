@@ -3208,3 +3208,418 @@ textarea{ resize: vertical; }
 .countryProfile span{color:var(--muted);font-size:12px;}
 .countryProfile strong{color:#087b9c;text-align:right;}
 .integrationDisclaimer{margin-top:10px;padding:10px 12px;border-left:3px solid #f59e0b;background:rgba(245,158,11,.08);line-height:1.5;}
+
+/* =========================================================
+   MOBILE – navigation tactile et éditeurs sans débordement
+   ========================================================= */
+@media (max-width: 760px){
+  html,
+  body{
+    width:100%;
+    height:100dvh;
+    overflow:hidden;
+  }
+
+  body{
+    font-size:14px;
+    overscroll-behavior:none;
+  }
+
+  .topbar{
+    height:44px;
+    min-height:44px;
+    padding:5px 10px;
+    position:relative;
+    z-index:20;
+  }
+
+  .topbar .segmented{ display:none; }
+  .topbar__right{ width:100%; justify-content:flex-end; }
+  .pill{ padding:7px 10px; box-shadow:none; }
+
+  .shell{
+    display:block !important;
+    width:100%;
+    height:calc(100dvh - 44px) !important;
+    padding:0 !important;
+  }
+
+  .sidebar{
+    position:fixed;
+    z-index:1000;
+    left:0;
+    right:0;
+    bottom:0;
+    width:100%;
+    height:calc(70px + env(safe-area-inset-bottom));
+    padding:6px 6px calc(6px + env(safe-area-inset-bottom));
+    border-radius:18px 18px 0 0;
+    overflow-x:auto;
+    overflow-y:hidden;
+    background:rgba(250,252,255,.96);
+    box-shadow:0 -10px 30px rgba(11,18,32,.16);
+    backdrop-filter:blur(20px);
+    -webkit-backdrop-filter:blur(20px);
+    scrollbar-width:none;
+  }
+
+  .sidebar::-webkit-scrollbar,
+  .nav::-webkit-scrollbar,
+  .toolbar::-webkit-scrollbar{ display:none; }
+
+  .sidebar__section:first-child{
+    margin:0;
+    padding:0;
+    border:0;
+  }
+
+  .sidebar__section:not(:first-child),
+  .sidebar__label{ display:none; }
+
+  .nav{
+    width:max-content;
+    min-width:100%;
+    display:flex;
+    flex-direction:row;
+    align-items:stretch;
+    gap:4px;
+    overflow:visible;
+  }
+
+  .nav__item{
+    flex:0 0 72px;
+    width:72px;
+    min-width:72px;
+    height:58px;
+    min-height:58px;
+    padding:5px 3px;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    gap:2px;
+    border-radius:13px;
+    text-align:center;
+    font-size:10px;
+    line-height:1.1;
+    box-shadow:none;
+  }
+
+  .nav__item:hover{ transform:none; box-shadow:none; }
+  .nav__icon{ width:auto; font-size:20px; line-height:1; }
+
+  .workspace{
+    width:100%;
+    height:100%;
+    border:0;
+    border-radius:0;
+    box-shadow:none;
+    background:rgba(247,249,255,.82);
+  }
+
+  .workspace__header{
+    flex:0 0 auto;
+    display:flex;
+    flex-direction:column;
+    align-items:stretch;
+    gap:10px;
+    padding:10px 10px 8px;
+  }
+
+  .workspace__title{ font-size:19px; }
+  .workspace__desc{
+    margin-top:3px;
+    font-size:12px;
+    line-height:1.35;
+  }
+
+  .toolbar{
+    width:100%;
+    max-width:none;
+    display:flex;
+    flex-wrap:nowrap;
+    justify-content:flex-start;
+    gap:7px;
+    padding:2px 1px 5px;
+    overflow-x:auto;
+    overflow-y:hidden;
+    scroll-snap-type:x proximity;
+    scrollbar-width:none;
+    -webkit-overflow-scrolling:touch;
+  }
+
+  .toolbar .btn{
+    flex:0 0 auto;
+    scroll-snap-align:start;
+  }
+
+  .page,
+  .page.is-active[data-page="payments"]{
+    width:100%;
+    padding:10px 10px calc(92px + env(safe-area-inset-bottom));
+    overflow-x:hidden;
+    overflow-y:auto;
+    -webkit-overflow-scrolling:touch;
+  }
+
+  .footer{
+    flex:0 0 auto;
+    padding:9px 10px calc(82px + env(safe-area-inset-bottom));
+    gap:8px;
+    font-size:10px;
+  }
+
+  .card{
+    padding:12px;
+    border-radius:16px;
+    box-shadow:0 8px 18px rgba(11,18,32,.08);
+  }
+
+  .grid2,
+  .split,
+  .row2,
+  .export-grid,
+  .page[data-page="clients"] .split,
+  .page[data-page="quotes"] .split,
+  .page[data-page="invoices"] .split{
+    grid-template-columns:minmax(0,1fr) !important;
+  }
+
+  .split,
+  .grid2{ gap:10px; }
+
+  .page[data-page="clients"] .split > .panel:first-child,
+  .page[data-page="items"] .split > .panel:first-child,
+  .page[data-page="quotes"] .split > .panel:first-child,
+  .page[data-page="invoices"] .split > .panel:first-child,
+  .page[data-page="inbound"] .split > .panel:first-child{
+    max-height:min(36vh, 310px);
+    overflow:auto !important;
+    -webkit-overflow-scrolling:touch;
+  }
+
+  .page.is-active[data-page="quotes"] .split,
+  .page.is-active[data-page="invoices"] .split,
+  .page.is-active[data-page="clients"] .split,
+  .page.is-active[data-page="items"] .split,
+  .page.is-active[data-page="inbound"] .split[data-split]{
+    display:grid !important;
+    height:auto !important;
+    overflow:visible !important;
+  }
+
+  input,
+  select,
+  textarea,
+  .btn,
+  .icon-btn,
+  .shortcut{
+    font-size:16px;
+  }
+
+  input,
+  select,
+  .btn{
+    min-height:44px;
+  }
+
+  input,
+  select,
+  textarea{ border-radius:12px; }
+  .btn{ padding:10px 12px; border-radius:13px; }
+  .icon-btn{ width:44px; height:44px; }
+
+  .searchRow{
+    align-items:stretch;
+    gap:7px;
+  }
+
+  .searchRow .btn{ flex:0 0 auto; }
+
+  .countryProfile{
+    align-items:flex-start;
+    flex-direction:column;
+  }
+
+  .countryProfile strong{ text-align:left; }
+
+  .upload{
+    align-items:flex-start;
+    flex-direction:column;
+  }
+
+  .upload__actions{
+    width:100%;
+    flex-wrap:wrap;
+  }
+
+  .composer{
+    grid-template-columns:minmax(0,1fr) 82px;
+    gap:8px;
+  }
+
+  .composer .btn{ grid-column:1 / -1; }
+
+  .page[data-page="quotes"] .table,
+  .page[data-page="invoices"] .table{
+    border:0;
+    border-radius:0;
+    overflow:visible;
+    background:transparent;
+    box-shadow:none;
+  }
+
+  .page[data-page="quotes"] .table__head,
+  .page[data-page="invoices"] .table__head{
+    display:none !important;
+  }
+
+  .page[data-page="quotes"] .table__row,
+  .page[data-page="invoices"] .table__row{
+    display:grid !important;
+    grid-template-columns:minmax(0,1fr) minmax(0,1fr) !important;
+    align-items:start !important;
+    gap:10px !important;
+    margin-bottom:10px;
+    padding:12px !important;
+    border:1px solid rgba(11,18,32,.10);
+    border-radius:15px;
+    background:rgba(255,255,255,.96);
+    box-shadow:0 6px 16px rgba(11,18,32,.07);
+  }
+
+  .page[data-page="quotes"] .table__row > *,
+  .page[data-page="invoices"] .table__row > *{
+    min-width:0;
+    overflow:visible;
+    white-space:normal;
+  }
+
+  .page[data-page="quotes"] .table__row .cell-desc,
+  .page[data-page="invoices"] .table__row .cell-desc{
+    grid-column:1 / -1;
+  }
+
+  .page[data-page="quotes"] .table__row > :nth-child(6),
+  .page[data-page="invoices"] .table__row > :nth-child(6){
+    grid-column:2;
+    justify-self:end;
+  }
+
+  .page[data-page="quotes"] .table__row [data-label],
+  .page[data-page="invoices"] .table__row [data-label]{
+    display:grid;
+    gap:5px;
+    text-align:left;
+  }
+
+  .page[data-page="quotes"] .table__row [data-label]::before,
+  .page[data-page="invoices"] .table__row [data-label]::before,
+  .paymentsTable__row > [data-label]::before{
+    content:attr(data-label);
+    display:block;
+    color:var(--muted2);
+    font-size:10px;
+    font-weight:800;
+    line-height:1.2;
+    text-align:left;
+    text-transform:uppercase;
+    letter-spacing:.04em;
+  }
+
+  .page[data-page="quotes"] .cell-input,
+  .page[data-page="invoices"] .cell-input{
+    min-height:42px;
+    text-align:left;
+  }
+
+  .paymentsKpis{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:8px;
+  }
+
+  .paymentsKpis .kpi{ min-height:78px; }
+  .paymentsKpis .kpi__value{ font-size:18px; }
+  .paymentsSummaryHeader{ align-items:stretch; flex-direction:column; }
+  .paymentsStatusFilter{ min-width:0; }
+  .paymentsTableWrap{ overflow:visible; }
+
+  .paymentsTable{
+    min-width:0;
+    display:grid;
+    gap:10px;
+  }
+
+  .paymentsTable__row--head{ display:none !important; }
+
+  .paymentsTable__row,
+  .paymentsTable__row--payment{
+    display:grid;
+    grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+    gap:10px 12px;
+    padding:12px;
+    border:1px solid rgba(11,18,32,.10);
+    border-radius:15px;
+    background:rgba(255,255,255,.96);
+    box-shadow:0 6px 16px rgba(11,18,32,.07);
+  }
+
+  .paymentsTable__row > div{
+    min-width:0;
+    display:grid;
+    align-content:start;
+    gap:4px;
+  }
+
+  .paymentsTable__row > :nth-child(3),
+  .paymentsTable__row--payment > :nth-child(3),
+  .paymentsTable__row--payment > :nth-child(5){ grid-column:1 / -1; }
+
+  .paymentsTable__amount{ text-align:left; }
+  .paymentsTable__muted{
+    white-space:normal;
+    overflow-wrap:anywhere;
+  }
+
+  .paymentInvoiceButton{ min-height:36px; text-align:left; }
+  .paymentDeleteButton{ min-height:40px; }
+
+  .modal{
+    padding:8px;
+    align-items:flex-end;
+  }
+
+  .modal__panel{
+    width:100%;
+    max-width:none;
+    max-height:calc(100dvh - 16px);
+    border-radius:18px 18px 10px 10px;
+  }
+
+  .modal__body{ padding:12px; overflow:auto; }
+  .modal__header,
+  .modal__footer{ padding:10px 12px; }
+  .modal__footer{ flex-wrap:wrap; }
+
+  .page.is-active[data-page="audit"]{
+    height:auto;
+    overflow:auto !important;
+  }
+
+  .page.is-active[data-page="audit"] .auditGrid{
+    grid-template-columns:minmax(0,1fr);
+  }
+
+  .auditPre,
+  pre{ max-width:100%; overflow:auto; }
+}
+
+@media (max-width: 380px){
+  .nav__item{
+    flex-basis:68px;
+    width:68px;
+    min-width:68px;
+  }
+
+  .paymentsKpis{ grid-template-columns:minmax(0,1fr); }
+  .workspace__desc{ display:none; }
+}
