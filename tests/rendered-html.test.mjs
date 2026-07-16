@@ -26,7 +26,7 @@ test("server-renders the D2F Gestion cockpit", async () => {
   assert.doesNotMatch(html, /codex-preview|Your site is taking shape|react-loading-skeleton/i);
 
   const shell = await readFile(new URL("../app/session-shell.tsx", import.meta.url), "utf8");
-  assert.match(shell, /src="\/erp\/index\.html\?v=20260716-documents-v10"/);
+  assert.match(shell, /src="\/erp\/index\.html\?v=20260716-evidence-v11"/);
   assert.match(shell, /title="D2F Gestion"/);
 });
 
@@ -37,8 +37,8 @@ test("ships a touch-first smartphone layout", async () => {
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
     readFile(new URL("../public/erp/index.html", import.meta.url), "utf8"),
   ]);
-  assert.match(html, /styles\.css\?v=20260716-documents-v10/);
-  assert.match(html, /app\.js\?v=20260716-documents-v10/);
+  assert.match(html, /styles\.css\?v=20260716-evidence-v11/);
+  assert.match(html, /app\.js\?v=20260716-evidence-v11/);
   assert.match(styles, /@media \(max-width: 760px\)/);
   assert.match(styles, /position:fixed;\s*z-index:1000;\s*left:0;\s*right:0;\s*bottom:0/);
   assert.match(styles, /grid-template-columns:minmax\(0,1fr\) minmax\(0,1fr\) !important/);
@@ -355,4 +355,31 @@ test("provides web-native PDFs, UBL, file handling, and connector storage", asyn
   assert.match(shim, /type = "file"/);
   assert.match(migration, /create table if not exists public\.d2f_integrations/);
   assert.match(migration, /create table if not exists public\.d2f_transmissions/);
+});
+
+test("stores country-aware PAF evidence with integrity and archive handoff", async () => {
+  const [html, app, route, shim, styles, ...dictionaries] = await Promise.all([
+    readFile(new URL("../public/erp/index.html", import.meta.url), "utf8"),
+    readFile(new URL("../public/erp/app.js", import.meta.url), "utf8"),
+    readFile(new URL("../app/rpc/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../public/erp/renderer/web-api-shim.js", import.meta.url), "utf8"),
+    readFile(new URL("../public/erp/styles.css", import.meta.url), "utf8"),
+    ...["fr", "en", "it", "es", "sr"].map((locale) => readFile(new URL(`../renderer/i18n/${locale}.json`, import.meta.url), "utf8")),
+  ]);
+  assert.match(html, /id="cf-evidence-vault"/);
+  assert.match(html, /id="cf-evidence-add"/);
+  assert.match(html, /id="cf-evidence-export"/);
+  assert.match(app, /conformity\.listEvidence/);
+  assert.match(app, /conformity\.archiveEvidence/);
+  assert.match(route, /d2f-compliance-evidence/);
+  assert.match(route, /sha256Bytes/);
+  assert.match(route, /actualHash !== String\(document\.sha256/);
+  assert.match(route, /status: "voided"/);
+  assert.match(route, /source: "compliance_evidence"/);
+  assert.match(shim, /pickEvidence/);
+  assert.match(styles, /\.complianceEvidenceItem/);
+  for (const dictionary of dictionaries) {
+    assert.match(dictionary, /"conformity\.evidence\.title"/);
+    assert.match(dictionary, /"conformity\.evidence\.profile\.fr_paf\.label"/);
+  }
 });

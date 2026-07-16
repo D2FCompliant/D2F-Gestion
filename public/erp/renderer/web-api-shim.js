@@ -130,6 +130,7 @@
     i18n: ns("i18n"),
     files: ns("files", {
       pickImage: () => chooseFile({ accept: "image/png,image/jpeg,image/webp", asDataUrl: true }),
+      pickEvidence: () => chooseFile({ accept: ".pdf,.xml,.json,.csv,.txt,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.webp,.eml,application/pdf,application/xml,application/json,text/csv,text/plain,image/*" }),
     }),
     audit: ns("audit"),
     rejectionReasons: ns("xpReject"),

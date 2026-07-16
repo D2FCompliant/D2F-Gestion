@@ -15,7 +15,7 @@
                  object-src 'none';
                  base-uri 'none'">
 
-  <link rel="stylesheet" href="./styles.css?v=20260716-documents-v10" />
+  <link rel="stylesheet" href="./styles.css?v=20260716-evidence-v11" />
 </head>
 
 <body>
@@ -343,6 +343,60 @@
               <div class="hint" id="cf-archive-status" data-i18n="integrations.not_configured">Non configuré</div>
             </div>
           </div>
+        </div>
+
+        <div class="card complianceVault u-mt" id="cf-evidence-vault">
+          <div class="complianceVault__header">
+            <div>
+              <div class="card__title" data-i18n="conformity.evidence.title">Dossier de preuves et PAF</div>
+              <div class="hint" data-i18n="conformity.evidence.subtitle">Pièces reliant l'opération réelle, la facture et son règlement. Présentables en cas de contrôle.</div>
+            </div>
+            <span class="complianceVault__profile" id="cf-evidence-profile">—</span>
+          </div>
+
+          <div class="complianceVault__notice">
+            <strong data-i18n="conformity.evidence.archive_difference">Archivage ≠ PAF</strong>
+            <span id="cf-evidence-explanation">—</span>
+          </div>
+
+          <div class="complianceChecklist" id="cf-evidence-checklist" aria-live="polite"></div>
+
+          <div class="complianceEvidenceForm">
+            <label class="field">
+              <div class="field__label" data-i18n="conformity.evidence.category">Type de pièce</div>
+              <select id="cf-evidence-category">
+                <option value="process_documentation" data-i18n="conformity.evidence.category.process">Procédure et contrôles internes</option>
+                <option value="order_contract" data-i18n="conformity.evidence.category.order">Devis, commande ou contrat</option>
+                <option value="delivery_service_proof" data-i18n="conformity.evidence.category.delivery">Livraison ou preuve de prestation</option>
+                <option value="invoice_tax" data-i18n="conformity.evidence.category.invoice">Facture et données fiscales</option>
+                <option value="payment_bank" data-i18n="conformity.evidence.category.payment">Paiement ou extrait bancaire</option>
+                <option value="control_report" data-i18n="conformity.evidence.category.control">Contrôle, rapprochement ou anomalie</option>
+                <option value="correction_credit_note" data-i18n="conformity.evidence.category.credit">Correction ou avoir</option>
+                <option value="tax_return" data-i18n="conformity.evidence.category.tax">Déclaration fiscale</option>
+                <option value="other" data-i18n="conformity.evidence.category.other">Autre justificatif</option>
+              </select>
+            </label>
+            <label class="field">
+              <div class="field__label" data-i18n="conformity.evidence.related">Référence liée</div>
+              <input id="cf-evidence-related" type="text" maxlength="160" placeholder="Facture, devis, commande…" data-i18n-attr="placeholder:conformity.evidence.related_ph" />
+            </label>
+            <label class="field">
+              <div class="field__label" data-i18n="conformity.evidence.date">Date de la pièce</div>
+              <input id="cf-evidence-date" type="date" />
+            </label>
+            <label class="field complianceEvidenceForm__description">
+              <div class="field__label" data-i18n="conformity.evidence.description">Description du contrôle ou du lien métier</div>
+              <input id="cf-evidence-description" type="text" maxlength="1000" placeholder="Expliquez pourquoi cette pièce justifie l'opération" data-i18n-attr="placeholder:conformity.evidence.description_ph" />
+            </label>
+          </div>
+
+          <div class="complianceVault__actions">
+            <button class="btn" id="cf-evidence-add" type="button" data-i18n="conformity.evidence.add">Ajouter une pièce</button>
+            <button class="btn btn--secondary" id="cf-evidence-export" type="button" data-i18n="conformity.evidence.export">Exporter le bordereau de contrôle</button>
+            <button class="btn btn--ghost" id="cf-evidence-refresh" type="button" data-i18n="action.refresh">Actualiser</button>
+          </div>
+          <div class="hint" id="cf-evidence-status" aria-live="polite"></div>
+          <div class="complianceEvidenceList" id="cf-evidence-list"></div>
         </div>
       </section>
 
@@ -1501,7 +1555,7 @@
   <script src="./renderer/web-electron-shim.js?v=20260716-web-pdf-pa-v1"></script>
   <script src="./renderer/web-api-shim.js?v=20260716-web-pdf-pa-v1"></script>
   <script src="./dashboard-ui.js?v=20260716-web-pdf-pa-v1"></script>
-  <script src="./app.js?v=20260716-documents-v10"></script>
+  <script src="./app.js?v=20260716-evidence-v11"></script>
 
   <div id="clientsImportModal" class="modal" aria-hidden="true">
     <div class="modal__backdrop" data-modal-close></div>

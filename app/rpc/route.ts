@@ -67,6 +67,211 @@ function safeFileName(input: unknown, fallback: string) {
   return normalized || fallback;
 }
 
+const COMPLIANCE_BUCKET = "d2f-compliance-evidence";
+const COMPLIANCE_MAX_BYTES = 10 * 1024 * 1024;
+const COMPLIANCE_CATEGORIES = new Set([
+  "process_documentation", "order_contract", "delivery_service_proof", "invoice_tax",
+  "payment_bank", "control_report", "correction_credit_note", "tax_return", "other",
+]);
+const COMPLIANCE_EXTENSIONS = new Set(["pdf", "xml", "json", "csv", "txt", "doc", "docx", "xls", "xlsx", "png", "jpg", "jpeg", "webp", "eml"]);
+
+function base64Bytes(value: string) {
+  const binary = atob(value.replace(/\s+/g, ""));
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
+  return bytes;
+}
+
+function bytesBase64(bytes: Uint8Array) {
+  let binary = "";
+  for (let index = 0; index < bytes.length; index += 0x8000) {
+    binary += String.fromCharCode(...bytes.subarray(index, index + 0x8000));
+  }
+  return btoa(binary);
+}
+
+async function sha256Bytes(bytes: Uint8Array) {
+  return bytesToHex(await crypto.subtle.digest("SHA-256", bytes));
+}
+
+function complianceProfile(countryValue: unknown) {
+  const country = String(countryValue || "").trim().toUpperCase().slice(0, 2);
+  if (country === "FR") return {
+    country, code: "FR_PAF", requiresPaf: true, retentionYears: 10,
+    label: "France — dossier PAF et pièces justificatives",
+    explanation: "La PAF documente les contrôles et relie l'opération, la commande, la livraison ou prestation, la facture et le paiement. Elle est présentée à l'administration sur demande ; elle n'est pas jointe à chaque facture.",
+    checklist: ["process_documentation", "order_contract", "delivery_service_proof", "invoice_tax", "payment_bank", "control_report"],
+  };
+  if (country === "IT") return {
+    country, code: "IT_CONSERVAZIONE", requiresPaf: false, retentionYears: 10,
+    label: "Italie — conservazione elettronica a norma",
+    explanation: "Le flux SdI et la conservation électronique conforme remplacent la logique documentaire française. Les pièces commerciales complémentaires restent utiles au contrôle.",
+    checklist: ["order_contract", "delivery_service_proof", "invoice_tax", "payment_bank"],
+  };
+  if (country === "ES") return {
+    country, code: "ES_SIF_VERIFACTU", requiresPaf: false, retentionYears: 10,
+    label: "Espagne — registres SIF / VERI*FACTU",
+    explanation: "Les registres doivent garantir intégrité, conservation, accessibilité, lisibilité, traçabilité et inaltérabilité. Ce n'est pas la PAF française.",
+    checklist: ["invoice_tax", "control_report", "correction_credit_note", "payment_bank"],
+  };
+  if (country === "RS") return {
+    country, code: "RS_SEF_STORAGE", requiresPaf: false, retentionYears: 10,
+    label: "Serbie — conservation SEF / intermédiaire d'information",
+    explanation: "Les factures du secteur privé sont conservées dans SEF ou chez l'intermédiaire habilité. Les pièces complémentaires peuvent être conservées ici sans être transmises avec chaque facture.",
+    checklist: ["order_contract", "delivery_service_proof", "invoice_tax", "payment_bank"],
+  };
+  return {
+    country: country || "—", code: "GENERIC_AUDIT_TRAIL", requiresPaf: false, retentionYears: 10,
+    label: "Contrôles et preuves — règles locales à qualifier",
+    explanation: "Le principe d'authenticité, d'intégrité et de lisibilité existe dans l'Union européenne, mais le nom PAF et les modalités de conservation dépendent du pays.",
+    checklist: ["process_documentation", "order_contract", "delivery_service_proof", "invoice_tax", "payment_bank"],
+  };
+}
+
+function complianceDocuments(company: JsonRecord) {
+  return Array.isArray(company.compliance_documents) ? company.compliance_documents.map(object) : [];
+}
+
+async function ensureComplianceBucket() {
+  const supabase = getSupabaseAdmin();
+  const { error } = await supabase.storage.getBucket(COMPLIANCE_BUCKET);
+  if (!error) return;
+  const created = await supabase.storage.createBucket(COMPLIANCE_BUCKET, {
+    public: false,
+    fileSizeLimit: COMPLIANCE_MAX_BYTES,
+  });
+  if (created.error && !/already exists|duplicate/i.test(created.error.message || "")) throw created.error;
+}
+
+async function complianceOwnerPrefix(ownerEmail: string) {
+  return (await sha256Hex(ownerEmail.toLowerCase())).slice(0, 32);
+}
+
+async function listComplianceEvidence(ownerEmail: string) {
+  const company = await getCompany(ownerEmail);
+  const documents = complianceDocuments(company)
+    .map(({ storage_path: _storagePath, ...document }) => document)
+    .sort((a, b) => String(b.created_at || "").localeCompare(String(a.created_at || "")));
+  const categories = new Set(documents.filter((document) => document.status !== "voided").map((document) => String(document.category || "other")));
+  return { documents, profile: complianceProfile(company.country), coveredCategories: [...categories] };
+}
+
+async function uploadComplianceEvidence(ownerEmail: string, input: JsonRecord) {
+  const filename = safeFileName(input.filename || input.name, "preuve.pdf");
+  const extension = filename.includes(".") ? filename.split(".").pop()?.toLowerCase() || "" : "";
+  if (!COMPLIANCE_EXTENSIONS.has(extension)) throw new Error("Format non admis. Utilisez PDF, XML, JSON, CSV, Word, Excel, image ou EML.");
+  const contentBase64 = String(input.contentBase64 || input.content_base64 || "");
+  if (!contentBase64) throw new Error("Le fichier est vide");
+  const bytes = base64Bytes(contentBase64);
+  if (!bytes.length || bytes.length > COMPLIANCE_MAX_BYTES) throw new Error("La pièce doit être comprise entre 1 octet et 10 Mo");
+  const category = COMPLIANCE_CATEGORIES.has(String(input.category || "")) ? String(input.category) : "other";
+  const company = await getCompany(ownerEmail);
+  const id = crypto.randomUUID();
+  const ownerPrefix = await complianceOwnerPrefix(ownerEmail);
+  const storagePath = `${ownerPrefix}/${id}/${filename}`;
+  const mimeType = String(input.mimeType || input.mime_type || "application/octet-stream").slice(0, 160);
+  const sha256 = await sha256Bytes(bytes);
+  await ensureComplianceBucket();
+  const supabase = getSupabaseAdmin();
+  const uploaded = await supabase.storage.from(COMPLIANCE_BUCKET).upload(storagePath, bytes, { contentType: mimeType, upsert: false });
+  if (uploaded.error) throw uploaded.error;
+  const document = {
+    id, filename, mime_type: mimeType, size: bytes.length, sha256, category,
+    description: String(input.description || "").trim().slice(0, 1000),
+    related_document: String(input.related_document || input.relatedDocument || "").trim().slice(0, 160),
+    document_date: String(input.document_date || input.documentDate || today()).slice(0, 10),
+    country: String(company.country || "").toUpperCase(),
+    storage_path: storagePath, integrity_status: "sealed",
+    archive_status: "not_archived", created_at: new Date().toISOString(),
+  };
+  try {
+    await saveCompany(ownerEmail, { ...company, compliance_documents: [document, ...complianceDocuments(company)] });
+  } catch (error) {
+    await supabase.storage.from(COMPLIANCE_BUCKET).remove([storagePath]).catch(() => undefined);
+    throw error;
+  }
+  const { storage_path: _storagePath, ...safeDocument } = document;
+  return safeDocument;
+}
+
+async function complianceDocument(ownerEmail: string, id: string) {
+  const company = await getCompany(ownerEmail);
+  const document = complianceDocuments(company).find((item) => String(item.id || "") === id);
+  if (!document) throw new Error("Pièce de conformité introuvable");
+  return { company, document };
+}
+
+async function downloadComplianceEvidence(ownerEmail: string, id: string) {
+  const { document } = await complianceDocument(ownerEmail, id);
+  const downloaded = await getSupabaseAdmin().storage.from(COMPLIANCE_BUCKET).download(String(document.storage_path || ""));
+  if (downloaded.error) throw downloaded.error;
+  const bytes = new Uint8Array(await downloaded.data.arrayBuffer());
+  const actualHash = await sha256Bytes(bytes);
+  if (actualHash !== String(document.sha256 || "")) throw new Error("Contrôle d'intégrité échoué : la pièce ne correspond plus à son empreinte d'origine");
+  return {
+    ok: true,
+    fileName: String(document.filename || "preuve"),
+    mimeType: String(document.mime_type || "application/octet-stream"),
+    downloadBase64: bytesBase64(bytes),
+  };
+}
+
+async function deleteComplianceEvidence(ownerEmail: string, id: string) {
+  const { company, document } = await complianceDocument(ownerEmail, id);
+  if (document.status === "voided") return { ok: true, id, status: "voided" };
+  const updated = complianceDocuments(company).map((item) => String(item.id || "") === id ? {
+    ...item,
+    status: "voided",
+    voided_at: new Date().toISOString(),
+  } : item);
+  await saveCompany(ownerEmail, { ...company, compliance_documents: updated });
+  return { ok: true, id, status: "voided" };
+}
+
+async function archiveComplianceEvidence(ownerEmail: string, id: string) {
+  const { company, document } = await complianceDocument(ownerEmail, id);
+  if (document.status === "voided") throw new Error("Une pièce annulée ne peut pas être versée au SAE");
+  const archive = await getIntegration(getSupabaseAdmin(), ownerEmail, "archive").catch(() => null);
+  if (!archive?.enabled || !archive?.configured) throw new Error("Configurez et activez d'abord le SAE dans la fiche Entreprise");
+  const downloaded = await getSupabaseAdmin().storage.from(COMPLIANCE_BUCKET).download(String(document.storage_path || ""));
+  if (downloaded.error) throw downloaded.error;
+  const bytes = new Uint8Array(await downloaded.data.arrayBuffer());
+  const actualHash = await sha256Bytes(bytes);
+  if (actualHash !== String(document.sha256 || "")) throw new Error("Archivage bloqué : l'empreinte SHA-256 de la pièce est invalide");
+  const result = await transmitIntegration(getSupabaseAdmin(), ownerEmail, "archive", {
+    documentId: id,
+    documentNumber: String(document.related_document || document.filename || id),
+    content: bytes,
+    contentType: String(document.mime_type || "application/octet-stream"),
+    metadata: { source: "compliance_evidence", category: document.category, sha256: document.sha256, file_name: document.filename },
+  });
+  const updated = complianceDocuments(company).map((item) => String(item.id || "") === id ? {
+    ...item,
+    archive_status: "archived",
+    archived_at: new Date().toISOString(),
+    archive_provider: result.provider,
+    archive_remote_id: result.remote_id,
+  } : item);
+  await saveCompany(ownerEmail, { ...company, compliance_documents: updated });
+  return { ok: true, id, status: result.status || "submitted", provider: result.provider || "SAE" };
+}
+
+async function exportComplianceManifest(ownerEmail: string) {
+  const company = await getCompany(ownerEmail);
+  const profile = complianceProfile(company.country);
+  const documents = complianceDocuments(company).map(({ storage_path: _storagePath, ...document }) => document);
+  const manifest = {
+    generated_at: new Date().toISOString(),
+    company: { legal_name: company.legal_name || company.name, legal_id: company.legal_id, vat_id: company.vat_id, country: company.country },
+    profile,
+    integrity: "SHA-256",
+    document_count: documents.length,
+    documents,
+  };
+  const filename = `dossier-controle-${safeFileName(company.legal_id || company.name, "entreprise")}-${today()}.json`;
+  return { ok: true, fileName: filename, mimeType: "application/json", downloadBase64: textToBase64(JSON.stringify(manifest, null, 2)) };
+}
+
 function defaultCompany() {
   return {
     id: "1",
@@ -453,7 +658,7 @@ function isMutationMethod(method: string) {
     "save", "upsert", "create", "update", "record", "remove", "delete", "importCsv", "duplicate",
     "setStatus", "issue", "createFromQuote", "createDeposit", "createCreditNote", "setInboundConfig",
     "setConformityConfig", "saveConfig", "setLogo", "clearLogo", "accept", "reject", "dispute",
-    "send", "sendInvoice", "sendNow", "archive", "importFile",
+    "send", "sendInvoice", "sendNow", "archive", "importFile", "uploadEvidence", "deleteEvidence", "archiveEvidence",
   ].includes(action);
 }
 
@@ -768,6 +973,12 @@ async function dispatch(ownerEmail: string, method: string, args: unknown[], ten
     const company = await getCompany(ownerEmail);
     return saveCompany(ownerEmail, { ...company, conformity: object(first(args)).conformity || first(args) });
   }
+  if (method === "conformity:listEvidence") return listComplianceEvidence(ownerEmail);
+  if (method === "conformity:uploadEvidence") return uploadComplianceEvidence(ownerEmail, object(first(args)));
+  if (method === "conformity:downloadEvidence") return downloadComplianceEvidence(ownerEmail, idFrom(first(args)));
+  if (method === "conformity:deleteEvidence") return deleteComplianceEvidence(ownerEmail, idFrom(first(args)));
+  if (method === "conformity:archiveEvidence") return archiveComplianceEvidence(ownerEmail, idFrom(first(args)));
+  if (method === "conformity:exportEvidenceManifest") return exportComplianceManifest(ownerEmail);
   if (method === "dashboard:get") return dashboard(ownerEmail);
   if (method === "dashboard:metrics") return dashboardMetrics(ownerEmail, object(first(args)).year);
   if (method === "directory:lookupPeppol") return lookupPeppolDirectory(object(first(args)));

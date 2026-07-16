@@ -2555,7 +2555,174 @@ async function cfLoadToForm() {
     }
   }
 
+  await cfLoadEvidence().catch((error) => cfEvidenceStatus(error.message, true));
+
   return cfg;
+}
+
+const CF_EVIDENCE_LABELS = {
+  process_documentation: ["conformity.evidence.category.process", "Procédure et contrôles internes"],
+  order_contract: ["conformity.evidence.category.order", "Devis, commande ou contrat"],
+  delivery_service_proof: ["conformity.evidence.category.delivery", "Livraison ou preuve de prestation"],
+  invoice_tax: ["conformity.evidence.category.invoice", "Facture et données fiscales"],
+  payment_bank: ["conformity.evidence.category.payment", "Paiement ou extrait bancaire"],
+  control_report: ["conformity.evidence.category.control", "Contrôle, rapprochement ou anomalie"],
+  correction_credit_note: ["conformity.evidence.category.credit", "Correction ou avoir"],
+  tax_return: ["conformity.evidence.category.tax", "Déclaration fiscale"],
+  other: ["conformity.evidence.category.other", "Autre justificatif"],
+};
+
+function cfEvidenceLabel(category) {
+  const [key, fallback] = CF_EVIDENCE_LABELS[category] || CF_EVIDENCE_LABELS.other;
+  return t(key, fallback);
+}
+
+function cfEscape(value) {
+  return String(value ?? "").replace(/[&<>'"]/g, (character) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;",
+  })[character]);
+}
+
+function cfFileSize(value) {
+  const size = Number(value || 0);
+  if (size < 1024) return `${size} o`;
+  if (size < 1024 * 1024) return `${Math.round(size / 1024)} Ko`;
+  return `${(size / (1024 * 1024)).toFixed(1)} Mo`;
+}
+
+function cfEvidenceStatus(message, isError = false) {
+  const element = $("cf-evidence-status");
+  if (!element) return;
+  element.textContent = message || "";
+  element.style.color = isError ? "#dc2626" : "";
+}
+
+function cfRenderEvidence(payload = {}) {
+  const profile = payload.profile || {};
+  const documents = Array.isArray(payload.documents) ? payload.documents : [];
+  const covered = new Set(Array.isArray(payload.coveredCategories) ? payload.coveredCategories : []);
+  const profileKey = String(profile.code || "GENERIC_AUDIT_TRAIL").toLowerCase();
+  if ($("cf-evidence-profile")) $("cf-evidence-profile").textContent = t(`conformity.evidence.profile.${profileKey}.label`, profile.label || profile.code || "—");
+  if ($("cf-evidence-explanation")) $("cf-evidence-explanation").textContent = t(`conformity.evidence.profile.${profileKey}.explanation`, profile.explanation || "—");
+
+  const checklist = $("cf-evidence-checklist");
+  if (checklist) {
+    checklist.innerHTML = (profile.checklist || []).map((category) => {
+      const complete = covered.has(category);
+      return `<span class="complianceChecklist__item ${complete ? "is-covered" : "is-missing"}"><span>${complete ? "✓" : "○"}</span>${cfEscape(cfEvidenceLabel(category))}</span>`;
+    }).join("");
+  }
+
+  const list = $("cf-evidence-list");
+  if (!list) return;
+  if (!documents.length) {
+    list.innerHTML = `<div class="complianceEvidenceEmpty">${cfEscape(t("conformity.evidence.empty", "Aucune pièce déposée. Commencez par la procédure de facturation, puis reliez les justificatifs aux factures."))}</div>`;
+    return;
+  }
+  list.innerHTML = documents.map((document) => {
+    const isVoided = document.status === "voided";
+    const isArchived = document.archive_status === "archived";
+    const related = document.related_document ? `${t("conformity.evidence.related_short", "Réf.")} ${document.related_document}` : t("conformity.evidence.unlinked", "Sans référence liée");
+    return `<article class="complianceEvidenceItem ${isVoided ? "is-voided" : ""}" data-evidence-id="${cfEscape(document.id)}">
+      <div class="complianceEvidenceItem__name">
+        <strong>${cfEscape(document.filename)}</strong>
+        <small>${cfEscape(document.description || related)}</small>
+        <span class="complianceEvidenceItem__hash" title="SHA-256 ${cfEscape(document.sha256)}">SHA-256 ${cfEscape(document.sha256)}</span>
+      </div>
+      <div>
+        <span class="complianceEvidenceBadge">${cfEscape(cfEvidenceLabel(document.category))}</span>
+        <span class="complianceEvidenceItem__meta">${cfEscape(document.document_date || "—")} · ${cfEscape(cfFileSize(document.size))}</span>
+      </div>
+      <div class="complianceEvidenceItem__badges">
+        <span class="complianceEvidenceBadge is-sealed">${cfEscape(t("conformity.evidence.sealed", "Empreinte scellée"))}</span>
+        ${isArchived ? `<span class="complianceEvidenceBadge is-archived">${cfEscape(t("conformity.evidence.archived", "Versée au SAE"))}</span>` : ""}
+        ${isVoided ? `<span class="complianceEvidenceBadge">${cfEscape(t("conformity.evidence.voided", "Annulée — conservée"))}</span>` : ""}
+      </div>
+      <div class="complianceEvidenceItem__actions">
+        <button class="btn btn--secondary" type="button" data-evidence-action="download">${cfEscape(t("conformity.evidence.download", "Télécharger"))}</button>
+        <button class="btn btn--ghost" type="button" data-evidence-action="archive" ${isArchived || isVoided ? "disabled" : ""}>${cfEscape(isArchived ? t("conformity.evidence.archived", "Versée au SAE") : t("conformity.evidence.archive", "Verser au SAE"))}</button>
+        <button class="btn btn--ghost" type="button" data-evidence-action="void" ${isVoided ? "disabled" : ""}>${cfEscape(t("conformity.evidence.void", "Annuler"))}</button>
+      </div>
+    </article>`;
+  }).join("");
+}
+
+async function cfLoadEvidence() {
+  if (!window.api?.conformity?.listEvidence || !$("cf-evidence-list")) return;
+  const payload = await window.api.conformity.listEvidence();
+  cfRenderEvidence(payload || {});
+  const activeCount = (payload?.documents || []).filter((document) => document.status !== "voided").length;
+  cfEvidenceStatus(t("conformity.evidence.count", "{count} pièce(s) active(s), chacune tracée par SHA-256.", { count: activeCount }));
+  return payload;
+}
+
+let cfEvidenceBound = false;
+function bindComplianceEvidence() {
+  if (cfEvidenceBound) return;
+  cfEvidenceBound = true;
+  if ($("cf-evidence-date") && !$("cf-evidence-date").value) $("cf-evidence-date").value = new Date().toISOString().slice(0, 10);
+
+  $("cf-evidence-add")?.addEventListener("click", async () => {
+    try {
+      cfEvidenceStatus(t("conformity.evidence.selecting", "Sélection de la pièce…"));
+      const selected = await window.api.files.pickEvidence();
+      if (!selected || selected.canceled) return cfEvidenceStatus("");
+      cfEvidenceStatus(t("conformity.evidence.uploading", "Dépôt sécurisé et calcul de l'empreinte…"));
+      await window.api.conformity.uploadEvidence({
+        ...selected,
+        category: $("cf-evidence-category")?.value || "other",
+        related_document: $("cf-evidence-related")?.value || "",
+        document_date: $("cf-evidence-date")?.value || new Date().toISOString().slice(0, 10),
+        description: $("cf-evidence-description")?.value || "",
+      });
+      if ($("cf-evidence-description")) $("cf-evidence-description").value = "";
+      cfEvidenceStatus(t("conformity.evidence.uploaded", "Pièce déposée, empreinte calculée et opération inscrite dans l'audit."));
+      await cfLoadEvidence();
+    } catch (error) {
+      cfEvidenceStatus(error.message || String(error), true);
+    }
+  });
+
+  $("cf-evidence-export")?.addEventListener("click", async () => {
+    try {
+      cfEvidenceStatus(t("conformity.evidence.exporting", "Préparation du bordereau de contrôle…"));
+      await window.api.conformity.exportEvidenceManifest();
+      cfEvidenceStatus(t("conformity.evidence.exported", "Bordereau exporté avec l'inventaire et les empreintes."));
+    } catch (error) {
+      cfEvidenceStatus(error.message || String(error), true);
+    }
+  });
+  $("cf-evidence-refresh")?.addEventListener("click", () => cfLoadEvidence().catch((error) => cfEvidenceStatus(error.message, true)));
+
+  $("cf-evidence-list")?.addEventListener("click", async (event) => {
+    const button = event.target.closest("[data-evidence-action]");
+    const item = button?.closest("[data-evidence-id]");
+    if (!button || !item) return;
+    const id = item.dataset.evidenceId;
+    const action = button.dataset.evidenceAction;
+    button.disabled = true;
+    try {
+      if (action === "download") {
+        cfEvidenceStatus(t("conformity.evidence.verifying", "Vérification de l'empreinte avant téléchargement…"));
+        await window.api.conformity.downloadEvidence({ id });
+        cfEvidenceStatus(t("conformity.evidence.integrity_ok", "Empreinte vérifiée : le fichier est intact."));
+      } else if (action === "archive") {
+        cfEvidenceStatus(t("conformity.evidence.archiving", "Versement de la pièce au SAE configuré…"));
+        await window.api.conformity.archiveEvidence({ id });
+        cfEvidenceStatus(t("conformity.evidence.archive_ok", "Pièce versée au SAE ; le reçu est conservé dans les transmissions."));
+        await cfLoadEvidence();
+      } else if (action === "void") {
+        if (!confirm(t("conformity.evidence.void_confirm", "Annuler cette pièce ? Elle restera conservée avec son empreinte et l'annulation sera auditée."))) return;
+        await window.api.conformity.deleteEvidence({ id });
+        cfEvidenceStatus(t("conformity.evidence.void_ok", "Pièce annulée mais conservée pour assurer la traçabilité."));
+        await cfLoadEvidence();
+      }
+    } catch (error) {
+      cfEvidenceStatus(error.message || String(error), true);
+    } finally {
+      button.disabled = false;
+    }
+  });
 }
 
 let __cf_saveTimer = null;
@@ -2664,6 +2831,7 @@ const cfAgent = {
 };
 
 async function initConformityPage() {
+  bindComplianceEvidence();
   if (__cf_inited) {
     // déjà bindé : juste reload
     await cfLoadToForm();
