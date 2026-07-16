@@ -255,6 +255,10 @@
   "totals.ttc": "Total TTC",
 
   "invoices.list_title": "Liste des factures",
+  "documents.count": "{count} document(s)",
+  "documents.no_results": "Aucun document ne correspond à la recherche.",
+  "documents.open_aria": "Ouvrir {number}, {client}, {status}, total {total}",
+  "documents.credit_note_issued": "Avoir émis",
   "invoices.search_ph": "Rechercher une facture…",
   "invoices.new": "Nouvelle",
   "invoices.editor_title": "Éditeur de factures (EN16931)",

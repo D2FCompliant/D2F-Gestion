@@ -2079,6 +2079,183 @@ function renderList(container, rows, selectedId, titleFn, subFn) {
   }
 }
 
+function documentListLocale() {
+  return {
+    fr: "fr-FR",
+    en: "en-GB",
+    sr: "sr-Latn-RS",
+    es: "es-ES",
+    it: "it-IT",
+  }[state.lang || getLang()] || "fr-FR";
+}
+
+function formatDocumentListDate(value) {
+  const iso = String(value || "").slice(0, 10);
+  if (!iso) return "—";
+  const date = new Date(`${iso}T00:00:00Z`);
+  if (Number.isNaN(date.getTime())) return iso;
+  return new Intl.DateTimeFormat(documentListLocale(), {
+    day: "2-digit",
+    month: "2-digit",
+    year: "2-digit",
+    timeZone: "UTC",
+  }).format(date);
+}
+
+function formatDocumentListMoney(value, currency = "EUR") {
+  const amount = Number(value || 0);
+  const code = String(currency || "EUR").trim().toUpperCase() || "EUR";
+  try {
+    return new Intl.NumberFormat(documentListLocale(), {
+      style: "currency",
+      currency: code,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(Number.isFinite(amount) ? amount : 0);
+  } catch {
+    return `${money(amount)} ${code}`;
+  }
+}
+
+function setDocumentListCount(id, count) {
+  const element = $(id);
+  if (!element) return;
+  element.textContent = String(count || 0);
+  element.setAttribute("aria-label", t("documents.count", "{count} document(s)", { count: count || 0 }));
+}
+
+function renderDocumentListEmpty(container) {
+  container.innerHTML = `<div class="documentListEmpty">${esc(t("documents.no_results", "Aucun document ne correspond à la recherche."))}</div>`;
+}
+
+function createDocumentListButton({ row, selectedId, number, client, status, tone, date, total, remaining = null }) {
+  const button = document.createElement("button");
+  const isSelected = String(row.id) === String(selectedId || "");
+  button.className = `list__item documentListItem documentListItem--${tone || "neutral"}${isSelected ? " is-selected" : ""}`;
+  button.type = "button";
+  button.dataset.id = row.id;
+  button.setAttribute("aria-pressed", isSelected ? "true" : "false");
+  button.setAttribute(
+    "aria-label",
+    t("documents.open_aria", "Ouvrir {number}, {client}, {status}, total {total}", {
+      number,
+      client,
+      status,
+      total,
+    })
+  );
+
+  const remainingMarkup = remaining === null
+    ? ""
+    : `<div class="documentListMetric documentListMetric--remaining">
+        <span>${esc(t("payments.col.remaining", "Reste"))}</span>
+        <strong>${esc(remaining)}</strong>
+      </div>`;
+
+  button.innerHTML = `
+    <div class="documentListTop">
+      <strong class="documentListNumber">${esc(number)}</strong>
+      <span class="documentStatus documentStatus--${esc(tone || "neutral")}">${esc(status)}</span>
+    </div>
+    <div class="documentListClient" title="${esc(client)}">${esc(client)}</div>
+    <div class="documentListMetrics${remaining === null ? " documentListMetrics--two" : ""}">
+      <div class="documentListMetric">
+        <span>${esc(t("common.date", "Date"))}</span>
+        <strong>${esc(date)}</strong>
+      </div>
+      <div class="documentListMetric documentListMetric--amount">
+        <span>${esc(t("payments.col.total", "Total"))}</span>
+        <strong>${esc(total)}</strong>
+      </div>
+      ${remainingMarkup}
+    </div>
+  `;
+  return button;
+}
+
+function renderQuoteDocumentList(container, rows, selectedId) {
+  if (!container) return;
+  container.innerHTML = "";
+  if (!rows.length) return renderDocumentListEmpty(container);
+
+  const toneByStatus = {
+    draft: "draft",
+    sent: "issued",
+    accepted: "paid",
+    rejected: "rejected",
+    cancelled: "credited",
+  };
+
+  for (const quote of rows) {
+    const quoteState = canonicalQuoteStatus(quote);
+    container.appendChild(createDocumentListButton({
+      row: quote,
+      selectedId,
+      number: String(quote.number || quote.id || "—"),
+      client: String(quote.client_name || "—"),
+      status: t(`quotes.status.${quoteState}`, quoteState),
+      tone: toneByStatus[quoteState] || "neutral",
+      date: formatDocumentListDate(quote.date),
+      total: formatDocumentListMoney(quote.total_ttc, quote.currency),
+    }));
+  }
+}
+
+function renderInvoiceDocumentList(container, rows, selectedId, payments, statusSource = rows) {
+  if (!container) return;
+  container.innerHTML = "";
+  if (!rows.length) return renderDocumentListEmpty(container);
+
+  const receivableRows = window.D2FReceivables?.buildReceivableRows
+    ? window.D2FReceivables.buildReceivableRows(statusSource, payments || [])
+    : [];
+  const receivableByInvoice = new Map(
+    receivableRows.map((entry) => [String(entry.invoice?.id || ""), entry])
+  );
+
+  for (const invoice of rows) {
+    const status = invoiceStatus(invoice);
+    const kind = invoiceKind(invoice);
+    const receivable = receivableByInvoice.get(String(invoice.id || ""));
+    let tone = status === "draft" ? "draft" : "issued";
+    let label = status === "draft"
+      ? t("payments.invoice_status.draft", "Brouillon")
+      : t("payments.invoice_status.issued", "Émise");
+    let remaining = null;
+
+    if (kind === "credit_note") {
+      tone = "credited";
+      label = t("documents.credit_note_issued", "Avoir émis");
+    } else if (receivable) {
+      tone = receivable.paymentStatus || "unpaid";
+      label = t(`payments.status.${tone}`, tone);
+      remaining = formatDocumentListMoney(receivable.remaining, invoice.currency);
+    }
+
+    container.appendChild(createDocumentListButton({
+      row: invoice,
+      selectedId,
+      number: String(invoice.invoice_number || invoice.id || "—"),
+      client: String(invoice.client_name || "—"),
+      status: label,
+      tone,
+      date: formatDocumentListDate(invoice.date),
+      total: formatDocumentListMoney(invoice.total_ttc, invoice.currency),
+      remaining,
+    }));
+  }
+}
+
+function focusDocumentEditorOnMobile(moduleKey) {
+  if (!window.matchMedia?.("(max-width: 760px)").matches) return;
+  const editor = document.querySelector(`.page[data-page="${moduleKey}"] .split > .panel:last-child`);
+  if (!editor) return;
+  const reduceMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+  window.requestAnimationFrame(() => {
+    editor.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
+  });
+}
+
 function decorateQuoteList() {
   const container = $("quotesList");
   if (!container) return;
@@ -3942,13 +4119,8 @@ return;
     const q = $("quotesSearch")?.value || "";
     state.quotes = (await window.api.quotes.list({ q })).map(normalizeQuote);
 
-    renderList(
-      $("quotesList"),
-      state.quotes,
-      state.selectedQuoteId,
-      (qq) => qq.number || "—",
-      (qq) => `${qq.client_name || "—"} • ${money(qq.total_ttc)} €`
-    );
+    setDocumentListCount("quotesListCount", state.quotes.length);
+    renderQuoteDocumentList($("quotesList"), state.quotes, state.selectedQuoteId);
     decorateQuoteList();
 
     await refreshClientAndArticlePickers();
@@ -4012,13 +4184,23 @@ renderQuoteDraft();
   if (moduleKey === "invoices") {
     const q = $("invoicesSearch")?.value || "";
     state.invoices = (await window.api.invoices.list({ q })).map(normalizeInvoice);
+    const invoiceStatusSource = q.trim()
+      ? (await window.api.invoices.list({ q: "" })).map(normalizeInvoice)
+      : state.invoices;
 
-    renderList(
+    try {
+      state.payments.all = (await window.api.payments.listAll({})) || [];
+    } catch (error) {
+      console.warn("[invoices] payment overview unavailable", error);
+      state.payments.all = [];
+    }
+    setDocumentListCount("invoicesListCount", state.invoices.length);
+    renderInvoiceDocumentList(
       $("invoicesList"),
       state.invoices,
       state.selectedInvoiceId,
-      (ii) => ii.invoice_number || "—",
-      (ii) => `${ii.client_name || "—"} • ${money(ii.total_ttc)} €`
+      state.payments.all,
+      invoiceStatusSource
     );
 
     await refreshClientAndArticlePickers();
@@ -6203,6 +6385,7 @@ function init() {
       } catch (err) {
         console.error("[quotesList click] get failed", err);
       }
+      focusDocumentEditorOnMobile("quotes");
     });
 
     $("invoicesList")?.addEventListener("click", async (e) => {
@@ -6210,6 +6393,7 @@ function init() {
       if (!item) return;
       state.selectedInvoiceId = item.dataset.id;
       await refreshModule("invoices");
+      focusDocumentEditorOnMobile("invoices");
     });
 
     $("inboundList")?.addEventListener("click", async (e) => {

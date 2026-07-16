@@ -250,6 +250,10 @@
   "totals.ttc": "Totale lordo",
 
   "invoices.list_title": "Elenco fatture",
+  "documents.count": "{count} documento/i",
+  "documents.no_results": "Nessun documento corrisponde alla ricerca.",
+  "documents.open_aria": "Apri {number}, {client}, {status}, totale {total}",
+  "documents.credit_note_issued": "Nota di credito emessa",
   "invoices.search_ph": "Cerca fattura…",
   "invoices.new": "Nuova",
   "invoices.editor_title": "Editor fatture (EN16931)",

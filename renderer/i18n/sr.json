@@ -250,6 +250,10 @@
   "totals.ttc": "Bruto ukupno",
 
   "invoices.list_title": "Lista faktura",
+  "documents.count": "{count} dokument(a)",
+  "documents.no_results": "Nijedan dokument ne odgovara pretrazi.",
+  "documents.open_aria": "Otvori {number}, {client}, {status}, ukupno {total}",
+  "documents.credit_note_issued": "Odobrenje izdato",
   "invoices.search_ph": "Pretraži fakturu…",
   "invoices.new": "Nova",
   "invoices.editor_title": "Editor faktura (EN16931)",

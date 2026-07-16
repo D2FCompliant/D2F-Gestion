@@ -250,6 +250,10 @@
   "totals.ttc": "Total bruto",
 
   "invoices.list_title": "Lista de facturas",
+  "documents.count": "{count} documento(s)",
+  "documents.no_results": "Ningún documento coincide con la búsqueda.",
+  "documents.open_aria": "Abrir {number}, {client}, {status}, total {total}",
+  "documents.credit_note_issued": "Abono emitido",
   "invoices.search_ph": "Buscar factura…",
   "invoices.new": "Nueva",
   "invoices.editor_title": "Editor de facturas (EN16931)",

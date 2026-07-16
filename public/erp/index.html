@@ -15,7 +15,7 @@
                  object-src 'none';
                  base-uri 'none'">
 
-  <link rel="stylesheet" href="./styles.css?v=20260716-mobile-v7" />
+  <link rel="stylesheet" href="./styles.css?v=20260716-documents-v8" />
 </head>
 
 <body>
@@ -563,12 +563,15 @@
       <section class="page is-active" data-page="quotes">
         <div class="split" data-split>
           <div class="panel card">
-            <div class="card__title" data-i18n="quotes.list_title">Liste des devis</div>
+            <div class="documentListHeader">
+              <div class="card__title" data-i18n="quotes.list_title">Liste des devis</div>
+              <span id="quotesListCount" class="documentListCount" aria-live="polite">0</span>
+            </div>
             <div class="searchRow">
               <input id="quotesSearch" class="search" type="search" data-i18n-attr="placeholder:quotes.search_ph" placeholder="Rechercher un devis…" />
               <button class="btn btn--secondary" type="button" data-action="quotes:new" data-i18n="action.new">Nouveau</button>
             </div>
-            <div id="quotesList" class="list"></div>
+            <div id="quotesList" class="list documentList"></div>
           </div>
 
           <div class="panel card">
@@ -696,12 +699,15 @@
       <section class="page" data-page="invoices">
         <div class="split" data-split>
           <div class="panel card">
-            <div class="card__title" data-i18n="invoices.list_title">Liste des factures</div>
+            <div class="documentListHeader">
+              <div class="card__title" data-i18n="invoices.list_title">Liste des factures</div>
+              <span id="invoicesListCount" class="documentListCount" aria-live="polite">0</span>
+            </div>
             <div class="searchRow">
               <input id="invoicesSearch" class="search" type="search" data-i18n-attr="placeholder:invoices.search_ph" placeholder="Rechercher une facture…" />
               <button class="btn btn--secondary" type="button" data-action="invoices:new" data-i18n="invoices.new">Nouvelle</button>
             </div>
-            <div id="invoicesList" class="list"></div>
+            <div id="invoicesList" class="list documentList"></div>
           </div>
 
           <div class="panel card">
@@ -1495,7 +1501,7 @@
   <script src="./renderer/web-electron-shim.js?v=20260716-web-pdf-pa-v1"></script>
   <script src="./renderer/web-api-shim.js?v=20260716-web-pdf-pa-v1"></script>
   <script src="./dashboard-ui.js?v=20260716-web-pdf-pa-v1"></script>
-  <script src="./app.js?v=20260716-mobile-v7"></script>
+  <script src="./app.js?v=20260716-documents-v8"></script>
 
   <div id="clientsImportModal" class="modal" aria-hidden="true">
     <div class="modal__backdrop" data-modal-close></div>

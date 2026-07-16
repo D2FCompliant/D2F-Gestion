@@ -255,6 +255,10 @@
   "totals.ttc": "Total incl. VAT",
 
   "invoices.list_title": "Invoice list",
+  "documents.count": "{count} document(s)",
+  "documents.no_results": "No document matches your search.",
+  "documents.open_aria": "Open {number}, {client}, {status}, total {total}",
+  "documents.credit_note_issued": "Credit note issued",
   "invoices.search_ph": "Search for an invoice…",
   "invoices.new": "New",
   "invoices.editor_title": "Invoice editor (EN16931)",
