@@ -414,6 +414,30 @@
                 </label>
               </div>
 
+              <div class="complianceCard u-mt" id="cl-peppol-card">
+                <div class="complianceCard__head">
+                  <div>
+                    <div class="card__title" data-i18n="clients.peppol.title">Routage électronique du client</div>
+                    <div class="hint" data-i18n="clients.peppol.hint">Recherchez l’identifiant officiel avant un export PEPPOL. La fiche et le PDF restent disponibles si le client n’est pas trouvé.</div>
+                  </div>
+                  <span class="readinessBadge is-neutral" id="cl-peppol-status" data-i18n="clients.peppol.not_checked">Non vérifié</span>
+                </div>
+                <div class="row2 u-mt">
+                  <label>
+                    <span data-i18n="clients.peppol.scheme">Schéma d’identifiant (BT-49)</span>
+                    <input id="cl-peppol-scheme" type="text" maxlength="4" placeholder="0225 / 0088 / 0192" />
+                  </label>
+                  <label>
+                    <span data-i18n="clients.peppol.endpoint">Identifiant électronique (BT-49)</span>
+                    <input id="cl-peppol-endpoint" type="text" data-i18n-attr="placeholder:clients.peppol.endpoint_ph" placeholder="Identifiant PEPPOL ou adresse nationale" />
+                  </label>
+                </div>
+                <div class="actions u-mt">
+                  <button class="btn btn--secondary" type="button" data-action="clients:lookupPeppol" data-i18n="clients.peppol.lookup">Rechercher dans l’annuaire PEPPOL</button>
+                </div>
+                <div class="hint u-mt" id="cl-peppol-message" data-i18n="clients.peppol.disclaimer">L’annuaire aide à identifier le participant ; le prestataire d’accès doit encore confirmer la capacité de livraison.</div>
+              </div>
+
               <label>
                 <span data-i18n="clients.street">Adresse (BT-50)*</span>
                 <input id="cl-street" type="text" data-i18n-attr="placeholder:clients.street_ph" placeholder="10 avenue ..." />
@@ -1055,6 +1079,17 @@
           <select id="ex-invoice"></select>
         </label>
 
+        <div class="complianceCard" id="ex-compliance-card">
+          <div class="complianceCard__head">
+            <div>
+              <div class="card__title" data-i18n="exports.readiness.title">Contrôle avant transmission</div>
+              <div class="hint" id="ex-compliance-profile" data-i18n="exports.readiness.select">Sélectionnez une facture pour vérifier le profil du pays.</div>
+            </div>
+            <span class="readinessBadge is-neutral" id="ex-compliance-badge" data-i18n="exports.readiness.pending">À vérifier</span>
+          </div>
+          <ul class="readinessList" id="ex-compliance-list"></ul>
+        </div>
+
         <button
           class="btn export-action"
           type="button"
@@ -1458,7 +1493,7 @@
   <script src="./renderer/web-electron-shim.js?v=20260716-web-pdf-pa-v1"></script>
   <script src="./renderer/web-api-shim.js?v=20260716-web-pdf-pa-v1"></script>
   <script src="./dashboard-ui.js?v=20260716-web-pdf-pa-v1"></script>
-  <script src="./app.js?v=20260716-quote-lifecycle-v5"></script>
+  <script src="./app.js?v=20260716-country-compliance-v6"></script>
 
   <div id="clientsImportModal" class="modal" aria-hidden="true">
     <div class="modal__backdrop" data-modal-close></div>

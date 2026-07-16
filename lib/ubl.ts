@@ -29,8 +29,8 @@ function country(party: JsonRecord) {
 function endpoint(party: JsonRecord) {
   const meta = party.meta && typeof party.meta === "object" ? party.meta as JsonRecord : {};
   return {
-    id: value(party.peppol_endpoint_id || meta.peppol_endpoint_id || party.vat_id || party.legal_id),
-    scheme: value(party.peppol_endpoint_scheme || meta.peppol_endpoint_scheme || (country(party) === "FR" ? "0002" : "9930")),
+    id: value(party.peppol_endpoint_id || meta.peppol_endpoint_id),
+    scheme: value(party.peppol_endpoint_scheme || meta.peppol_endpoint_scheme),
   };
 }
 
@@ -55,7 +55,7 @@ function partyXml(tag: string, party: JsonRecord) {
   </cac:${tag}>`;
 }
 
-export function createUblDocument(input: { document: JsonRecord; lines: JsonRecord[]; seller: JsonRecord; buyer: JsonRecord }) {
+export function createUblDocument(input: { document: JsonRecord; lines: JsonRecord[]; seller: JsonRecord; buyer: JsonRecord; profile?: "peppol" | "sef" | "en16931" }) {
   const document = input.document;
   const lines = input.lines;
   const isCredit = value(document.type).toLowerCase() === "credit_note";
@@ -98,17 +98,24 @@ export function createUblDocument(input: { document: JsonRecord; lines: JsonReco
   const bank = input.seller.bank && typeof input.seller.bank === "object" ? input.seller.bank as JsonRecord : {};
   const iban = value(bank.iban || input.seller.iban);
   const dueDate = value(document.due_date);
+  const profile = input.profile || "peppol";
+  const customizationId = profile === "peppol"
+    ? "urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:billing:3.0"
+    : "urn:cen.eu:en16931:2017";
+  const profileId = profile === "peppol" ? "urn:fdc:peppol.eu:2017:poacc:billing:01:1.0" : "";
+  const sourceInvoiceNumber = value(document.source_invoice_number || document.source_document_number || document.source_invoice_id);
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <${root} xmlns="urn:oasis:names:specification:ubl:schema:xsd:${root}-2" xmlns:cac="urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2" xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2">
-  <cbc:CustomizationID>urn:cen.eu:en16931:2017</cbc:CustomizationID>
-  <cbc:ProfileID>urn:fdc:peppol.eu:2017:poacc:billing:01:1.0</cbc:ProfileID>
+  <cbc:CustomizationID>${customizationId}</cbc:CustomizationID>
+  ${profileId ? `<cbc:ProfileID>${profileId}</cbc:ProfileID>` : ""}
   <cbc:ID>${xml(number)}</cbc:ID>
   <cbc:IssueDate>${xml(value(document.date).slice(0, 10))}</cbc:IssueDate>
   ${dueDate ? `<cbc:DueDate>${xml(dueDate.slice(0, 10))}</cbc:DueDate>` : ""}
   <cbc:${isCredit ? "CreditNoteTypeCode" : "InvoiceTypeCode"}>${typeCode}</cbc:${isCredit ? "CreditNoteTypeCode" : "InvoiceTypeCode"}>
   <cbc:DocumentCurrencyCode>${xml(currency)}</cbc:DocumentCurrencyCode>
   ${document.buyer_reference ? `<cbc:BuyerReference>${xml(document.buyer_reference)}</cbc:BuyerReference>` : ""}
+  ${isCredit && sourceInvoiceNumber ? `<cac:BillingReference><cac:InvoiceDocumentReference><cbc:ID>${xml(sourceInvoiceNumber)}</cbc:ID></cac:InvoiceDocumentReference></cac:BillingReference>` : ""}
   ${partyXml("AccountingSupplierParty", input.seller)}
   ${partyXml("AccountingCustomerParty", input.buyer)}
   ${iban ? `<cac:PaymentMeans><cbc:PaymentMeansCode>30</cbc:PaymentMeansCode><cac:PayeeFinancialAccount><cbc:ID>${xml(iban)}</cbc:ID></cac:PayeeFinancialAccount></cac:PaymentMeans>` : ""}

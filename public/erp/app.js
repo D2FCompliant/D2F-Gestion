@@ -679,6 +679,7 @@ function renderToolbar(moduleKey) {
     const quoteState = canonicalQuoteStatus(state.quoteDraft);
     const isDraft = quoteState === "draft";
     const isSent = hasId && quoteState === "sent";
+    const canDecide = hasId && (isDraft || isSent);
     const isAccepted = hasId && quoteState === "accepted";
 
     const acceptBtn = document.createElement("button");
@@ -686,7 +687,7 @@ function renderToolbar(moduleKey) {
     acceptBtn.type = "button";
     acceptBtn.textContent = t("action.accept", "Accepter");
     acceptBtn.dataset.action = "quotes:accept";
-    setButtonDisabled(acceptBtn, !isSent);
+    setButtonDisabled(acceptBtn, !canDecide);
     elToolbar.appendChild(acceptBtn);
 
     const rejectBtn = document.createElement("button");
@@ -694,7 +695,7 @@ function renderToolbar(moduleKey) {
     rejectBtn.type = "button";
     rejectBtn.textContent = t("action.reject", "Refuser");
     rejectBtn.dataset.action = "quotes:reject";
-    setButtonDisabled(rejectBtn, !isSent);
+    setButtonDisabled(rejectBtn, !canDecide);
     elToolbar.appendChild(rejectBtn);
 
     for (const a of cfg.actions || []) {
@@ -1916,6 +1917,25 @@ async function saveCompanyFromUI() {
 }
 
 /* ----------------- Clients UI (manquants) ----------------- */
+function setClientPeppolStatus(status, message) {
+  const badge = $("cl-peppol-status");
+  const messageEl = $("cl-peppol-message");
+  const normalized = String(status || "not_checked");
+  const labels = {
+    verified: t("clients.peppol.verified", "Identifiant trouvé"),
+    not_found: t("clients.peppol.not_found", "Non trouvé — PDF possible"),
+    error: t("clients.peppol.error", "Annuaire indisponible"),
+    not_checked: t("clients.peppol.not_checked", "Non vérifié"),
+  };
+  if (badge) {
+    badge.dataset.directoryStatus = normalized;
+    badge.textContent = labels[normalized] || labels.not_checked;
+    badge.classList.remove("is-neutral", "is-ready", "is-warning", "is-blocked");
+    badge.classList.add(normalized === "verified" ? "is-ready" : normalized === "not_found" || normalized === "error" ? "is-warning" : "is-neutral");
+  }
+  if (messageEl) messageEl.textContent = message || t("clients.peppol.disclaimer", "L’annuaire aide à identifier le participant ; le prestataire d’accès doit encore confirmer la capacité de livraison.");
+}
+
 function fillClientForm(c) {
   if ($("cl-id")) $("cl-id").value = c?.id || "";
   if ($("cl-customer-type")) $("cl-customer-type").value = (c?.customer_type || "B2C").toString().toUpperCase();
@@ -1928,6 +1948,9 @@ function fillClientForm(c) {
   if ($("cl-vat-subject")) $("cl-vat-subject").value = String(c?.vat_subject ?? 1);
   if ($("cl-vat-id")) $("cl-vat-id").value = c?.vat_id || "";
   if ($("cl-legal-id")) $("cl-legal-id").value = c?.legal_id || "";
+  if ($("cl-peppol-scheme")) $("cl-peppol-scheme").value = c?.peppol_endpoint_scheme || "";
+  if ($("cl-peppol-endpoint")) $("cl-peppol-endpoint").value = c?.peppol_endpoint_id || "";
+  setClientPeppolStatus(c?.peppol_directory_status || "not_checked", c?.peppol_directory_message || "");
 
   if ($("cl-street")) $("cl-street").value = c?.street || "";
   if ($("cl-street2")) $("cl-street2").value = c?.street2 || "";
@@ -1957,6 +1980,10 @@ function clientPayloadFromForm() {
     vat_subject: Number($("cl-vat-subject")?.value ?? 1),
     vat_id: $("cl-vat-id")?.value || "",
     legal_id: $("cl-legal-id")?.value || "",
+    peppol_endpoint_scheme: $("cl-peppol-scheme")?.value?.trim() || "",
+    peppol_endpoint_id: $("cl-peppol-endpoint")?.value?.trim() || "",
+    peppol_directory_status: $("cl-peppol-status")?.dataset?.directoryStatus || "not_checked",
+    peppol_directory_message: $("cl-peppol-message")?.textContent || "",
     street: $("cl-street")?.value || "",
     street2: $("cl-street2")?.value || "",
     postal_code: $("cl-postal")?.value || "",
@@ -2040,6 +2067,19 @@ function renderList(container, rows, selectedId, titleFn, subFn) {
     if (sEl) sEl.textContent = normalizeLabel(subFn ? subFn(r) : "");
 
     container.appendChild(b);
+  }
+}
+
+function decorateQuoteList() {
+  const container = $("quotesList");
+  if (!container) return;
+  for (const quote of state.quotes || []) {
+    const item = Array.from(container.querySelectorAll(".list__item")).find((node) => String(node.dataset.id) === String(quote.id));
+    if (!item) continue;
+    const status = canonicalQuoteStatus(quote);
+    item.classList.toggle("list__item--rejected", status === "rejected");
+    if (status === "rejected") item.dataset.statusWatermark = t("quotes.status.rejected", "Refusé");
+    else delete item.dataset.statusWatermark;
   }
 }
 
@@ -3677,6 +3717,58 @@ function fillExportsPickers() {
     })),
     getSelectedExportInvoiceId() || state.selectedInvoiceId || state.invoiceDraft?.id
   );
+  refreshExportReadiness().catch((error) => console.warn("[compliance] preflight", error));
+}
+
+function localizedComplianceMessage(issue) {
+  const key = `compliance.issue.${String(issue?.code || "").toLowerCase().replace(/[^a-z0-9]+/g, "_")}`;
+  return t(key, issue?.message || issue?.code || "");
+}
+
+async function refreshExportReadiness() {
+  const invoiceId = getSelectedExportInvoiceId();
+  const badge = $("ex-compliance-badge");
+  const profileEl = $("ex-compliance-profile");
+  const list = $("ex-compliance-list");
+  const sendButton = document.querySelector('[data-action="exports:peppolSend"]');
+  if (!badge || !profileEl || !list) return;
+  badge.classList.remove("is-neutral", "is-ready", "is-warning", "is-blocked");
+  if (!invoiceId) {
+    badge.classList.add("is-neutral");
+    badge.textContent = t("exports.readiness.pending", "À vérifier");
+    profileEl.textContent = t("exports.readiness.select", "Sélectionnez une facture pour vérifier le profil du pays.");
+    list.innerHTML = "";
+    setButtonDisabled(sendButton, true);
+    return;
+  }
+  badge.classList.add("is-neutral");
+  badge.textContent = t("exports.readiness.checking", "Contrôle…");
+  setButtonDisabled(sendButton, true);
+  try {
+    const result = await window.api.conformity.invoicePreflight({ id: invoiceId, mode: "national" });
+    const profileKey = `integrations.profile.${String(result?.sellerCountry || "default").toLowerCase()}.title`;
+    profileEl.textContent = t(profileKey, result?.profile?.label || result?.profile?.nationalChannel || "EN16931");
+    const issues = [...(result?.errors || []), ...(result?.warnings || [])];
+    list.innerHTML = "";
+    for (const issue of issues) {
+      const li = document.createElement("li");
+      li.textContent = localizedComplianceMessage(issue);
+      list.appendChild(li);
+    }
+    const readiness = result?.readiness || (result?.ok ? "ready" : "blocked");
+    badge.classList.remove("is-neutral");
+    badge.classList.add(`is-${readiness}`);
+    badge.textContent = t(`exports.readiness.${readiness}`, readiness === "ready" ? "Prêt" : readiness === "warning" ? "À confirmer" : "Bloqué");
+    setButtonDisabled(sendButton, !result?.ok);
+    sendButton?.setAttribute("title", result?.ok ? t("exports.readiness.send_ready", "Contrôles obligatoires réussis") : t("exports.readiness.send_blocked", "Corrigez les informations listées avant transmission"));
+  } catch (error) {
+    badge.classList.remove("is-neutral");
+    badge.classList.add("is-blocked");
+    badge.textContent = t("exports.readiness.blocked", "Bloqué");
+    profileEl.textContent = error?.message || t("exports.readiness.error", "Contrôle indisponible");
+    list.innerHTML = "";
+    setButtonDisabled(sendButton, true);
+  }
 }
 
 /* ----------------- Deposits helpers ----------------- */
@@ -3848,6 +3940,7 @@ return;
       (qq) => qq.number || "—",
       (qq) => `${qq.client_name || "—"} • ${money(qq.total_ttc)} €`
     );
+    decorateQuoteList();
 
     await refreshClientAndArticlePickers();
 
@@ -4175,18 +4268,15 @@ async function handleAction(actionId, payload) {
       case "quotes:accept": {
         const id = state.quoteDraft?.id;
         if (!id) { setStatus("Devis: id manquant"); break; }
-        if (canonicalQuoteStatus(state.quoteDraft) !== "sent") {
-          throw new Error(t("err.quote.must_be_sent_for_decision", "Le devis doit d’abord être validé et envoyé."));
+        if (!["draft", "sent"].includes(canonicalQuoteStatus(state.quoteDraft))) {
+          throw new Error(t("err.quote.decision_not_allowed", "Ce devis a déjà reçu une décision définitive."));
         }
 
-        await window.api.quotes.setStatus({ id, status: "accepted" });
-
-        await refreshModule("quotes").catch(() => {});
-
-        const fresh = await window.api.quotes.get(id);
-        if (fresh) state.quoteDraft = fresh;
-
+        const updated = await window.api.quotes.setStatus({ id, status: "accepted" });
+        state.quoteDraft = { ...state.quoteDraft, ...(updated || {}), status: "accepted" };
         renderQuoteDraft();
+
+        await refreshModule("quotes");
         setStatus(t("status.quote_accepted", "Devis accepté"));
         break;
       }
@@ -4194,11 +4284,13 @@ async function handleAction(actionId, payload) {
       case "quotes:reject": {
         const id = state.quoteDraft?.id;
         if (!id) throw new Error(t("err.quote.select_quote", "Sélectionnez un devis."));
-        if (canonicalQuoteStatus(state.quoteDraft) !== "sent") {
-          throw new Error(t("err.quote.must_be_sent_for_decision", "Le devis doit d’abord être validé et envoyé."));
+        if (!["draft", "sent"].includes(canonicalQuoteStatus(state.quoteDraft))) {
+          throw new Error(t("err.quote.decision_not_allowed", "Ce devis a déjà reçu une décision définitive."));
         }
 
-        await window.api.quotes.setStatus({ id, status: "rejected" });
+        const updated = await window.api.quotes.setStatus({ id, status: "rejected" });
+        state.quoteDraft = { ...state.quoteDraft, ...(updated || {}), status: "rejected" };
+        renderQuoteDraft();
         await refreshModule("quotes");
         setStatus(t("status.quote_rejected", "Devis refusé"));
         break;
@@ -4628,11 +4720,50 @@ case "clients:new":
 
 case "clients:save": {
   const payload = clientPayloadFromForm();
+  validateBuyerEN16931(payload);
   const saved = normalizeClient(await window.api.clients.save(payload));
-  validateBuyerEN16931(saved);
   state.selectedClientId = saved.id; 
   await refreshModule("clients");
   setStatus(t("status.client_saved", "Client saved"));
+  break;
+}
+
+case "clients:lookupPeppol": {
+  const payload = clientPayloadFromForm();
+  validateBuyerEN16931(payload);
+  setClientPeppolStatus("not_checked", t("clients.peppol.searching", "Recherche dans l’annuaire officiel PEPPOL…"));
+  try {
+    const request = {
+      country: payload.country,
+      name: payload.name,
+      legalId: payload.legal_id,
+      vatId: payload.vat_id,
+      scheme: payload.peppol_endpoint_scheme,
+      endpointId: payload.peppol_endpoint_id,
+      query: payload.peppol_endpoint_id || payload.legal_id || payload.vat_id || payload.name,
+    };
+    const result = window.api.directory?.lookupPeppol
+      ? await window.api.directory.lookupPeppol(request)
+      : await window.api.invoke("directory:lookupPeppol", request);
+    const matches = Array.isArray(result?.results) ? result.results : [];
+    if (!matches.length) {
+      setClientPeppolStatus("not_found", t("clients.peppol.not_found_help", "Aucun participant trouvé. Vous pouvez enregistrer la fiche et produire un PDF, mais l’export structuré restera bloqué tant que l’adresse électronique n’est pas renseignée."));
+      setStatus(t("clients.peppol.not_found", "Non trouvé — PDF possible"));
+      break;
+    }
+    const country = String(payload.country || "").toUpperCase();
+    const legalId = String(payload.legal_id || payload.vat_id || "").replace(/[^A-Z0-9]/gi, "").toUpperCase();
+    const best = matches.find((item) => String(item.country || "").toUpperCase() === country && String(item.endpointId || "").replace(/[^A-Z0-9]/gi, "").toUpperCase().includes(legalId))
+      || matches.find((item) => String(item.country || "").toUpperCase() === country)
+      || matches[0];
+    if ($("cl-peppol-scheme")) $("cl-peppol-scheme").value = best.scheme || "";
+    if ($("cl-peppol-endpoint")) $("cl-peppol-endpoint").value = best.endpointId || "";
+    setClientPeppolStatus("verified", t("clients.peppol.found_help", "Participant trouvé : {name} ({scheme}:{id}). Confirmez la capacité de réception avec votre prestataire avant l’envoi.", { name: best.name || payload.name, scheme: best.scheme, id: best.endpointId }));
+    setStatus(t("clients.peppol.verified", "Identifiant trouvé"));
+  } catch (error) {
+    setClientPeppolStatus("error", error?.message || t("clients.peppol.error", "Annuaire indisponible"));
+    throw error;
+  }
   break;
 }
 
@@ -6085,6 +6216,10 @@ function init() {
     $("quotesSearch")?.addEventListener("input", () => refreshModule("quotes").catch(console.error));
     $("invoicesSearch")?.addEventListener("input", () => refreshModule("invoices").catch(console.error));
     $("inboundSearch")?.addEventListener("input", () => refreshModule("inbound").catch(console.error));
+    $("ex-invoice")?.addEventListener("change", () => refreshExportReadiness().catch(console.error));
+    ["cl-peppol-scheme", "cl-peppol-endpoint"].forEach((id) => {
+      $(id)?.addEventListener("input", () => setClientPeppolStatus("not_checked", t("clients.peppol.changed", "Identifiant modifié : relancez la recherche avant un envoi structuré.")));
+    });
 
     // VAT watchers
     $("q-client")?.addEventListener("change", () => applyVatForQuote().catch(console.error));

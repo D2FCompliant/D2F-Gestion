@@ -209,13 +209,41 @@ test("wires every visible command and enforces the quote lifecycle", async () =>
 
   assert.match(html, /id="q-lifecycle-hint"/);
   assert.match(app, /case "quotes:reject"/);
-  assert.match(app, /canonicalQuoteStatus\(state\.quoteDraft\) !== "sent"/);
+  assert.match(app, /list__item--rejected/);
+  assert.match(app, /\["draft", "sent"\]\.includes\(canonicalQuoteStatus/);
   assert.match(app, /if \(state\.currentModule === "quotes"\) renderToolbar\("quotes"\)/);
-  assert.match(app, /setButtonDisabled\(acceptBtn, !isSent\)/);
-  assert.match(app, /setButtonDisabled\(rejectBtn, !isSent\)/);
-  assert.match(route, /draft: \["sent"\]/);
+  assert.match(app, /setButtonDisabled\(acceptBtn, !canDecide\)/);
+  assert.match(app, /setButtonDisabled\(rejectBtn, !canDecide\)/);
+  assert.match(route, /draft: \["sent", "accepted", "rejected"\]/);
   assert.match(route, /sent: \["accepted", "rejected"\]/);
   assert.match(route, /Transition de devis interdite/);
+});
+
+test("country-aware structured export fails closed and client PEPPOL lookup is available", async () => {
+  const [html, app, route, ubl, compliance, shim] = await Promise.all([
+    readFile(new URL("../public/erp/index.html", import.meta.url), "utf8"),
+    readFile(new URL("../public/erp/app.js", import.meta.url), "utf8"),
+    readFile(new URL("../app/rpc/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../lib/ubl.ts", import.meta.url), "utf8"),
+    readFile(new URL("../lib/country-compliance.ts", import.meta.url), "utf8"),
+    readFile(new URL("../public/erp/renderer/web-api-shim.js", import.meta.url), "utf8"),
+  ]);
+  assert.match(html, /id="cl-peppol-scheme"/);
+  assert.match(html, /id="cl-peppol-endpoint"/);
+  assert.match(html, /data-action="clients:lookupPeppol"/);
+  assert.match(html, /id="ex-compliance-card"/);
+  assert.match(app, /case "clients:lookupPeppol"/);
+  assert.match(app, /conformity\.invoicePreflight/);
+  assert.match(route, /directory:lookupPeppol/);
+  assert.match(route, /Transmission nationale bloquée/);
+  assert.match(shim, /directory: ns\("directory"\)/);
+  assert.match(compliance, /FR-BT-49/);
+  assert.match(compliance, /IT-FATTURAPA/);
+  assert.match(compliance, /ES-VERIFACTU/);
+  assert.match(compliance, /COUNTRY-NOT-QUALIFIED/);
+  assert.match(ubl, /billing:3\.0/);
+  assert.match(ubl, /cac:BillingReference/);
+  assert.doesNotMatch(ubl, /meta\.peppol_endpoint_id \|\| party\.vat_id/);
 });
 
 test("removes issued credit notes from invoice balances", async () => {

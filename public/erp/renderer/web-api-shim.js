@@ -108,6 +108,7 @@
     on: () => () => {},
     off: () => {},
     dashboard: ns("dashboard"),
+    directory: ns("directory"),
     quotes: ns("quotes"),
     clients: ns("clients"),
     invoices: ns("invoices"),

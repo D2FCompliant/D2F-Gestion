@@ -11,6 +11,7 @@ import { getIntegration, listTransmissions, saveIntegration, testIntegration, tr
 import { readAppSession, renewedSession, sessionCookie } from "../../lib/auth/server";
 import { accountAllowsApplication, getAccountById, memberFor } from "../../lib/saas/accounts";
 import { validateEstablishmentIdentifier } from "../../lib/company-identifiers";
+import { preflightInvoice } from "../../lib/country-compliance";
 
 export const dynamic = "force-dynamic";
 
@@ -624,10 +625,72 @@ async function exportInvoiceUbl(ownerEmail: string, input: unknown) {
   const id = idFrom(input);
   const bundle = await documentBundle(ownerEmail, "invoices", id);
   if (invoiceStatus(bundle.document) !== "issued") throw new Error("La facture doit être émise avant l'export UBL");
-  const xml = createUblDocument(bundle);
+  const preflight = preflightInvoice({ ...bundle, mode: "peppol" });
+  if (!preflight.ok) {
+    const details = preflight.errors.map((issue) => `${issue.code}: ${issue.message}`).join("\n");
+    throw new Error(`Export PEPPOL bloqué — informations obligatoires manquantes :\n${details}`);
+  }
+  const xml = createUblDocument({ ...bundle, profile: "peppol" });
   const number = bundle.document.invoice_number || bundle.document.id;
   const fileName = `${safeFileName(number, "facture")}.xml`;
   return { ok: true, xml, filename: fileName, fileName, mimeType: "application/xml", downloadBase64: textToBase64(xml) };
+}
+
+function peppolText(value: unknown) {
+  if (typeof value === "string" || typeof value === "number") return String(value).trim();
+  const item = object(value);
+  return String(item.value || item.id || item.text || item.name || "").trim();
+}
+
+function peppolCards(payload: unknown) {
+  if (Array.isArray(payload)) return payload.map(object);
+  const root = object(payload);
+  const candidates = [root.matches, root.businessCards, root.business_cards, root.entities, root.results, root.items];
+  const list = candidates.find(Array.isArray);
+  return Array.isArray(list) ? list.map(object) : [];
+}
+
+function normalizePeppolCard(card: JsonRecord) {
+  const participant = object(card.participantID || card.participantId || card.participant_identifier || card.participant);
+  const rawParticipant = peppolText(participant) || peppolText(card.participantID || card.participantId || card.participant_identifier || card.participant);
+  const value = peppolText(participant.value || participant.id) || rawParticipant.replace(/^iso6523-actorid-upis::/i, "");
+  const parts = value.split(":");
+  const scheme = peppolText(participant.scheme || participant.schemeID || participant.scheme_id) || (parts.length > 1 ? parts.shift() || "" : "");
+  const endpointId = parts.length ? parts.join(":") : value;
+  const entities = Array.isArray(card.entities) ? card.entities.map(object) : [];
+  const firstEntity = entities[0] || object(card.entity);
+  const names = Array.isArray(firstEntity.names) ? firstEntity.names.map(object) : [];
+  const name = peppolText(card.name || card.entityName || firstEntity.name || names[0]);
+  const country = String(card.country || firstEntity.countryCode || firstEntity.country || "").toUpperCase().slice(0, 2);
+  return { scheme, endpointId, participant: scheme && endpointId ? `${scheme}:${endpointId}` : rawParticipant, name, country };
+}
+
+async function lookupPeppolDirectory(input: JsonRecord) {
+  const country = String(input.country || "").trim().toUpperCase().slice(0, 2);
+  const scheme = String(input.scheme || input.endpointScheme || "").trim();
+  const endpointId = String(input.endpointId || input.endpoint_id || "").trim();
+  const query = String(input.query || input.legalId || input.legal_id || input.vatId || input.vat_id || input.name || "").trim();
+  if (!query && !endpointId) throw new Error("Indiquez un nom, un identifiant légal, un numéro de TVA ou un identifiant PEPPOL");
+  const url = new URL("https://directory.peppol.eu/search/1.0/json");
+  if (scheme && endpointId) url.searchParams.set("participant", `iso6523-actorid-upis::${scheme}:${endpointId}`);
+  else url.searchParams.set("q", query || endpointId);
+  if (country) url.searchParams.set("country", country);
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 8_000);
+  try {
+    const response = await fetch(url, { headers: { accept: "application/json", "user-agent": "D2F-Gestion/1.0" }, signal: controller.signal });
+    if (!response.ok) throw new Error(`Annuaire PEPPOL indisponible (${response.status})`);
+    const text = await response.text();
+    if (!text.trim()) return { ok: true, found: false, results: [], source: "Peppol Directory" };
+    const payload = JSON.parse(text) as unknown;
+    const results = peppolCards(payload).map(normalizePeppolCard).filter((item) => item.endpointId && item.scheme).slice(0, 20);
+    return { ok: true, found: results.length > 0, results, source: "Peppol Directory", directoryUrl: `https://directory.peppol.eu/public/menuitem-search?q=${encodeURIComponent(query || endpointId)}` };
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") throw new Error("Le délai de réponse de l’annuaire PEPPOL est dépassé");
+    throw error;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 async function conformitySummary(ownerEmail: string) {
@@ -706,6 +769,14 @@ async function dispatch(ownerEmail: string, method: string, args: unknown[], ten
   }
   if (method === "dashboard:get") return dashboard(ownerEmail);
   if (method === "dashboard:metrics") return dashboardMetrics(ownerEmail, object(first(args)).year);
+  if (method === "directory:lookupPeppol") return lookupPeppolDirectory(object(first(args)));
+  if (method === "conformity:invoicePreflight") {
+    const payload = object(first(args));
+    const bundle = await documentBundle(ownerEmail, "invoices", idFrom(payload));
+    const requestedMode = String(payload.mode || "national");
+    const mode = requestedMode === "pdf" || requestedMode === "peppol" ? requestedMode : "national";
+    return preflightInvoice({ ...bundle, mode });
+  }
   if (method === "quotes:exportPdf") return exportDocumentPdf(ownerEmail, "quotes", args);
   if (method === "invoices:exportPdf") return exportDocumentPdf(ownerEmail, "invoices", args);
   if (method === "invoices:exportUbl") return exportInvoiceUbl(ownerEmail, first(args));
@@ -727,9 +798,14 @@ async function dispatch(ownerEmail: string, method: string, args: unknown[], ten
     const connector = await validatedNationalConnector(ownerEmail);
     const bundle = await documentBundle(ownerEmail, "invoices", idFrom(payload));
     if (invoiceStatus(bundle.document) !== "issued") throw new Error("La facture doit être émise avant transmission au réseau national");
+    const preflight = preflightInvoice({ ...bundle, mode: "national" });
+    if (!preflight.ok) {
+      const details = preflight.errors.map((issue) => `${issue.code}: ${issue.message}`).join("\n");
+      throw new Error(`Transmission nationale bloquée — contrôle pays incomplet :\n${details}`);
+    }
     if (connector.country === "IT") throw new Error("L’envoi SdI direct exige le format FatturaPA et une recette avec le canal choisi. Ce connecteur n’est pas encore autorisé à transmettre un UBL comme FatturaPA.");
     if (connector.country === "ES") throw new Error("VERI*FACTU exige des registres AEAT spécifiques et ne correspond pas à l’envoi d’une facture UBL. Configurez un prestataire certifiant le flux avant activation.");
-    const xml = createUblDocument(bundle);
+    const xml = createUblDocument({ ...bundle, profile: connector.country === "RS" ? "sef" : "en16931" });
     return transmitIntegration(getSupabaseAdmin(), ownerEmail, "pa", { documentId: String(bundle.document.id || ""), documentNumber: String(bundle.document.invoice_number || ""), content: xml, contentType: "application/xml", metadata: { format: "UBL-2.1", standard: "EN16931", channel_profile: connector.expectedProfile, country: connector.country } });
   }
   if (method === "conformity:rebuildPeriod") {
@@ -807,7 +883,7 @@ async function dispatch(ownerEmail: string, method: string, args: unknown[], ten
       const currentStatus = String(source.status || "draft").toLowerCase();
       const nextStatus = String(args[1] || object(first(args)).status || "").toLowerCase();
       const allowedTransitions: Record<string, string[]> = {
-        draft: ["sent"],
+        draft: ["sent", "accepted", "rejected"],
         sent: ["accepted", "rejected"],
         accepted: [],
         rejected: [],
@@ -840,7 +916,7 @@ async function dispatch(ownerEmail: string, method: string, args: unknown[], ten
     if (entity === "invoices" && action === "createCreditNote") {
       const source = await getRecord(ownerEmail, "invoices", idFrom(first(args)));
       if (!source) throw new Error("Facture introuvable");
-      return saveRecord(ownerEmail, "invoices", { ...source, id: crypto.randomUUID(), source_invoice_id: source.id, invoice_number: "", type: "credit_note", status: "draft", total_ht: -Math.abs(numberValue(source.total_ht)), total_tva: -Math.abs(numberValue(source.total_tva)), total_ttc: -Math.abs(numberValue(source.total_ttc)) });
+      return saveRecord(ownerEmail, "invoices", { ...source, id: crypto.randomUUID(), source_invoice_id: source.id, source_invoice_number: source.invoice_number || source.number || source.id, invoice_number: "", type: "credit_note", status: "draft", total_ht: -Math.abs(numberValue(source.total_ht)), total_tva: -Math.abs(numberValue(source.total_tva)), total_ttc: -Math.abs(numberValue(source.total_ttc)) });
     }
     if (entity === "payments" && action === "sumByInvoice") {
       const id = idFrom(first(args));
