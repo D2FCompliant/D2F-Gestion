@@ -139,6 +139,7 @@ test("ships a branded Cloudflare gateway without exposing the Worker origin", as
   assert.match(config, /"D2F_PUBLIC_URL": "https:\/\/gestion\.d2fcompliant\.org"/);
   assert.match(config, /"D2F_OWNER_EMAIL": "contact@d2fcompliant\.org"/);
   assert.match(config, /"D2F_DATA_OWNER_KEY": "owner@d2f\.local"/);
+  assert.match(config, /"D2F_MONTHLY_PRICE_EUR": "29"/);
 });
 
 test("shows one visible product brand and blocks clients until payment is verified", async () => {
@@ -159,6 +160,31 @@ test("shows one visible product brand and blocks clients until payment is verifi
   assert.match(accounts, /account\.subscription\.status !== "payment_declared"/);
   assert.match(signup, /acceptPaymentTerms/);
   assert.match(subscription, /body\.confirmTransfer !== true/);
+});
+
+test("shows the monthly tariff before establishment registration in every portal language", async () => {
+  const [page, shell, styles, portal, auth, envExample] = await Promise.all([
+    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/session-shell.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
+    readFile(new URL("../app/portal-i18n.ts", import.meta.url), "utf8"),
+    readFile(new URL("../lib/auth/server.ts", import.meta.url), "utf8"),
+    readFile(new URL("../.env.example", import.meta.url), "utf8"),
+  ]);
+  assert.match(page, /publicBillingConfig\(\)\.amountEur/);
+  assert.match(shell, /className="pricing-card"/);
+  assert.match(shell, /formatPortalPrice\(monthlyPriceEur, locale\)/);
+  assert.match(styles, /\.pricing-card\s*\{/);
+  assert.match(styles, /\.pricing-card ul \{ display:grid; grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
+  assert.equal(Array.from(portal.matchAll(/pricingPlan: "/g)).length, 5);
+  assert.equal(Array.from(portal.matchAll(/pricingCommitment: "/g)).length, 5);
+  assert.match(portal, /2 utilisateurs inclus/);
+  assert.match(portal, /2 users included/);
+  assert.match(portal, /2 korisnika uključena/);
+  assert.match(portal, /2 utenti inclusi/);
+  assert.match(portal, /2 usuarios incluidos/);
+  assert.match(auth, /D2F_MONTHLY_PRICE_EUR \|\| "29"/);
+  assert.match(envExample, /D2F_MONTHLY_PRICE_EUR=29/);
 });
 
 test("scopes tenants to establishments and selects national e-invoicing profiles", async () => {

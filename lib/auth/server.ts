@@ -152,9 +152,9 @@ export async function userFromAccessToken(accessToken: string): Promise<User> {
 }
 
 export function publicBillingConfig() {
-  const amount = Number(process.env.D2F_MONTHLY_PRICE_EUR || "");
+  const amount = Number(process.env.D2F_MONTHLY_PRICE_EUR || "29");
   return {
-    amountEur: Number.isFinite(amount) && amount > 0 ? amount : null,
+    amountEur: Number.isFinite(amount) && amount > 0 ? amount : 29,
     currency: "EUR",
     beneficiary: process.env.D2F_BILLING_BENEFICIARY || "D2F Compliant d.o.o.",
     iban: process.env.D2F_BILLING_IBAN || "",

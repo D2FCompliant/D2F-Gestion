@@ -57,7 +57,17 @@ function formatDate(value: string) {
   return new Intl.DateTimeFormat("fr-FR", { dateStyle: "medium", timeZone: "UTC" }).format(new Date(`${value}T00:00:00.000Z`));
 }
 
-function AuthPortal({ onAuthenticated }: { onAuthenticated: (session: SessionData) => void }) {
+function formatPortalPrice(amount: number, locale: PortalLocale) {
+  const locales: Record<PortalLocale, string> = { fr: "fr-FR", en: "en-GB", sr: "sr-Latn-RS", it: "it-IT", es: "es-ES" };
+  return new Intl.NumberFormat(locales[locale], {
+    style: "currency",
+    currency: "EUR",
+    minimumFractionDigits: Number.isInteger(amount) ? 0 : 2,
+    maximumFractionDigits: 2,
+  }).format(amount);
+}
+
+function AuthPortal({ onAuthenticated, monthlyPriceEur }: { onAuthenticated: (session: SessionData) => void; monthlyPriceEur: number }) {
   const [mode, setMode] = useState<"login" | "signup">("login");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -164,6 +174,19 @@ function AuthPortal({ onAuthenticated }: { onAuthenticated: (session: SessionDat
           ) : (
             <form className="auth-form signup-form" onSubmit={submitSignup}>
               <div><p className="eyebrow">{copy.monthly}</p><h2>{copy.createSpace}</h2><p>{copy.signupLead}</p></div>
+              <section className="pricing-card" aria-label={copy.pricingPlan}>
+                <div className="pricing-card__head">
+                  <div><span>{copy.pricingPlan}</span><p><strong>{formatPortalPrice(monthlyPriceEur, locale)}</strong><small>{copy.pricingPeriod}</small></p></div>
+                  <span className="pricing-card__tag">{copy.pricingCommitment}</span>
+                </div>
+                <ul>
+                  <li>{copy.pricingScope}</li>
+                  <li>{copy.pricingSeats}</li>
+                  <li>{copy.pricingIncluded}</li>
+                </ul>
+                <p className="pricing-card__tax">{copy.pricingTax}</p>
+                <p className="pricing-card__external">{copy.pricingExternal}</p>
+              </section>
               <p className="establishment-note">{copy.identifierScope}</p>
               <div className="form-grid">
                 <label>{copy.companyName}<input name="companyName" autoComplete="organization" required /></label>
@@ -263,7 +286,7 @@ function LockedSubscription({ session, onOpen }: { session: SessionData; onOpen:
   return <main className="locked-page"><img src="/d2f-gestion-logo.png" alt="D2F Gestion" /><p className="eyebrow">PORTAIL DE RÈGLEMENT</p><h1>{formatStatus(session.account.status)}</h1><p>Votre connexion est confirmée, mais l’application reste verrouillée jusqu’à réception et validation du règlement par D2F Compliant.</p><ol className="activation-steps"><li><strong>Entreprise créée</strong>Adresse e-mail et identité confirmées.</li><li><strong>Paiement déclaré</strong>Le client renseigne un virement réellement exécuté.</li><li><strong>Réception validée</strong>D2F ouvre alors un mois d’accès.</li></ol><div className="reference-card"><span>Référence à indiquer</span><strong>{session.account.subscription.bankTransferReference || "D2F vous communiquera la référence"}</strong></div><button className="primary-action" onClick={onOpen}>Voir les coordonnées et déclarer le virement</button></main>;
 }
 
-export default function SessionShell() {
+export default function SessionShell({ monthlyPriceEur }: { monthlyPriceEur: number }) {
   const [loading, setLoading] = useState(true);
   const [session, setSession] = useState<SessionData | null>(null);
   const [drawer, setDrawer] = useState(false);
@@ -326,7 +349,7 @@ export default function SessionShell() {
 
   if (loading) return <main className="session-loading"><img src="/d2f-gestion-logo.png" alt="D2F Gestion" /><span>Ouverture sécurisée…</span></main>;
   if (completionToken) return <PasswordCompletion token={completionToken} onAuthenticated={(value) => { setCompletionToken(""); setSession(value); }} />;
-  if (!session) return <AuthPortal onAuthenticated={setSession} />;
+  if (!session) return <AuthPortal onAuthenticated={setSession} monthlyPriceEur={monthlyPriceEur} />;
 
   return <main className="app-session-shell">
     <header className="account-bar"><div className="account-brand"><img src="/d2f-gestion-logo.png" alt="" /><strong>D2F Gestion</strong><span>{session.account.name}</span></div><div className="account-actions">{warning > 0 && <span className="idle-warning">Déconnexion dans {warning} s</span>}<button className="account-button" onClick={() => setDrawer(true)}><span>{initials}</span><span><strong>{session.user.fullName}</strong><small>{formatStatus(session.account.status)}</small></span></button><button className="logout-button" onClick={logout}>Déconnexion</button></div></header>

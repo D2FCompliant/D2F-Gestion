@@ -26,6 +26,14 @@ export type PortalCopy = {
   monthly: string;
   createSpace: string;
   signupLead: string;
+  pricingPlan: string;
+  pricingPeriod: string;
+  pricingTax: string;
+  pricingScope: string;
+  pricingSeats: string;
+  pricingIncluded: string;
+  pricingExternal: string;
+  pricingCommitment: string;
   companyName: string;
   country: string;
   ownerName: string;
@@ -62,6 +70,9 @@ export const portalCopies: Record<PortalLocale, PortalCopy> = {
     wait: "Veuillez patienter…", login: "Se connecter", sendLink: "Envoyer le lien", forgot: "Mot de passe oublié ?", backToLogin: "Retour à la connexion",
     monthly: "ABONNEMENT MENSUEL", createSpace: "Créer votre espace",
     signupLead: "La création ouvre uniquement le portail de règlement. L’application reste verrouillée jusqu’à validation du paiement par D2F.",
+    pricingPlan: "Offre D2F Gestion", pricingPeriod: "/ mois et par établissement", pricingTax: "Prix hors taxes — TVA selon le pays et le statut fiscal.",
+    pricingScope: "1 établissement facturant (un SIRET en France)", pricingSeats: "2 utilisateurs inclus", pricingIncluded: "Hébergement sécurisé, mises à jour et fonctions D2F Gestion inclus",
+    pricingExternal: "Frais éventuels du connecteur réglementaire et de l’archivage probant non inclus", pricingCommitment: "Sans engagement · résiliable en ligne",
     companyName: "Raison sociale", country: "Pays de l’établissement", ownerName: "Nom du propriétaire", workEmail: "E-mail professionnel",
     confirmPassword: "Confirmer", terms: "Je confirme être autorisé à engager l’établissement et accepte le traitement des données nécessaire au service.",
     paymentTerms: "Je comprends que l’inscription ne vaut pas paiement : l’accès au logiciel sera activé seulement après déclaration puis validation du règlement.",
@@ -89,6 +100,9 @@ export const portalCopies: Record<PortalLocale, PortalCopy> = {
     welcome: "Welcome", resetTitle: "Reset access", loginLead: "Sign in with your D2F credentials.", resetLead: "We will send you a secure link.",
     email: "Email address", password: "Password", wait: "Please wait…", login: "Sign in", sendLink: "Send link", forgot: "Forgot your password?", backToLogin: "Back to sign in",
     monthly: "MONTHLY SUBSCRIPTION", createSpace: "Create your workspace", signupLead: "Creating the account only opens the payment portal. The application remains locked until D2F validates the payment.",
+    pricingPlan: "D2F Gestion plan", pricingPeriod: "/ month per establishment", pricingTax: "Price excludes tax — VAT depends on country and tax status.",
+    pricingScope: "1 invoicing establishment (one SIRET in France)", pricingSeats: "2 users included", pricingIncluded: "Secure hosting, updates and D2F Gestion features included",
+    pricingExternal: "Any regulatory connector and probative archiving provider fees are not included", pricingCommitment: "No commitment · cancel online",
     companyName: "Legal name", country: "Establishment country", ownerName: "Owner name", workEmail: "Business email", confirmPassword: "Confirm",
     terms: "I confirm that I am authorised to bind the establishment and accept the data processing required to provide the service.",
     paymentTerms: "I understand that registration is not payment: software access is activated only after the transfer is declared and then verified.",
@@ -113,6 +127,9 @@ export const portalCopies: Record<PortalLocale, PortalCopy> = {
     loginTab: "Prijava", signupTab: "Kreiraj preduzeće", secureSpace: "BEZBEDAN PROSTOR", welcome: "Dobro došli", resetTitle: "Obnovi pristup",
     loginLead: "Prijavite se D2F podacima.", resetLead: "Poslaćemo vam bezbednu vezu.", email: "E-adresa", password: "Lozinka", wait: "Sačekajte…", login: "Prijavi se", sendLink: "Pošalji vezu", forgot: "Zaboravljena lozinka?", backToLogin: "Nazad na prijavu",
     monthly: "MESEČNA PRETPLATA", createSpace: "Kreirajte svoj prostor", signupLead: "Kreiranje otvara samo portal za plaćanje. Aplikacija ostaje zaključana dok D2F ne potvrdi uplatu.",
+    pricingPlan: "D2F Gestion paket", pricingPeriod: "/ mesečno po poslovnom sedištu", pricingTax: "Cena ne uključuje porez — PDV zavisi od zemlje i poreskog statusa.",
+    pricingScope: "1 izdavalac faktura (jedan SIRET u Francuskoj)", pricingSeats: "2 korisnika uključena", pricingIncluded: "Bezbedan hosting, ažuriranja i D2F Gestion funkcije su uključeni",
+    pricingExternal: "Troškovi regulatornog konektora i kvalifikovanog arhiviranja nisu uključeni", pricingCommitment: "Bez obaveze · otkazivanje onlajn",
     companyName: "Poslovno ime", country: "Država preduzeća", ownerName: "Ime vlasnika", workEmail: "Poslovna e-adresa", confirmPassword: "Potvrda",
     terms: "Potvrđujem da sam ovlašćen da zastupam preduzeće i prihvatam obradu podataka potrebnu za uslugu.", paymentTerms: "Razumem da registracija nije plaćanje: pristup se aktivira tek nakon prijave i D2F potvrde uplate.",
     creating: "Kreiranje…", createCompany: "Kreiraj preduzeće", passwordSecurity: "Lozinkom upravlja Supabase Auth i D2F Gestion je nikada ne čuva.",
@@ -127,6 +144,9 @@ export const portalCopies: Record<PortalLocale, PortalCopy> = {
     isolatedTitle: "Dati isolati", isolatedText: "Uno spazio logico per ogni sede.", seatsTitle: "2 utenti inclusi", seatsText: "Un proprietario e un collaboratore.", sessionTitle: "Sessione protetta", sessionText: "Disconnessione dopo 30 minuti di inattività.",
     loginTab: "Accedi", signupTab: "Crea una sede", secureSpace: "SPAZIO SICURO", welcome: "Benvenuto", resetTitle: "Reimposta accesso", loginLead: "Accedi con le credenziali D2F.", resetLead: "Ti invieremo un collegamento sicuro.", email: "Indirizzo e-mail", password: "Password", wait: "Attendere…", login: "Accedi", sendLink: "Invia link", forgot: "Password dimenticata?", backToLogin: "Torna all’accesso",
     monthly: "ABBONAMENTO MENSILE", createSpace: "Crea il tuo spazio", signupLead: "La creazione apre soltanto il portale di pagamento. L’applicazione resta bloccata finché D2F non convalida il pagamento.",
+    pricingPlan: "Piano D2F Gestion", pricingPeriod: "/ mese per sede", pricingTax: "Prezzo al netto delle imposte — IVA secondo il Paese e lo status fiscale.",
+    pricingScope: "1 sede di fatturazione (un SIRET in Francia)", pricingSeats: "2 utenti inclusi", pricingIncluded: "Hosting sicuro, aggiornamenti e funzioni D2F Gestion inclusi",
+    pricingExternal: "Eventuali costi del connettore normativo e dell’archiviazione probatoria non inclusi", pricingCommitment: "Senza impegno · recesso online",
     companyName: "Ragione sociale", country: "Paese della sede", ownerName: "Nome del proprietario", workEmail: "E-mail aziendale", confirmPassword: "Conferma",
     terms: "Confermo di essere autorizzato a impegnare la sede e accetto il trattamento dei dati necessario al servizio.", paymentTerms: "Comprendo che la registrazione non equivale al pagamento: l’accesso viene attivato solo dopo la dichiarazione e la verifica del bonifico.",
     creating: "Creazione…", createCompany: "Crea la sede", passwordSecurity: "La password è gestita da Supabase Auth e non viene mai memorizzata da D2F Gestion.",
@@ -140,6 +160,9 @@ export const portalCopies: Record<PortalLocale, PortalCopy> = {
     isolatedTitle: "Datos aislados", isolatedText: "Un espacio lógico por establecimiento.", seatsTitle: "2 usuarios incluidos", seatsText: "Un propietario y un colaborador.", sessionTitle: "Sesión protegida", sessionText: "Desconexión tras 30 minutos de inactividad.",
     loginTab: "Acceder", signupTab: "Crear establecimiento", secureSpace: "ESPACIO SEGURO", welcome: "Bienvenido", resetTitle: "Restablecer acceso", loginLead: "Acceda con sus credenciales D2F.", resetLead: "Le enviaremos un enlace seguro.", email: "Correo electrónico", password: "Contraseña", wait: "Espere…", login: "Acceder", sendLink: "Enviar enlace", forgot: "¿Olvidó la contraseña?", backToLogin: "Volver al acceso",
     monthly: "SUSCRIPCIÓN MENSUAL", createSpace: "Cree su espacio", signupLead: "La creación solo abre el portal de pago. La aplicación permanece bloqueada hasta que D2F valide el pago.",
+    pricingPlan: "Plan D2F Gestion", pricingPeriod: "/ mes por establecimiento", pricingTax: "Precio sin impuestos — IVA según el país y la situación fiscal.",
+    pricingScope: "1 establecimiento emisor (un SIRET en Francia)", pricingSeats: "2 usuarios incluidos", pricingIncluded: "Alojamiento seguro, actualizaciones y funciones de D2F Gestion incluidos",
+    pricingExternal: "No incluye posibles costes del conector normativo ni del archivo probatorio", pricingCommitment: "Sin permanencia · cancelación en línea",
     companyName: "Razón social", country: "País del establecimiento", ownerName: "Nombre del propietario", workEmail: "Correo profesional", confirmPassword: "Confirmar",
     terms: "Confirmo que estoy autorizado para representar al establecimiento y acepto el tratamiento de datos necesario para el servicio.", paymentTerms: "Entiendo que registrarse no equivale a pagar: el acceso solo se activa tras declarar y verificar la transferencia.",
     creating: "Creando…", createCompany: "Crear establecimiento", passwordSecurity: "La contraseña la gestiona Supabase Auth y D2F Gestion nunca la almacena.",
