@@ -26,7 +26,7 @@ test("server-renders the D2F Gestion cockpit", async () => {
   assert.doesNotMatch(html, /codex-preview|Your site is taking shape|react-loading-skeleton/i);
 
   const shell = await readFile(new URL("../app/session-shell.tsx", import.meta.url), "utf8");
-  assert.match(shell, /src="\/erp\/index\.html\?v=20260716-country-profiles-v4"/);
+  assert.match(shell, /src="\/erp\/index\.html\?v=20260716-quote-lifecycle-v5"/);
   assert.match(shell, /title="D2F Gestion"/);
 });
 
@@ -189,6 +189,33 @@ test("ships a global payment overview and complete screen translations", async (
     const missing = [...keys].filter((key) => !key.includes("${") && !(key in dictionary));
     assert.deepEqual(missing, [], `${locale} is missing screen translations: ${missing.join(", ")}`);
   }
+});
+
+test("wires every visible command and enforces the quote lifecycle", async () => {
+  const [html, app, route] = await Promise.all([
+    readFile(new URL("../public/erp/index.html", import.meta.url), "utf8"),
+    readFile(new URL("../public/erp/app.js", import.meta.url), "utf8"),
+    readFile(new URL("../app/rpc/route.ts", import.meta.url), "utf8"),
+  ]);
+
+  const commands = new Set([
+    ...Array.from(html.matchAll(/data-action="([^"]+)"/g), (match) => match[1]),
+    ...Array.from(app.matchAll(/\bid:\s*"([a-z][a-zA-Z0-9_-]*:[a-zA-Z0-9:_-]+)"/g), (match) => match[1]),
+    ...Array.from(app.matchAll(/dataset\.action\s*=\s*"([^"]+)"/g), (match) => match[1]),
+  ]);
+  const handled = new Set(Array.from(app.matchAll(/case\s+"([^"]+)"\s*:/g), (match) => match[1]));
+  const missing = [...commands].filter((command) => !handled.has(command)).sort();
+  assert.deepEqual(missing, [], `visible commands without a handler: ${missing.join(", ")}`);
+
+  assert.match(html, /id="q-lifecycle-hint"/);
+  assert.match(app, /case "quotes:reject"/);
+  assert.match(app, /canonicalQuoteStatus\(state\.quoteDraft\) !== "sent"/);
+  assert.match(app, /if \(state\.currentModule === "quotes"\) renderToolbar\("quotes"\)/);
+  assert.match(app, /setButtonDisabled\(acceptBtn, !isSent\)/);
+  assert.match(app, /setButtonDisabled\(rejectBtn, !isSent\)/);
+  assert.match(route, /draft: \["sent"\]/);
+  assert.match(route, /sent: \["accepted", "rejected"\]/);
+  assert.match(route, /Transition de devis interdite/);
 });
 
 test("removes issued credit notes from invoice balances", async () => {

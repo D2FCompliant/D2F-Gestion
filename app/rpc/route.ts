@@ -767,8 +767,30 @@ async function dispatch(ownerEmail: string, method: string, args: unknown[], ten
     if (entity === "payments" && ["save", "upsert", "create", "update", "record"].includes(action)) {
       return savePaymentRecord(ownerEmail, object(first(args)));
     }
-    if (["save", "upsert", "create", "update", "record"].includes(action)) return saveRecord(ownerEmail, entity, object(first(args)));
-    if (["remove", "delete"].includes(action)) return removeRecord(ownerEmail, entity, idFrom(first(args)));
+    if (["save", "upsert", "create", "update", "record"].includes(action)) {
+      const input = object(first(args));
+      if (input.id && (entity === "quotes" || entity === "invoices")) {
+        const current = await getRecord(ownerEmail, entity, String(input.id));
+        if (current && String(current.status || "draft").toLowerCase() !== "draft") {
+          throw new Error(entity === "quotes"
+            ? "Seul un devis brouillon peut être modifié"
+            : "Seule une facture brouillon peut être modifiée");
+        }
+      }
+      return saveRecord(ownerEmail, entity, input);
+    }
+    if (["remove", "delete"].includes(action)) {
+      const id = idFrom(first(args));
+      if (entity === "quotes" || entity === "invoices") {
+        const current = await getRecord(ownerEmail, entity, id);
+        if (current && String(current.status || "draft").toLowerCase() !== "draft") {
+          throw new Error(entity === "quotes"
+            ? "Seul un devis brouillon peut être supprimé"
+            : "Seule une facture brouillon peut être supprimée");
+        }
+      }
+      return removeRecord(ownerEmail, entity, id);
+    }
     if (entity === "clients" && action === "importCsv") {
       const rows = Array.isArray(object(first(args)).rows) ? object(first(args)).rows as unknown[] : [];
       return { imported: (await Promise.all(rows.map((row) => saveRecord(ownerEmail, "clients", object(row))))).length };
@@ -782,7 +804,19 @@ async function dispatch(ownerEmail: string, method: string, args: unknown[], ten
       const id = idFrom(first(args));
       const source = await getRecord(ownerEmail, "quotes", id);
       if (!source) throw new Error("Devis introuvable");
-      return saveRecord(ownerEmail, "quotes", { ...source, status: String(args[1] || object(first(args)).status || "draft") });
+      const currentStatus = String(source.status || "draft").toLowerCase();
+      const nextStatus = String(args[1] || object(first(args)).status || "").toLowerCase();
+      const allowedTransitions: Record<string, string[]> = {
+        draft: ["sent"],
+        sent: ["accepted", "rejected"],
+        accepted: [],
+        rejected: [],
+        cancelled: [],
+      };
+      if (!allowedTransitions[currentStatus]?.includes(nextStatus)) {
+        throw new Error(`Transition de devis interdite : ${currentStatus} → ${nextStatus}`);
+      }
+      return saveRecord(ownerEmail, "quotes", { ...source, status: nextStatus });
     }
     if (entity === "invoices" && action === "issue") {
       const id = idFrom(first(args));

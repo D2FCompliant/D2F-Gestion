@@ -676,13 +676,17 @@ function renderToolbar(moduleKey) {
 
   if (moduleKey === "quotes") {
     const hasId = !!state.quoteDraft?.id;
+    const quoteState = canonicalQuoteStatus(state.quoteDraft);
+    const isDraft = quoteState === "draft";
+    const isSent = hasId && quoteState === "sent";
+    const isAccepted = hasId && quoteState === "accepted";
 
     const acceptBtn = document.createElement("button");
     acceptBtn.className = "btn";
     acceptBtn.type = "button";
     acceptBtn.textContent = t("action.accept", "Accepter");
     acceptBtn.dataset.action = "quotes:accept";
-    setButtonDisabled(acceptBtn, !hasId);
+    setButtonDisabled(acceptBtn, !isSent);
     elToolbar.appendChild(acceptBtn);
 
     const rejectBtn = document.createElement("button");
@@ -690,7 +694,7 @@ function renderToolbar(moduleKey) {
     rejectBtn.type = "button";
     rejectBtn.textContent = t("action.reject", "Refuser");
     rejectBtn.dataset.action = "quotes:reject";
-    setButtonDisabled(rejectBtn, !hasId);
+    setButtonDisabled(rejectBtn, !isSent);
     elToolbar.appendChild(rejectBtn);
 
     for (const a of cfg.actions || []) {
@@ -703,13 +707,17 @@ function renderToolbar(moduleKey) {
       b.textContent = resolveActionLabel(a);
       b.dataset.action = a.id;
 
-      // règles de disable éventuelles spécifiques à quotes (optionnel)
       if (a.id === "quotes:delete" || a.id === "quotes:remove") {
-        setButtonDisabled(b, !hasId);
+        setButtonDisabled(b, !hasId || !isDraft);
       }
       if (a.id === "quotes:save" || a.id === "quotes:update") {
-        // autorise save même sans id si ton flow crée au save; sinon mets !hasId
-        setButtonDisabled(b, false);
+        setButtonDisabled(b, hasId && !isDraft);
+      }
+      if (a.id === "quotes:issue") {
+        setButtonDisabled(b, hasId && !isDraft);
+      }
+      if (["quotes:toDepositInvoice", "quotes:toFinalInvoice", "quotes:toInvoice"].includes(a.id)) {
+        setButtonDisabled(b, !isAccepted);
       }
 
       elToolbar.appendChild(b);
@@ -1587,10 +1595,6 @@ function periodicityLabel(p) {
   return p;
 }
 
-function round2(x) {
-  return Math.round(((Number(x) || 0) + Number.EPSILON) * 100) / 100;
-}
-
 /* ----------------- Modals ----------------- */
 function openModal(id) {
   const m = document.getElementById(id);
@@ -1725,24 +1729,9 @@ function updateCountryEInvoicingProfile(company = state?.company || {}, config =
   return { country, profile };
 }
 
-function safeJsonParse(x, fallback = {}) {
-  if (!x) return fallback;
-  if (typeof x === "object") return x;
-  try {
-    const o = JSON.parse(String(x));
-    return o && typeof o === "object" ? o : fallback;
-  } catch {
-    return fallback;
-  }
-}
-
 function num(x, def = 0) {
   const v = Number(x);
   return Number.isFinite(v) ? v : def;
-}
-
-function round2(x) {
-  return Math.round((num(x, 0) + Number.EPSILON) * 100) / 100;
 }
 
 function jsonStringifySafe(x) {
@@ -1751,6 +1740,22 @@ function jsonStringifySafe(x) {
   } catch {
     return "{}";
   }
+}
+
+function applyAccentColor(color, { updateCompany = true } = {}) {
+  const allowed = new Set(["#6366f1", "#06b6d4", "#22c55e", "#f97316", "#ec4899"]);
+  const selected = allowed.has(String(color || "").toLowerCase()) ? String(color).toLowerCase() : "#6366f1";
+  document.documentElement.style.setProperty("--accent", selected);
+  document.querySelectorAll(".swatch[data-action^='theme:accent:']").forEach((swatch) => {
+    swatch.classList.toggle("is-active", String(swatch.style.getPropertyValue("--sw") || "").toLowerCase() === selected);
+  });
+  if (updateCompany) {
+    const current = state?.company || {};
+    const meta = { ...safeJsonParse(current.meta_json, {}), ui_accent: selected };
+    state.company = { ...current, meta_json: jsonStringifySafe(meta) };
+    if ($("co-meta-json")) $("co-meta-json").value = state.company.meta_json;
+  }
+  return selected;
 }
 
 function companyPayloadFromForm() {
@@ -1813,6 +1818,7 @@ function companyPayloadFromForm() {
 
 function fillCompanyForm(c) {
   const meta = safeJsonParse(c?.meta_json, {});
+  applyAccentColor(meta?.ui_accent || "#6366f1", { updateCompany: false });
 
   if ($("co-legal-name")) $("co-legal-name").value = c?.legal_name || "";
   if ($("co-legal-id")) $("co-legal-id").value = c?.legal_id || "";
@@ -2666,10 +2672,6 @@ function guessMapping(headers) {
   return map;
 }
 
-function num(x) {
-  const v = Number(x);
-  return Number.isFinite(v) ? v : 0;
-}
 function pick(obj, keys) {
   for (const k of keys) {
     const v = obj?.[k];
@@ -3512,15 +3514,7 @@ function renderQuoteDraft() {
 
   const st = String(state.quoteDraft?.status || "draft").toLowerCase();
 
-  const labelByStatus = {
-    draft: "Brouillon",
-    sent: "Envoyé",
-    accepted: "Accepté",
-    rejected: "Refusé",
-    cancelled: "Annulé",
-  };
-
-  const label = labelByStatus[st] || st;
+  const label = t(`quotes.status.${st}`, st);
 
   // texte + affichage
   badge.textContent = label;
@@ -3549,6 +3543,14 @@ function renderQuoteDraft() {
   badge.style.background = c.bg;
   badge.style.color = c.fg;
   badge.style.borderColor = c.bd;
+
+  const lifecycleHint = document.getElementById("q-lifecycle-hint");
+  if (lifecycleHint) {
+    const lifecycleKey = state.quoteDraft?.id ? st : "new";
+    lifecycleHint.textContent = t(`quotes.lifecycle.${lifecycleKey}`, "");
+  }
+
+  if (state.currentModule === "quotes") renderToolbar("quotes");
 
   console.log("[renderQuoteDraft] status badge:", { status: st, label });
 }
@@ -4153,11 +4155,31 @@ async function handleAction(actionId, payload) {
         setStatus(t("status.dashboard_refreshed", "Dashboard refreshed"));
         break;
 
+      case "theme:accent:indigo":
+      case "theme:accent:cyan":
+      case "theme:accent:green":
+      case "theme:accent:orange":
+      case "theme:accent:pink": {
+        const colors = {
+          "theme:accent:indigo": "#6366f1",
+          "theme:accent:cyan": "#06b6d4",
+          "theme:accent:green": "#22c55e",
+          "theme:accent:orange": "#f97316",
+          "theme:accent:pink": "#ec4899",
+        };
+        applyAccentColor(colors[actionId]);
+        setStatus(t("status.theme_accent_selected", "Couleur d’interface sélectionnée — enregistrez la fiche Entreprise."));
+        break;
+      }
+
       case "quotes:accept": {
         const id = state.quoteDraft?.id;
         if (!id) { setStatus("Devis: id manquant"); break; }
+        if (canonicalQuoteStatus(state.quoteDraft) !== "sent") {
+          throw new Error(t("err.quote.must_be_sent_for_decision", "Le devis doit d’abord être validé et envoyé."));
+        }
 
-        await window.api.quotes.setStatus(id, "accepted");
+        await window.api.quotes.setStatus({ id, status: "accepted" });
 
         await refreshModule("quotes").catch(() => {});
 
@@ -4166,6 +4188,19 @@ async function handleAction(actionId, payload) {
 
         renderQuoteDraft();
         setStatus(t("status.quote_accepted", "Devis accepté"));
+        break;
+      }
+
+      case "quotes:reject": {
+        const id = state.quoteDraft?.id;
+        if (!id) throw new Error(t("err.quote.select_quote", "Sélectionnez un devis."));
+        if (canonicalQuoteStatus(state.quoteDraft) !== "sent") {
+          throw new Error(t("err.quote.must_be_sent_for_decision", "Le devis doit d’abord être validé et envoyé."));
+        }
+
+        await window.api.quotes.setStatus({ id, status: "rejected" });
+        await refreshModule("quotes");
+        setStatus(t("status.quote_rejected", "Devis refusé"));
         break;
       }
       
@@ -4685,6 +4720,9 @@ case "quotes:save": {
   const clientId = $("q-client")?.value || null;
   const date = $("q-date")?.value || new Date().toISOString().slice(0, 10);
   if (!clientId) throw new Error("Devis: client obligatoire.");
+  if (state.quoteDraft?.id && canonicalQuoteStatus(state.quoteDraft) !== "draft") {
+    throw new Error(t("err.quote.only_draft_editable", "Seul un devis brouillon peut être modifié."));
+  }
 
   state.company = await window.api.company.get();
   validateCompanyEN16931(state.company);
@@ -4702,6 +4740,7 @@ case "quotes:save": {
   client_id: clientId,
   date,
   currency: "EUR",
+  status: "draft",
   vat_mode: state.quoteDraft.vat_mode || "AUTO",
 
   total_ht: Number(state.quoteDraft.total_ht || 0),
@@ -4731,9 +4770,12 @@ case "quotes:save": {
 }
 
 case "quotes:issue": {
-  const qid = state.selectedQuoteId || state.quoteDraft?.id;
-  if (!qid) throw new Error("Sélectionner un devis.");
+  if (state.quoteDraft?.id && canonicalQuoteStatus(state.quoteDraft) !== "draft") {
+    throw new Error(t("err.quote.only_draft_can_be_sent", "Seul un devis brouillon peut être validé et envoyé."));
+  }
   if (!state.quoteDraft?.id) await handleAction("quotes:save");
+  const qid = state.selectedQuoteId || state.quoteDraft?.id;
+  if (!qid) throw new Error(t("err.quote.select_quote", "Sélectionnez un devis."));
   await window.api.quotes.setStatus({ id: qid, status: "sent" });
   await refreshModule("quotes");
   setStatus(t("status.quote_sent", "Quote marked as sent"));
@@ -4758,6 +4800,9 @@ case "quotes:toDepositInvoice": {
 
   if (!qid) {
     throw new Error("Sélectionner un devis.");
+  }
+  if (canonicalQuoteStatus(quote) !== "accepted") {
+    throw new Error(t("err.quote.must_be_accepted_for_invoice", "Le devis doit être accepté avant de créer une facture."));
   }
 
   if (!window.api?.invoices?.createDeposit) {
@@ -4811,6 +4856,9 @@ case "quotes:toFinalInvoice":
 case "quotes:toInvoice": {
   const qid = state.selectedQuoteId;
   if (!qid) throw new Error("Sélectionner un devis.");
+  if (canonicalQuoteStatus(state.quoteDraft) !== "accepted") {
+    throw new Error(t("err.quote.must_be_accepted_for_invoice", "Le devis doit être accepté avant de créer une facture."));
+  }
   if (!window.api?.invoices?.createFromQuote) throw new Error("API manquante: invoices.createFromQuote");
   if (!window.api?.invoices?.getFull) throw new Error("API manquante: invoices.getFull");
 
@@ -4831,6 +4879,9 @@ case "quotes:toInvoice": {
 case "quotes:delete": {
   const id = state.selectedQuoteId || state.quoteDraft?.id;
   if (!id) throw new Error("Sélectionner un devis.");
+  if (canonicalQuoteStatus(state.quoteDraft) !== "draft") {
+    throw new Error(t("err.quote.only_draft_deletable", "Seul un devis brouillon peut être supprimé."));
+  }
   await window.api.quotes.remove(id);
   state.selectedQuoteId = null;
   state.quoteDraft = {
