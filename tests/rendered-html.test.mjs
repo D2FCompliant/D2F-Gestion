@@ -59,7 +59,8 @@ test("keeps Supabase access tenant-scoped and server-side", async () => {
   assert.match(accounts, /currentPeriodEnd/);
   assert.match(accounts, /addUtcMonth/);
   assert.match(accounts, /accountAllowsApplication\(account\)/);
-  assert.match(accounts, /ownerKey = lifetime \? normalizedEmail\(process\.env\.D2F_OWNER_EMAIL\) : `tenant:/);
+  assert.match(accounts, /process\.env\.D2F_DATA_OWNER_KEY \|\| process\.env\.D2F_OWNER_EMAIL/);
+  assert.match(accounts, /ownerKey = lifetime \? d2fDataOwnerKey\(\) : `tenant:/);
   assert.doesNotMatch(accounts, /\.or\(`/);
   assert.match(migration, /enable row level security/);
   assert.match(migration, /revoke all on public\.d2f_records from anon, authenticated/);
@@ -89,6 +90,8 @@ test("ships a branded Cloudflare gateway without exposing the Worker origin", as
   assert.match(gateway, /x-d2f-gateway/);
   assert.match(gateway, /gestion\.d2fcompliant\.org/);
   assert.match(config, /"D2F_PUBLIC_URL": "https:\/\/gestion\.d2fcompliant\.org"/);
+  assert.match(config, /"D2F_OWNER_EMAIL": "contact@d2fcompliant\.org"/);
+  assert.match(config, /"D2F_DATA_OWNER_KEY": "owner@d2f\.local"/);
 });
 
 test("hydrates invoice client names from the tenant client records", async () => {

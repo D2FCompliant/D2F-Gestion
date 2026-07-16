@@ -18,7 +18,8 @@
   "vars": {
     "NODE_ENV": "production",
     "D2F_PUBLIC_URL": "https://gestion.d2fcompliant.org",
-    "D2F_OWNER_EMAIL": "contact@d2fcompliant.com",
+    "D2F_OWNER_EMAIL": "contact@d2fcompliant.org",
+    "D2F_DATA_OWNER_KEY": "owner@d2f.local",
     "SUPABASE_URL": "https://ttvtufxfcvzwjwvtfifp.supabase.co"
   }
 }

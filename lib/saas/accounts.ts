@@ -54,6 +54,10 @@ function numberValue(value: unknown) {
   return Number.isFinite(number) ? number : 0;
 }
 
+function d2fDataOwnerKey() {
+  return normalizedEmail(process.env.D2F_DATA_OWNER_KEY || process.env.D2F_OWNER_EMAIL);
+}
+
 function missingAccountTable(error: { code?: string; message?: string } | null) {
   return Boolean(error && (error.code === "42P01" || error.code === "PGRST205" || /d2f_(tenants|tenant_members|subscriptions).*not find|relation .*d2f_/i.test(error.message || "")));
 }
@@ -253,7 +257,7 @@ export async function createTenantAccount(input: {
 
   const tenantId = crypto.randomUUID();
   const lifetime = isPlatformAdminEmail(email);
-  const ownerKey = lifetime ? normalizedEmail(process.env.D2F_OWNER_EMAIL) : `tenant:${tenantId}`;
+  const ownerKey = lifetime ? d2fDataOwnerKey() : `tenant:${tenantId}`;
   const now = new Date().toISOString();
   const status: SubscriptionStatus = lifetime ? "lifetime" : "pending_payment";
   const billing = publicBillingConfig();
@@ -321,7 +325,7 @@ export async function ensureD2FLifetimeAccount(user: User) {
   const existing = await findAccountForUser(user.id, normalizedEmail(user.email));
   if (existing) return existing;
   if (!isPlatformAdminEmail(normalizedEmail(user.email))) return null;
-  const ownerKey = normalizedEmail(process.env.D2F_OWNER_EMAIL);
+  const ownerKey = d2fDataOwnerKey();
   const { data } = await getSupabaseAdmin().from("d2f_company").select("data").eq("owner_email", ownerKey).maybeSingle();
   const company = object(data?.data);
   return createTenantAccount({
