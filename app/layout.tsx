@@ -12,7 +12,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const protocol = incoming.get("x-forwarded-proto") || (host.includes("localhost") ? "http" : "https");
   const socialImage = `${protocol}://${host}/og.png`;
   const title = "D2F Gestion — Pilotez votre activité";
-  const description = "Clients, dossiers, revenus et priorités réunis dans un cockpit de gestion clair.";
+  const description = "Gestion, facturation EN16931 et e-Reporting dans un espace sécurisé pour chaque entreprise.";
   return {
     title,
     description,

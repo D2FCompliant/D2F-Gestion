@@ -8,6 +8,8 @@ import { getOwnerEmail, getSupabaseAdmin, SupabaseConfigurationError } from "../
 import { createDocumentPdf, pdfBytesToBase64 } from "../../lib/document-pdf";
 import { createUblDocument, textToBase64 } from "../../lib/ubl";
 import { getIntegration, listTransmissions, saveIntegration, testIntegration, transmitIntegration, type IntegrationType } from "../../lib/integrations";
+import { readAppSession, renewedSession, sessionCookie } from "../../lib/auth/server";
+import { accountAllowsApplication, getAccountById, memberFor } from "../../lib/saas/accounts";
 
 export const dynamic = "force-dynamic";
 
@@ -17,8 +19,8 @@ type Entity = "clients" | "items" | "quotes" | "invoices" | "payments" | "inboun
 const dictionaries: Record<string, unknown> = { fr, en, es, it, sr };
 const entities = new Set<Entity>(["clients", "items", "quotes", "invoices", "payments", "inbound"]);
 
-function reply(result: unknown, status = 200) {
-  return Response.json({ ok: status < 400, ...(status < 400 ? { result } : { error: result }) }, { status, headers: { "cache-control": "no-store" } });
+function reply(result: unknown, status = 200, headers?: HeadersInit) {
+  return Response.json({ ok: status < 400, ...(status < 400 ? { result } : { error: result }) }, { status, headers: { "cache-control": "no-store", ...headers } });
 }
 
 function object(value: unknown): JsonRecord {
@@ -153,7 +155,15 @@ async function listRecords(ownerEmail: string, entity: Entity, query: JsonRecord
   }
   const { data, error } = await request;
   if (error) throw error;
-  return (data || []).map((row) => ({ ...object(row.data), id: row.id, created_at: row.created_at, updated_at: row.updated_at }));
+  const records = (data || []).map((row) => ({ ...object(row.data), id: row.id, created_at: row.created_at, updated_at: row.updated_at }));
+  if (!['quotes', 'invoices'].includes(entity)) return records;
+  const clientIds = [...new Set(records.map((record) => String(record.client_id || "")).filter(Boolean))];
+  if (!clientIds.length) return records;
+  const { data: clients, error: clientError } = await supabase.from("d2f_records").select("id,data")
+    .eq("owner_email", ownerEmail).eq("entity", "clients").in("id", clientIds);
+  if (clientError) throw clientError;
+  const clientNames = new Map((clients || []).map((row) => [String(row.id), String(object(row.data).name || object(row.data).legal_name || "")]));
+  return records.map((record) => ({ ...record, client_name: String(record.client_name || clientNames.get(String(record.client_id || "")) || "") }));
 }
 
 async function getRecord(ownerEmail: string, entity: Entity, id: string) {
@@ -162,14 +172,28 @@ async function getRecord(ownerEmail: string, entity: Entity, id: string) {
   const { data, error } = await supabase.from("d2f_records").select("id,data,created_at,updated_at")
     .eq("owner_email", ownerEmail).eq("entity", entity).eq("id", id).maybeSingle();
   if (error) throw error;
-  return data ? { ...object(data.data), id: data.id, created_at: data.created_at, updated_at: data.updated_at } : null;
+  if (!data) return null;
+  const record = { ...object(data.data), id: data.id, created_at: data.created_at, updated_at: data.updated_at };
+  if (["quotes", "invoices"].includes(entity) && record.client_id && !record.client_name) {
+    const client = await getRecord(ownerEmail, "clients", String(record.client_id));
+    record.client_name = String(client?.name || client?.legal_name || "");
+  }
+  return record;
 }
 
 async function saveRecord(ownerEmail: string, entity: Entity, input: JsonRecord) {
   const supabase = getSupabaseAdmin();
   const id = String(input.id || crypto.randomUUID());
+  const { data: occupied, error: occupiedError } = await supabase.from("d2f_records").select("owner_email").eq("id", id).maybeSingle();
+  if (occupiedError) throw occupiedError;
+  if (occupied && String(occupied.owner_email) !== ownerEmail) throw new Error("Identifiant déjà utilisé par une autre entreprise");
   const previous = await getRecord(ownerEmail, entity, id);
-  const normalized = normalizeRecord(entity, { ...(previous || {}), ...input, id });
+  const candidate = { ...(previous || {}), ...input, id };
+  if (["quotes", "invoices"].includes(entity) && candidate.client_id && !candidate.client_name) {
+    const client = await getRecord(ownerEmail, "clients", String(candidate.client_id));
+    candidate.client_name = String(client?.name || client?.legal_name || "");
+  }
+  const normalized = normalizeRecord(entity, candidate);
   delete normalized.owner_email;
   const row = {
     id,
@@ -203,6 +227,7 @@ async function getCompany(ownerEmail: string) {
   const company = object(data.data);
   delete company._integrations;
   delete company._transmissions;
+  delete company._saas_account;
   const meta = { ...jsonObject(company.meta_json), ...object(company.meta) };
   const useCaseMeta = jsonObject(company.use_case_meta_json);
   const conformity = { ...object(useCaseMeta.conformity), ...object(company.conformity) };
@@ -222,7 +247,14 @@ async function saveCompany(ownerEmail: string, input: JsonRecord) {
   const previous = await getCompany(ownerEmail);
   const { data: rawRow } = await supabase.from("d2f_company").select("data").eq("owner_email", ownerEmail).maybeSingle();
   const hidden = object(rawRow?.data);
-  const company = { ...previous, ...input, ...((hidden._integrations || hidden._transmissions) ? { _integrations: hidden._integrations, _transmissions: hidden._transmissions } : {}), id: "1" };
+  const company = {
+    ...previous,
+    ...input,
+    ...(hidden._integrations ? { _integrations: hidden._integrations } : {}),
+    ...(hidden._transmissions ? { _transmissions: hidden._transmissions } : {}),
+    ...(hidden._saas_account ? { _saas_account: hidden._saas_account } : {}),
+    id: "1",
+  };
   delete company.owner_email;
   const { data, error } = await supabase.from("d2f_company").upsert({ owner_email: ownerEmail, data: company, updated_at: new Date().toISOString() }, { onConflict: "owner_email" }).select("data,created_at,updated_at").single();
   if (error) throw error;
@@ -449,7 +481,7 @@ function auditPayload(method: string, args: unknown[], result: unknown) {
   };
 }
 
-async function appendAuditEvent(ownerEmail: string, method: string, args: unknown[], result: unknown) {
+async function appendAuditEvent(ownerEmail: string, actorEmail: string, method: string, args: unknown[], result: unknown) {
   const supabase = getSupabaseAdmin();
   for (let attempt = 0; attempt < 3; attempt += 1) {
     const { data: previous, error: previousError } = await supabase
@@ -465,7 +497,7 @@ async function appendAuditEvent(ownerEmail: string, method: string, args: unknow
     const core = {
       ts: new Date().toISOString(),
       seq,
-      actor: ownerEmail,
+      actor: actorEmail,
       action: method.replace(":", "."),
       entityType: auditEntityType(method),
       entityId: auditEntityId(method, args, result),
@@ -789,23 +821,41 @@ async function dispatch(ownerEmail: string, method: string, args: unknown[]) {
 }
 
 export async function POST(request: Request) {
-  const ownerEmail = getOwnerEmail(request);
+  const appSession = await readAppSession(request);
+  const ownerEmail = appSession?.ownerKey || getOwnerEmail(request);
   if (!ownerEmail) return reply("Authentification requise", 401);
+  let refreshedCookie = "";
+  if (appSession) {
+    const account = await getAccountById(appSession.tenantId);
+    const member = account ? memberFor(account, appSession.userId, appSession.email) : null;
+    if (!account || !member) return reply("Accès entreprise révoqué", 403);
+    if (!accountAllowsApplication(account)) return reply("Abonnement inactif — validation du virement requise", 402);
+    const refreshed = renewedSession({
+      userId: appSession.userId,
+      email: appSession.email,
+      fullName: appSession.fullName,
+      tenantId: account.id,
+      ownerKey: account.ownerKey,
+      role: member.role,
+    });
+    refreshedCookie = await sessionCookie(refreshed, request);
+  }
+  const responseHeaders = refreshedCookie ? { "set-cookie": refreshedCookie } : undefined;
   let method = "";
   try {
     const body = object(await request.json());
     method = String(body.method || "");
     const args = Array.isArray(body.args) ? body.args : [];
-    if (!method || !method.includes(":")) return reply("Méthode RPC invalide", 400);
+    if (!method || !method.includes(":")) return reply("Méthode RPC invalide", 400, responseHeaders);
     const result = await dispatch(ownerEmail, method, args);
-    if (isMutationMethod(method)) await appendAuditEvent(ownerEmail, method, args, result);
-    return reply(result);
+    if (isMutationMethod(method)) await appendAuditEvent(ownerEmail, appSession?.email || ownerEmail, method, args, result);
+    return reply(result, 200, responseHeaders);
   } catch (error) {
     if (error instanceof SupabaseConfigurationError) {
       const fallback = previewResult(method);
-      if (fallback !== undefined) return reply(fallback);
-      return reply("Supabase n’est pas encore configuré", 503);
+      if (fallback !== undefined) return reply(fallback, 200, responseHeaders);
+      return reply("Supabase n’est pas encore configuré", 503, responseHeaders);
     }
-    return reply(error instanceof Error ? error.message : "Erreur RPC", 500);
+    return reply(error instanceof Error ? error.message : "Erreur RPC", 500, responseHeaders);
   }
 }

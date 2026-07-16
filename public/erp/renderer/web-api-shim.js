@@ -5,7 +5,16 @@
 
   const downloadCache = new Map();
 
+  function signalActivity() {
+    try { window.parent?.postMessage({ type: "d2f-activity" }, window.location.origin); } catch {}
+  }
+
+  ["pointerdown", "keydown", "touchstart"].forEach((eventName) => {
+    window.addEventListener(eventName, signalActivity, { passive: true });
+  });
+
   async function rpc(method, ...args) {
+    signalActivity();
     const r = await fetch("/rpc", {
       method: "POST",
       headers: { "Content-Type": "application/json" },

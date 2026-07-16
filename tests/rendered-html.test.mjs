@@ -20,17 +20,24 @@ test("server-renders the D2F Gestion cockpit", async () => {
   assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
   const html = await response.text();
   assert.match(html, /<title>D2F Gestion — Pilotez votre activité<\/title>/i);
-  assert.match(html, /src="\/erp\/index\.html\?v=20260716-web-pdf-pa-v1"/);
-  assert.match(html, /title="D2F Gestion"/);
+  assert.match(html, /Ouverture sécurisée/);
+  assert.doesNotMatch(html, /<iframe[^>]+\/erp\/index\.html/);
   assert.match(html, /og\.png/);
   assert.doesNotMatch(html, /codex-preview|Your site is taking shape|react-loading-skeleton/i);
+
+  const shell = await readFile(new URL("../app/session-shell.tsx", import.meta.url), "utf8");
+  assert.match(shell, /src="\/erp\/index\.html\?v=20260716-saas-v1"/);
+  assert.match(shell, /title="D2F Gestion"/);
 });
 
-test("keeps Supabase access server-side and ships its schema", async () => {
-  const [route, client, migration, envExample, legacyHtml] = await Promise.all([
+test("keeps Supabase access tenant-scoped and server-side", async () => {
+  const [route, client, auth, accounts, migration, tenantMigration, envExample, legacyHtml] = await Promise.all([
     readFile(new URL("../app/rpc/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../lib/supabase/server.ts", import.meta.url), "utf8"),
+    readFile(new URL("../lib/auth/server.ts", import.meta.url), "utf8"),
+    readFile(new URL("../lib/saas/accounts.ts", import.meta.url), "utf8"),
     readFile(new URL("../supabase/migrations/20260710150000_init_d2f_gestion.sql", import.meta.url), "utf8"),
+    readFile(new URL("../supabase/migrations/20260716150000_multitenant_saas.sql", import.meta.url), "utf8"),
     readFile(new URL("../.env.example", import.meta.url), "utf8"),
     readFile(new URL("../public/erp/index.html", import.meta.url), "utf8"),
   ]);
@@ -38,19 +45,45 @@ test("keeps Supabase access server-side and ships its schema", async () => {
   assert.match(route, /getOwnerEmail/);
   assert.match(route, /recognizedRevenueHt/);
   assert.match(route, /meta_json/);
+  assert.match(route, /readAppSession/);
+  assert.match(route, /accountAllowsApplication/);
   assert.match(client, /SUPABASE_SERVICE_ROLE_KEY/);
   assert.match(client, /persistSession: false/);
-  assert.ok(
-    client.indexOf("D2F_OWNER_EMAIL") < client.indexOf("oai-authenticated-user-email"),
-    "the configured D2F owner must take precedence over the hosting identity",
-  );
+  assert.doesNotMatch(client, /oai-authenticated-user-email/);
+  assert.doesNotMatch(client, /D2F_OWNER_EMAIL/);
+  assert.match(auth, /SESSION_IDLE_SECONDS = 30 \* 60/);
+  assert.match(auth, /HttpOnly; SameSite=Lax; Max-Age=/);
+  assert.match(auth, /isPlatformAdminEmail/);
+  assert.match(accounts, /seatLimit: 2/);
+  assert.match(accounts, /account\.members\.length >= account\.seatLimit/);
+  assert.match(accounts, /ownerKey = lifetime \? normalizedEmail\(process\.env\.D2F_OWNER_EMAIL\) : `tenant:/);
+  assert.doesNotMatch(accounts, /\.or\(`/);
   assert.match(migration, /enable row level security/);
   assert.match(migration, /revoke all on public\.d2f_records from anon, authenticated/);
+  assert.match(tenantMigration, /create table if not exists public\.d2f_tenants/);
+  assert.match(tenantMigration, /create table if not exists public\.d2f_tenant_members/);
+  assert.match(tenantMigration, /create table if not exists public\.d2f_subscriptions/);
+  assert.match(tenantMigration, /enable row level security/);
+  assert.match(tenantMigration, /revoke all on public\.d2f_tenants from anon, authenticated/);
   assert.match(envExample, /SUPABASE_URL/);
+  assert.match(envExample, /D2F_SESSION_SECRET/);
+  assert.match(envExample, /D2F_MONTHLY_PRICE_EUR/);
   assert.match(legacyHtml, /D2F Gestion/);
   assert.match(legacyHtml, /\/d2f-gestion-logo\.png\?v=20260710-brand-2026/);
   assert.match(legacyHtml, /© D2F Compliant d\.o\.o 2026/);
   assert.match(legacyHtml, /web-api-shim\.js/);
+});
+
+test("hydrates invoice client names from the tenant client records", async () => {
+  const route = await readFile(new URL("../app/rpc/route.ts", import.meta.url), "utf8");
+  assert.match(route, /const clientNames = new Map/);
+  assert.match(route, /record\.client_name/);
+  assert.match(route, /record\.client_id/);
+  assert.match(route, /candidate\.client_name/);
+  assert.match(route, /record\.client_name = String\(client\?\.name/);
+  assert.match(route, /occupied\.owner_email/);
+  assert.match(route, /delete company\._saas_account/);
+  assert.match(route, /hidden\._saas_account/);
 });
 
 test("ships a global payment overview and complete screen translations", async () => {
