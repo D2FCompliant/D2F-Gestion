@@ -15,7 +15,7 @@
                  object-src 'none';
                  base-uri 'none'">
 
-  <link rel="stylesheet" href="./styles.css?v=20260716-clients-v12" />
+  <link rel="stylesheet" href="./styles.css?v=20260716-company-v13" />
 </head>
 
 <body>
@@ -80,8 +80,8 @@
 
       <!-- Société -->
       <section class="page" data-page="company">
-        <div class="grid2">
-          <div class="card">
+        <div class="companyOverviewGrid">
+          <div class="card companyIdentityCard">
             <div class="card__title" data-i18n="company.identity.title">Identité (EN16931 BG-4)</div>
             <div class="form">
               <label>
@@ -109,7 +109,7 @@
               </div>
               <label class="u-mt">
                 <span data-i18n="company.meta_json">Meta JSON (optionnel)</span>
-                <textarea id="co-meta-json" rows="6" placeholder='{"objective_annual_ca":250000}'></textarea>
+                <textarea id="co-meta-json" rows="3" placeholder='{"objective_annual_ca":250000}'></textarea>
               </label>
               <div class="row2">
                 <label>
@@ -146,52 +146,6 @@
                   <input id="co-city" type="text" data-i18n-attr="placeholder:common.empty" placeholder="" />
                 </label>
               </div>
-              <div class="card">
-                <div class="card__title" data-i18n="company.smtp.title">Configuration Email (SMTP)</div>
-
-                <div class="form">
-
-                  <label>
-                    <span data-i18n="company.smtp.host">SMTP Host</span>
-                    <input
-                      id="company-smtp-host"
-                      type="text"
-                      placeholder="smtp.office365.com">
-                  </label>
-
-                  <label>
-                    <span data-i18n="company.smtp.port">SMTP Port</span>
-                    <input
-                      id="company-smtp-port"
-                      type="number"
-                      value="587">
-                  </label>
-
-                  <label>
-                    <span data-i18n="company.smtp.user">SMTP User</span>
-                    <input
-                      id="company-smtp-user"
-                      type="email"
-                      placeholder="contact@entreprise.com">
-                  </label>
-
-                  <label>
-                    <span data-i18n="company.smtp.password">SMTP Password</span>
-                    <input
-                      id="company-smtp-password"
-                      type="password">
-                  </label>
-
-                  <label>
-                    <span data-i18n="company.smtp.from_name">Nom expéditeur</span>
-                    <input
-                      id="company-smtp-from-name"
-                      type="text"
-                      placeholder="D2F Compliant">
-                  </label>
-
-                </div>
-              </div>
               <div class="row2">
                 <label>
                   <span data-i18n="common.email">Email</span>
@@ -205,7 +159,8 @@
             </div>
           </div>
 
-          <div class="card">
+          <div class="companySideStack">
+          <div class="card companyBrandingCard">
             <div class="card__title" data-i18n="company.branding.title">Branding PDF</div>
             <div class="hint" data-i18n="company.branding.hint">
               Le logo est <strong>uniquement</strong> pour les PDF (devis/factures).
@@ -248,14 +203,47 @@
             </div>
           </div>
 
-          <div class="card">
+          <div class="card companySmtpCard">
+            <div class="card__title" data-i18n="company.smtp.title">Configuration Email (SMTP)</div>
+            <div class="form companySmtpForm">
+              <div class="row2">
+                <label>
+                  <span data-i18n="company.smtp.host">SMTP Host</span>
+                  <input id="company-smtp-host" type="text" placeholder="smtp.office365.com">
+                </label>
+                <label>
+                  <span data-i18n="company.smtp.port">SMTP Port</span>
+                  <input id="company-smtp-port" type="number" value="587">
+                </label>
+              </div>
+              <div class="row2">
+                <label>
+                  <span data-i18n="company.smtp.user">SMTP User</span>
+                  <input id="company-smtp-user" type="email" placeholder="contact@entreprise.com">
+                </label>
+                <label>
+                  <span data-i18n="company.smtp.password">SMTP Password</span>
+                  <input id="company-smtp-password" type="password">
+                </label>
+              </div>
+              <label>
+                <span data-i18n="company.smtp.from_name">Nom expéditeur</span>
+                <input id="company-smtp-from-name" type="text" placeholder="D2F Compliant">
+              </label>
+            </div>
+          </div>
+          </div>
+        </div>
+
+        <div class="companyOperationsGrid">
+          <div class="card companyTermsCard">
             <div class="card__title" data-i18n="company.cgv.title">CGV & Paiement (PDF)</div>
             <div class="hint" data-i18n="company.cgv.hint">Ces informations seront imprimées sur les PDF devis & factures.</div>
 
             <div class="form u-mt">
               <label>
                 <span data-i18n="company.cgv.text">CGV (texte imprimé)</span>
-                <textarea id="co-cgv-text" rows="6" data-i18n-attr="placeholder:company.cgv.ph" placeholder="Conditions générales de vente…"></textarea>
+                <textarea id="co-cgv-text" rows="4" data-i18n-attr="placeholder:company.cgv.ph" placeholder="Conditions générales de vente…"></textarea>
               </label>
 
               <div class="row2">
@@ -286,6 +274,7 @@
             </div>
           </div>
 
+          <div class="companyConnectorStack">
           <div class="card integrationCard" id="company-einvoice-card">
             <div class="card__title" id="cf-pa-title" data-i18n="integrations.country.title">Connexion nationale de facturation électronique</div>
             <div class="hint" id="cf-pa-hint" data-i18n="integrations.country.hint">Le profil attendu est déterminé par le pays déclaré dans la fiche entreprise.</div>
@@ -342,6 +331,7 @@
               <div class="actions"><button class="btn" id="cf-archive-save" type="button" data-i18n="action.save">Enregistrer</button><button class="btn btn--secondary" id="cf-archive-test" type="button" data-i18n="integrations.test">Tester la connexion</button></div>
               <div class="hint" id="cf-archive-status" data-i18n="integrations.not_configured">Non configuré</div>
             </div>
+          </div>
           </div>
         </div>
 
@@ -1558,7 +1548,7 @@
   <script src="./renderer/web-electron-shim.js?v=20260716-web-pdf-pa-v1"></script>
   <script src="./renderer/web-api-shim.js?v=20260716-web-pdf-pa-v1"></script>
   <script src="./dashboard-ui.js?v=20260716-web-pdf-pa-v1"></script>
-  <script src="./app.js?v=20260716-clients-v12"></script>
+  <script src="./app.js?v=20260716-company-v13"></script>
 
   <div id="clientsImportModal" class="modal" aria-hidden="true">
     <div class="modal__backdrop" data-modal-close></div>

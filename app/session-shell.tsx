@@ -353,7 +353,7 @@ export default function SessionShell({ monthlyPriceEur }: { monthlyPriceEur: num
 
   return <main className="app-session-shell">
     <header className="account-bar"><div className="account-brand"><img src="/d2f-gestion-logo.png" alt="" /><strong>D2F Gestion</strong><span>{session.account.name}</span></div><div className="account-actions">{warning > 0 && <span className="idle-warning">Déconnexion dans {warning} s</span>}<button className="account-button" onClick={() => setDrawer(true)}><span>{initials}</span><span><strong>{session.user.fullName}</strong><small>{formatStatus(session.account.status)}</small></span></button><button className="logout-button" onClick={logout}>Déconnexion</button></div></header>
-    {session.account.canUseApplication ? <iframe className="web-app-frame" src="/erp/index.html?v=20260716-clients-v12" title="D2F Gestion" allow="clipboard-read; clipboard-write" /> : <LockedSubscription session={session} onOpen={() => setDrawer(true)} />}
+    {session.account.canUseApplication ? <iframe className="web-app-frame" src="/erp/index.html?v=20260716-company-v13" title="D2F Gestion" allow="clipboard-read; clipboard-write" /> : <LockedSubscription session={session} onOpen={() => setDrawer(true)} />}
     {drawer && <AccountDrawer session={session} onSession={setSession} onClose={() => setDrawer(false)} />}
   </main>;
 }

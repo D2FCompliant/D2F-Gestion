@@ -3948,3 +3948,101 @@ textarea{ resize: vertical; }
     grid-template-columns:minmax(58px,.72fr) minmax(82px,1fr) minmax(82px,1fr);
   }
 }
+
+/* Company – compact settings dashboard without stretched empty cards */
+.companyOverviewGrid,
+.companyOperationsGrid{
+  display:grid;
+  grid-template-columns:minmax(0,1.08fr) minmax(360px,.92fr);
+  gap:14px;
+  min-width:0;
+  align-items:start;
+}
+
+.companyOperationsGrid{ margin-top:14px; }
+
+.companySideStack,
+.companyConnectorStack{
+  display:grid;
+  gap:14px;
+  min-width:0;
+  align-content:start;
+}
+
+.companyIdentityCard,
+.companyBrandingCard,
+.companySmtpCard,
+.companyTermsCard,
+.companyOperationsGrid .integrationCard{
+  align-self:start;
+}
+
+.companyBrandingCard .upload{
+  padding:10px;
+  box-shadow:0 8px 18px rgba(11,18,32,.06);
+}
+
+.companyBrandingCard .upload__preview{
+  width:58px;
+  height:58px;
+  border-radius:16px;
+  flex:0 0 58px;
+}
+
+.companyBrandingCard .upload__actions{
+  margin-top:7px;
+  flex-wrap:wrap;
+}
+
+.companyBrandingCard .upload__actions .btn{
+  min-height:34px;
+  padding:7px 10px;
+}
+
+.companyBrandingCard .toggle input{
+  width:auto;
+  min-height:0;
+}
+
+.companySmtpForm{ gap:9px; }
+
+@media (max-width:1100px){
+  .companyOverviewGrid,
+  .companyOperationsGrid{
+    grid-template-columns:minmax(0,1fr);
+    gap:10px;
+  }
+
+  .companySideStack,
+  .companyConnectorStack{ gap:10px; }
+}
+
+@media (max-width:760px){
+  .page[data-page="company"] .companyBrandingCard .upload{
+    align-items:center;
+    flex-direction:row;
+  }
+
+  .page[data-page="company"] .companyBrandingCard .upload__meta{
+    min-width:0;
+    flex:1;
+  }
+
+  .page[data-page="company"] .companyBrandingCard .upload__actions{
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+
+  .page[data-page="company"] .companyBrandingCard .upload__actions .btn{
+    width:100%;
+    min-height:40px;
+    font-size:14px;
+  }
+}
+
+@media (max-width:380px){
+  .page[data-page="company"] .companyBrandingCard .upload{
+    align-items:flex-start;
+    flex-direction:column;
+  }
+}
