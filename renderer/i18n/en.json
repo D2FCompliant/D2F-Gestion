@@ -1061,6 +1061,7 @@
 "compliance.issue.bt_53": "The customer postal code is required before structured export.",
 "compliance.issue.bt_55": "The customer country is required.",
 "compliance.issue.bg_25": "The invoice must contain at least one line.",
+"compliance.issue.fr_bt_34": "French routing requires a 0225 seller electronic address in the Company record.",
 "compliance.issue.fr_bt_49": "French B2B/B2G routing requires a 0225 electronic address validated through the PA/PPF.",
 "compliance.issue.it_fatturapa": "Italy requires FatturaPA XML through SdI; generic UBL is blocked.",
 "compliance.issue.es_verifactu": "Spain requires a separate AEAT SIF/VERI*FACTU record; UBL alone is insufficient."

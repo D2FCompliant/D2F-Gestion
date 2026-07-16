@@ -55,7 +55,7 @@ function partyXml(tag: string, party: JsonRecord) {
   </cac:${tag}>`;
 }
 
-export function createUblDocument(input: { document: JsonRecord; lines: JsonRecord[]; seller: JsonRecord; buyer: JsonRecord; profile?: "peppol" | "sef" | "en16931" }) {
+export function createUblDocument(input: { document: JsonRecord; lines: JsonRecord[]; seller: JsonRecord; buyer: JsonRecord; profile?: "peppol" | "fr-cius" | "sef" | "en16931" }) {
   const document = input.document;
   const lines = input.lines;
   const isCredit = value(document.type).toLowerCase() === "credit_note";
@@ -99,10 +99,12 @@ export function createUblDocument(input: { document: JsonRecord; lines: JsonReco
   const iban = value(bank.iban || input.seller.iban);
   const dueDate = value(document.due_date);
   const profile = input.profile || "peppol";
-  const customizationId = profile === "peppol"
-    ? "urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:billing:3.0"
-    : "urn:cen.eu:en16931:2017";
-  const profileId = profile === "peppol" ? "urn:fdc:peppol.eu:2017:poacc:billing:01:1.0" : "";
+  const customizationId = profile === "fr-cius"
+    ? "urn:cen.eu:en16931:2017#compliant#urn:peppol:france:billing:cius:1.0"
+    : profile === "peppol"
+      ? "urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:billing:3.0"
+      : "urn:cen.eu:en16931:2017";
+  const profileId = profile === "peppol" || profile === "fr-cius" ? "urn:fdc:peppol.eu:2017:poacc:billing:01:1.0" : "";
   const sourceInvoiceNumber = value(document.source_invoice_number || document.source_document_number || document.source_invoice_id);
 
   return `<?xml version="1.0" encoding="UTF-8"?>

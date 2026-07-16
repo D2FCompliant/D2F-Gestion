@@ -242,6 +242,7 @@ test("country-aware structured export fails closed and client PEPPOL lookup is a
   assert.match(compliance, /ES-VERIFACTU/);
   assert.match(compliance, /COUNTRY-NOT-QUALIFIED/);
   assert.match(ubl, /billing:3\.0/);
+  assert.match(ubl, /urn:peppol:france:billing:cius:1\.0/);
   assert.match(ubl, /cac:BillingReference/);
   assert.doesNotMatch(ubl, /meta\.peppol_endpoint_id \|\| party\.vat_id/);
 });

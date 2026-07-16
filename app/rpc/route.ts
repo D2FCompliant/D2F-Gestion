@@ -630,7 +630,8 @@ async function exportInvoiceUbl(ownerEmail: string, input: unknown) {
     const details = preflight.errors.map((issue) => `${issue.code}: ${issue.message}`).join("\n");
     throw new Error(`Export PEPPOL bloqué — informations obligatoires manquantes :\n${details}`);
   }
-  const xml = createUblDocument({ ...bundle, profile: "peppol" });
+  const frenchDomestic = String(bundle.seller.country || "").toUpperCase() === "FR" && String(bundle.buyer.country || "").toUpperCase() === "FR";
+  const xml = createUblDocument({ ...bundle, profile: frenchDomestic ? "fr-cius" : "peppol" });
   const number = bundle.document.invoice_number || bundle.document.id;
   const fileName = `${safeFileName(number, "facture")}.xml`;
   return { ok: true, xml, filename: fileName, fileName, mimeType: "application/xml", downloadBase64: textToBase64(xml) };
@@ -805,7 +806,7 @@ async function dispatch(ownerEmail: string, method: string, args: unknown[], ten
     }
     if (connector.country === "IT") throw new Error("L’envoi SdI direct exige le format FatturaPA et une recette avec le canal choisi. Ce connecteur n’est pas encore autorisé à transmettre un UBL comme FatturaPA.");
     if (connector.country === "ES") throw new Error("VERI*FACTU exige des registres AEAT spécifiques et ne correspond pas à l’envoi d’une facture UBL. Configurez un prestataire certifiant le flux avant activation.");
-    const xml = createUblDocument({ ...bundle, profile: connector.country === "RS" ? "sef" : "en16931" });
+    const xml = createUblDocument({ ...bundle, profile: connector.country === "FR" ? "fr-cius" : connector.country === "RS" ? "sef" : "en16931" });
     return transmitIntegration(getSupabaseAdmin(), ownerEmail, "pa", { documentId: String(bundle.document.id || ""), documentNumber: String(bundle.document.invoice_number || ""), content: xml, contentType: "application/xml", metadata: { format: "UBL-2.1", standard: "EN16931", channel_profile: connector.expectedProfile, country: connector.country } });
   }
   if (method === "conformity:rebuildPeriod") {

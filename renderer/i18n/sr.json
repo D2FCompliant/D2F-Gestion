@@ -964,6 +964,7 @@
   "compliance.issue.bt_53": "Poštanski broj kupca je obavezan pre strukturiranog izvoza.",
   "compliance.issue.bt_55": "Država kupca je obavezna.",
   "compliance.issue.bg_25": "Faktura mora imati najmanje jednu stavku.",
+  "compliance.issue.fr_bt_34": "Francusko usmeravanje zahteva elektronsku adresu prodavca 0225 u kartici Preduzeće.",
   "compliance.issue.fr_bt_49": "Francusko B2B/B2G usmeravanje zahteva elektronsku adresu 0225 potvrđenu preko PA/PPF.",
   "compliance.issue.it_fatturapa": "Italija zahteva FatturaPA XML preko SdI; generički UBL je blokiran.",
   "compliance.issue.es_verifactu": "Španija zahteva poseban AEAT SIF/VERI*FACTU zapis; samo UBL nije dovoljno."

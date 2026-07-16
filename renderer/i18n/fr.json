@@ -991,6 +991,7 @@
 "compliance.issue.bt_53": "Le code postal du client est obligatoire avant un export structuré.",
 "compliance.issue.bt_55": "Le pays du client est obligatoire.",
 "compliance.issue.bg_25": "La facture doit contenir au moins une ligne.",
+"compliance.issue.fr_bt_34": "Le routage français exige une adresse électronique vendeur 0225 dans la fiche Entreprise.",
 "compliance.issue.fr_bt_49": "Le routage français B2B/B2G exige une adresse électronique 0225 validée via la PA/PPF.",
 "compliance.issue.it_fatturapa": "L’Italie exige FatturaPA XML via SdI ; l’UBL générique est bloqué.",
 "compliance.issue.es_verifactu": "L’Espagne exige un registre SIF/VERI*FACTU AEAT distinct ; l’UBL seul est insuffisant."

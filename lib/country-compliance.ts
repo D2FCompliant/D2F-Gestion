@@ -146,6 +146,9 @@ export function preflightInvoice(input: {
     if (!sellerEndpoint.id || !sellerEndpoint.scheme) add(errors, "BT-34", "seller.peppol_endpoint", "L’adresse électronique PEPPOL du vendeur et son schéma sont obligatoires.");
     if (!buyerEndpoint.id || !buyerEndpoint.scheme) add(errors, "BT-49", "buyer.peppol_endpoint", "L’adresse électronique PEPPOL du client et son schéma sont obligatoires.");
     if (buyerEndpoint.status !== "verified") add(warnings, "PEPPOL-DIRECTORY", "buyer.peppol_directory_status", "L’identifiant du client doit être confirmé par le prestataire PEPPOL avant l’envoi.");
+    if (sellerCountry === "FR" && sellerEndpoint.scheme !== "0225") {
+      add(errors, "FR-BT-34", "seller.peppol_endpoint_scheme", "En France, l’adresse électronique du vendeur doit utiliser le schéma 0225 pour ce profil.");
+    }
     if (sellerCountry === "FR" && buyerCountry === "FR" && buyerType !== "B2C" && buyerEndpoint.scheme !== "0225") {
       add(errors, "FR-BT-49", "buyer.peppol_endpoint_scheme", "En France, l’adresse électronique du client relevant du dispositif doit utiliser le schéma 0225.");
     }
@@ -155,6 +158,9 @@ export function preflightInvoice(input: {
     if (!PROFILES[sellerCountry]) add(errors, "COUNTRY-NOT-QUALIFIED", "seller.country", `Aucun connecteur national D2F n’est qualifié pour ${sellerCountry || "ce pays"}.`);
     if (sellerCountry === "FR" && buyerCountry === "FR" && buyerType !== "B2C" && (!buyerEndpoint.id || buyerEndpoint.scheme !== "0225")) {
       add(errors, "FR-BT-49", "buyer.peppol_endpoint", "Le routage français B2B/B2G exige une adresse électronique 0225 validée via la PA/PPF.");
+    }
+    if (sellerCountry === "FR" && (!sellerEndpoint.id || sellerEndpoint.scheme !== "0225")) {
+      add(errors, "FR-BT-34", "seller.peppol_endpoint", "Le routage français exige une adresse électronique vendeur 0225 dans la fiche Entreprise.");
     }
     if (sellerCountry === "IT") add(errors, "IT-FATTURAPA", "format", "Une facture domestique italienne doit être générée en FatturaPA XML et transmise via SdI ; l’UBL PEPPOL générique est bloqué.");
     if (sellerCountry === "ES") add(errors, "ES-VERIFACTU", "fiscal_record", "La transmission nationale espagnole exige un registre SIF/VERI*FACTU AEAT distinct, avec empreinte et QR ; l’UBL seul est insuffisant.");
