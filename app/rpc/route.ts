@@ -298,12 +298,15 @@ function normalizeRecord(entity: Entity, raw: JsonRecord) {
     normalized.item_type = String(raw.item_type || "SERVICE");
   }
   if (entity === "clients") {
+    const peppol = normalizePeppolEndpoint(raw.peppol_endpoint_scheme, raw.peppol_endpoint_id);
     normalized.name = String(raw.name || "").trim();
     normalized.customer_type = String(raw.customer_type || "B2C");
     normalized.country = String(raw.country || "FR").toUpperCase();
     normalized.postal_code = String(raw.postal_code || raw.postal || "");
     normalized.postal = normalized.postal_code;
     normalized.vat_subject = raw.vat_subject === 0 || raw.vat_subject === "0" ? 0 : 1;
+    normalized.peppol_endpoint_scheme = peppol.scheme;
+    normalized.peppol_endpoint_id = peppol.endpointId;
   }
   if (entity === "quotes" || entity === "invoices") {
     const lines = Array.isArray(raw.lines) ? raw.lines.map((line, index) => {
@@ -848,6 +851,23 @@ function peppolText(value: unknown) {
   return String(item.value || item.id || item.text || item.name || "").trim();
 }
 
+function normalizePeppolEndpoint(schemeValue: unknown, endpointValue: unknown) {
+  let scheme = String(schemeValue || "").trim();
+  let endpointId = String(endpointValue || "").trim();
+  let candidate = endpointId;
+  if (/^iso6523-actorid-upis$/i.test(scheme)) candidate = `${scheme}:${endpointId}`;
+  if (/^iso6523-actorid-upis:/i.test(candidate)) {
+    candidate = candidate.replace(/^iso6523-actorid-upis:{1,2}/i, "");
+    scheme = "";
+  }
+  const parts = candidate.split(":").filter(Boolean);
+  if (parts.length > 1 && (/^\d{4}$/.test(parts[0]) || !scheme)) {
+    scheme = parts.shift() || scheme;
+    endpointId = parts.join(":");
+  }
+  return { scheme, endpointId };
+}
+
 function peppolCards(payload: unknown) {
   if (Array.isArray(payload)) return payload.map(object);
   const root = object(payload);
@@ -859,10 +879,9 @@ function peppolCards(payload: unknown) {
 function normalizePeppolCard(card: JsonRecord) {
   const participant = object(card.participantID || card.participantId || card.participant_identifier || card.participant);
   const rawParticipant = peppolText(participant) || peppolText(card.participantID || card.participantId || card.participant_identifier || card.participant);
-  const value = peppolText(participant.value || participant.id) || rawParticipant.replace(/^iso6523-actorid-upis::/i, "");
-  const parts = value.split(":");
-  const scheme = peppolText(participant.scheme || participant.schemeID || participant.scheme_id) || (parts.length > 1 ? parts.shift() || "" : "");
-  const endpointId = parts.length ? parts.join(":") : value;
+  const value = peppolText(participant.value || participant.id) || rawParticipant;
+  const normalizedEndpoint = normalizePeppolEndpoint(peppolText(participant.scheme || participant.schemeID || participant.scheme_id), value);
+  const { scheme, endpointId } = normalizedEndpoint;
   const entities = Array.isArray(card.entities) ? card.entities.map(object) : [];
   const firstEntity = entities[0] || object(card.entity);
   const names = Array.isArray(firstEntity.names) ? firstEntity.names.map(object) : [];
@@ -873,8 +892,8 @@ function normalizePeppolCard(card: JsonRecord) {
 
 async function lookupPeppolDirectory(input: JsonRecord) {
   const country = String(input.country || "").trim().toUpperCase().slice(0, 2);
-  const scheme = String(input.scheme || input.endpointScheme || "").trim();
-  const endpointId = String(input.endpointId || input.endpoint_id || "").trim();
+  const normalizedEndpoint = normalizePeppolEndpoint(input.scheme || input.endpointScheme, input.endpointId || input.endpoint_id);
+  const { scheme, endpointId } = normalizedEndpoint;
   const query = String(input.query || input.legalId || input.legal_id || input.vatId || input.vat_id || input.name || "").trim();
   if (!query && !endpointId) throw new Error("Indiquez un nom, un identifiant légal, un numéro de TVA ou un identifiant PEPPOL");
   const url = new URL("https://directory.peppol.eu/search/1.0/json");

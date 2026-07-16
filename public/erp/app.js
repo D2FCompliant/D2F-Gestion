@@ -914,6 +914,7 @@ function normalizeClient(c) {
   const payment_days = c.payment_days ?? c.paymentDays ?? null;
   const payment_text = c.payment_text ?? c.paymentText ?? "";
   const quote_validity_days = c.quote_validity_days ?? c.quoteValidityDays ?? null;
+  const peppol = normalizeClientPeppol(c.peppol_endpoint_scheme, c.peppol_endpoint_id);
 
   return {
     ...c,
@@ -921,6 +922,8 @@ function normalizeClient(c) {
     is_vat_subject: vat_subject,
     postal_code: c.postal_code ?? c.postal ?? "",
     customer_type: (c.customer_type || c.customerType || "B2C").toString().toUpperCase(),
+    peppol_endpoint_scheme: peppol.scheme,
+    peppol_endpoint_id: peppol.endpointId,
 
     // normalisés
     payment_term,
@@ -1979,6 +1982,7 @@ function fillClientForm(c) {
 }
 
 function clientPayloadFromForm() {
+  const peppol = normalizeClientPeppol($("cl-peppol-scheme")?.value, $("cl-peppol-endpoint")?.value);
   return {
     id: $("cl-id")?.value || undefined,
     customer_type: ($("cl-customer-type")?.value || "B2C").toString().toUpperCase(),
@@ -1989,8 +1993,8 @@ function clientPayloadFromForm() {
     vat_subject: Number($("cl-vat-subject")?.value ?? 1),
     vat_id: $("cl-vat-id")?.value || "",
     legal_id: $("cl-legal-id")?.value || "",
-    peppol_endpoint_scheme: $("cl-peppol-scheme")?.value?.trim() || "",
-    peppol_endpoint_id: $("cl-peppol-endpoint")?.value?.trim() || "",
+    peppol_endpoint_scheme: peppol.scheme,
+    peppol_endpoint_id: peppol.endpointId,
     peppol_directory_status: $("cl-peppol-status")?.dataset?.directoryStatus || "not_checked",
     peppol_directory_message: $("cl-peppol-message")?.textContent || "",
     street: $("cl-street")?.value || "",
@@ -2076,6 +2080,63 @@ function renderList(container, rows, selectedId, titleFn, subFn) {
     if (sEl) sEl.textContent = normalizeLabel(subFn ? subFn(r) : "");
 
     container.appendChild(b);
+  }
+}
+
+function normalizeClientPeppol(schemeValue, endpointValue) {
+  let scheme = String(schemeValue || "").trim();
+  let endpointId = String(endpointValue || "").trim();
+  let candidate = endpointId;
+  if (/^iso6523-actorid-upis$/i.test(scheme)) candidate = `${scheme}:${endpointId}`;
+  if (/^iso6523-actorid-upis:/i.test(candidate)) {
+    candidate = candidate.replace(/^iso6523-actorid-upis:{1,2}/i, "");
+    scheme = "";
+  }
+  const parts = candidate.split(":").filter(Boolean);
+  if (parts.length > 1 && (/^\d{4}$/.test(parts[0]) || !scheme)) {
+    const parsedScheme = parts.shift();
+    if (parsedScheme) scheme = parsedScheme;
+    endpointId = parts.join(":");
+  }
+  return { scheme, endpointId };
+}
+
+function renderClientList(container, rows, selectedId) {
+  if (!container) return;
+  container.innerHTML = "";
+  if (!rows.length) return renderDocumentListEmpty(container);
+  for (const client of rows) {
+    const peppol = normalizeClientPeppol(client.peppol_endpoint_scheme, client.peppol_endpoint_id);
+    const status = String(client.peppol_directory_status || "not_checked").toLowerCase();
+    const statusLabel = status === "verified"
+      ? t("clients.peppol.verified", "Identifiant trouvé")
+      : status === "not_found"
+        ? t("clients.peppol.not_found", "Non trouvé — PDF possible")
+        : status === "error"
+          ? t("clients.peppol.error", "Annuaire indisponible")
+          : t("clients.peppol.not_checked", "Non vérifié");
+    const identifier = client.vat_id || client.legal_id || t("clients.list.no_identifier", "Identifiant fiscal non renseigné");
+    const endpoint = peppol.scheme && peppol.endpointId
+      ? `${peppol.scheme}:${peppol.endpointId}`
+      : t("clients.list.no_endpoint", "Adresse électronique absente");
+    const isSelected = String(client.id || "") === String(selectedId || "");
+    const button = document.createElement("button");
+    button.type = "button";
+    button.dataset.id = client.id;
+    button.className = `list__item clientListItem clientListItem--${status}${isSelected ? " is-selected" : ""}`;
+    button.setAttribute("aria-pressed", isSelected ? "true" : "false");
+    button.setAttribute("aria-label", `${client.name || "—"}, ${client.customer_type || "B2C"}, ${client.country || "—"}, ${statusLabel}`);
+    button.innerHTML = `
+      <div class="clientListItem__head">
+        <strong>${esc(client.name || "—")}</strong>
+        <span class="clientListBadge">${esc(client.customer_type || "B2C")}</span>
+      </div>
+      <div class="clientListItem__identity"><span>${esc(String(client.country || "—").toUpperCase())}</span><span>${esc(identifier)}</span></div>
+      <div class="clientListItem__route">
+        <span class="clientListPeppol clientListPeppol--${esc(status)}">${esc(statusLabel)}</span>
+        <span class="clientListEndpoint" title="${esc(endpoint)}">${esc(endpoint)}</span>
+      </div>`;
+    container.appendChild(button);
   }
 }
 
@@ -4245,14 +4306,8 @@ if (hintEl) {
   if (moduleKey === "clients") {
     const q = $("clientsSearch")?.value || "";
     state.clients = (await window.api.clients.list({ q })).map(normalizeClient);
-
-    renderList(
-      $("clientsList"),
-      state.clients,
-      state.selectedClientId,
-      (c) => `${c.name} ${c.customer_type ? `(${c.customer_type})` : ""}`,
-      (c) => c.email || ""
-    );
+    setDocumentListCount("clientsListCount", state.clients.length);
+    renderClientList($("clientsList"), state.clients, state.selectedClientId);
 
     if (!state.selectedClientId && state.clients[0]) state.selectedClientId = state.clients[0].id;
 
@@ -5106,8 +5161,18 @@ case "clients:lookupPeppol": {
       : await window.api.invoke("directory:lookupPeppol", request);
     const matches = Array.isArray(result?.results) ? result.results : [];
     if (!matches.length) {
-      setClientPeppolStatus("not_found", t("clients.peppol.not_found_help", "Aucun participant trouvé. Vous pouvez enregistrer la fiche et produire un PDF, mais l’export structuré restera bloqué tant que l’adresse électronique n’est pas renseignée."));
-      setStatus(t("clients.peppol.not_found", "Non trouvé — PDF possible"));
+      const message = t("clients.peppol.not_found_help", "Aucun participant trouvé. Vous pouvez enregistrer la fiche et produire un PDF, mais l’export structuré restera bloqué tant que l’adresse électronique n’est pas renseignée.");
+      setClientPeppolStatus("not_found", message);
+      const saved = normalizeClient(await window.api.clients.save({
+        ...clientPayloadFromForm(),
+        peppol_directory_status: "not_found",
+        peppol_directory_message: message,
+        peppol_directory_source: result?.source || "Peppol Directory",
+        peppol_directory_checked_at: new Date().toISOString(),
+      }));
+      state.selectedClientId = saved.id;
+      await refreshModule("clients");
+      setStatus(t("clients.peppol.not_found_saved", "Client enregistré — participant PEPPOL non trouvé"));
       break;
     }
     const country = String(payload.country || "").toUpperCase();
@@ -5115,10 +5180,25 @@ case "clients:lookupPeppol": {
     const best = matches.find((item) => String(item.country || "").toUpperCase() === country && String(item.endpointId || "").replace(/[^A-Z0-9]/gi, "").toUpperCase().includes(legalId))
       || matches.find((item) => String(item.country || "").toUpperCase() === country)
       || matches[0];
-    if ($("cl-peppol-scheme")) $("cl-peppol-scheme").value = best.scheme || "";
-    if ($("cl-peppol-endpoint")) $("cl-peppol-endpoint").value = best.endpointId || "";
-    setClientPeppolStatus("verified", t("clients.peppol.found_help", "Participant trouvé : {name} ({scheme}:{id}). Confirmez la capacité de réception avec votre prestataire avant l’envoi.", { name: best.name || payload.name, scheme: best.scheme, id: best.endpointId }));
-    setStatus(t("clients.peppol.verified", "Identifiant trouvé"));
+    const normalizedEndpoint = normalizeClientPeppol(best.scheme, best.endpointId);
+    if ($("cl-peppol-scheme")) $("cl-peppol-scheme").value = normalizedEndpoint.scheme;
+    if ($("cl-peppol-endpoint")) $("cl-peppol-endpoint").value = normalizedEndpoint.endpointId;
+    const message = t("clients.peppol.found_help", "Participant trouvé : {name} ({scheme}:{id}). Confirmez la capacité de réception avec votre prestataire avant l’envoi.", { name: best.name || payload.name, scheme: normalizedEndpoint.scheme, id: normalizedEndpoint.endpointId });
+    setClientPeppolStatus("verified", message);
+    const saved = normalizeClient(await window.api.clients.save({
+      ...clientPayloadFromForm(),
+      peppol_endpoint_scheme: normalizedEndpoint.scheme,
+      peppol_endpoint_id: normalizedEndpoint.endpointId,
+      peppol_directory_status: "verified",
+      peppol_directory_message: message,
+      peppol_directory_source: result?.source || "Peppol Directory",
+      peppol_directory_checked_at: new Date().toISOString(),
+      peppol_participant_name: best.name || payload.name,
+      peppol_participant_country: best.country || payload.country,
+    }));
+    state.selectedClientId = saved.id;
+    await refreshModule("clients");
+    setStatus(t("clients.peppol.verified_saved", "Identifiant PEPPOL vérifié et enregistré dans la fiche client"));
   } catch (error) {
     setClientPeppolStatus("error", error?.message || t("clients.peppol.error", "Annuaire indisponible"));
     throw error;

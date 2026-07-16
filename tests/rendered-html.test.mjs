@@ -26,7 +26,7 @@ test("server-renders the D2F Gestion cockpit", async () => {
   assert.doesNotMatch(html, /codex-preview|Your site is taking shape|react-loading-skeleton/i);
 
   const shell = await readFile(new URL("../app/session-shell.tsx", import.meta.url), "utf8");
-  assert.match(shell, /src="\/erp\/index\.html\?v=20260716-evidence-v11"/);
+  assert.match(shell, /src="\/erp\/index\.html\?v=20260716-clients-v12"/);
   assert.match(shell, /title="D2F Gestion"/);
 });
 
@@ -37,8 +37,8 @@ test("ships a touch-first smartphone layout", async () => {
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
     readFile(new URL("../public/erp/index.html", import.meta.url), "utf8"),
   ]);
-  assert.match(html, /styles\.css\?v=20260716-evidence-v11/);
-  assert.match(html, /app\.js\?v=20260716-evidence-v11/);
+  assert.match(html, /styles\.css\?v=20260716-clients-v12/);
+  assert.match(html, /app\.js\?v=20260716-clients-v12/);
   assert.match(styles, /@media \(max-width: 760px\)/);
   assert.match(styles, /position:fixed;\s*z-index:1000;\s*left:0;\s*right:0;\s*bottom:0/);
   assert.match(styles, /grid-template-columns:minmax\(0,1fr\) minmax\(0,1fr\) !important/);
@@ -69,6 +69,12 @@ test("renders human-readable document lists on desktop and smartphone", async ()
   assert.match(styles, /grid-template-rows:auto auto auto/);
   assert.match(styles, /-webkit-line-clamp:2/);
   assert.match(styles, /\.documentListClient\{[\s\S]*?min-height:18px/);
+  assert.match(html, /id="clientsListCount"/);
+  assert.match(html, /id="clientsList" class="list clientList"/);
+  assert.match(app, /function renderClientList/);
+  assert.match(app, /clients\.list\.no_endpoint/);
+  assert.match(styles, /\.clientListItem\{[\s\S]*?flex:0 0 auto/);
+  assert.match(styles, /page\[data-page="clients"\][\s\S]*?grid-template-columns:minmax\(350px,390px\)/);
 });
 
 test("keeps Supabase access tenant-scoped and server-side", async () => {
@@ -274,8 +280,12 @@ test("country-aware structured export fails closed and client PEPPOL lookup is a
   assert.match(html, /data-action="clients:lookupPeppol"/);
   assert.match(html, /id="ex-compliance-card"/);
   assert.match(app, /case "clients:lookupPeppol"/);
+  assert.match(app, /peppol_directory_checked_at: new Date\(\)\.toISOString\(\)/);
+  assert.match(app, /clients\.peppol\.verified_saved/);
   assert.match(app, /conformity\.invoicePreflight/);
   assert.match(route, /directory:lookupPeppol/);
+  assert.match(route, /function normalizePeppolEndpoint/);
+  assert.match(route, /iso6523-actorid-upis:\{1,2\}/);
   assert.match(route, /Transmission nationale bloquée/);
   assert.match(shim, /directory: ns\("directory"\)/);
   assert.match(compliance, /FR-BT-49/);

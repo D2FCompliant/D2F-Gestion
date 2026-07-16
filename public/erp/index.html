@@ -15,7 +15,7 @@
                  object-src 'none';
                  base-uri 'none'">
 
-  <link rel="stylesheet" href="./styles.css?v=20260716-evidence-v11" />
+  <link rel="stylesheet" href="./styles.css?v=20260716-clients-v12" />
 </head>
 
 <body>
@@ -404,13 +404,16 @@
       <section class="page" data-page="clients">
         <div class="split" data-split>
           <div class="panel card">
-            <div class="card__title" data-i18n="clients.list_title">Liste des clients</div>
-            <div class="searchRow">
+            <div class="documentListHeader">
+              <div class="card__title" data-i18n="clients.list_title">Liste des clients</div>
+              <span id="clientsListCount" class="documentListCount" aria-live="polite">0</span>
+            </div>
+            <div class="searchRow clientSearchRow">
               <input id="clientsSearch" class="search" type="search" data-i18n-attr="placeholder:clients.search_ph" placeholder="Rechercher un client…" />
               <button class="btn btn--secondary" type="button" data-action="clients:new" data-i18n="action.new">Nouveau</button>
               <button class="btn btn--secondary" type="button" data-action="clients:importCsv" data-i18n="clients.import.open_btn">Importer CSV…</button>
             </div>
-            <div id="clientsList" class="list"></div>
+            <div id="clientsList" class="list clientList"></div>
           </div>
 
           <div class="panel card">
@@ -1555,7 +1558,7 @@
   <script src="./renderer/web-electron-shim.js?v=20260716-web-pdf-pa-v1"></script>
   <script src="./renderer/web-api-shim.js?v=20260716-web-pdf-pa-v1"></script>
   <script src="./dashboard-ui.js?v=20260716-web-pdf-pa-v1"></script>
-  <script src="./app.js?v=20260716-evidence-v11"></script>
+  <script src="./app.js?v=20260716-clients-v12"></script>
 
   <div id="clientsImportModal" class="modal" aria-hidden="true">
     <div class="modal__backdrop" data-modal-close></div>
