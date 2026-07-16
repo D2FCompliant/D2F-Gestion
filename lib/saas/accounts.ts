@@ -341,7 +341,7 @@ export async function ensureD2FLifetimeAccount(user: User) {
 export function accountAllowsApplication(account: TenantAccount) {
   if (account.status === "lifetime") return true;
   if (account.status !== "active") return false;
-  return !account.subscription.currentPeriodEnd || account.subscription.currentPeriodEnd >= todayIso();
+  return Boolean(account.subscription.currentPeriodStart && account.subscription.currentPeriodEnd && account.subscription.currentPeriodEnd >= todayIso());
 }
 
 export function memberFor(account: TenantAccount, userId: string, email: string) {
@@ -350,6 +350,7 @@ export function memberFor(account: TenantAccount, userId: string, email: string)
 
 export async function inviteCollaborator(account: TenantAccount, actor: TenantMember, input: { email: string; fullName: string; redirectTo: string }) {
   if (actor.role !== "owner") throw new Error("Seul le propriétaire peut inviter un collaborateur");
+  if (!accountAllowsApplication(account)) throw new Error("L’abonnement doit être actif avant d’inviter un collaborateur");
   const email = normalizedEmail(input.email);
   if (!email || !email.includes("@")) throw new Error("Adresse e-mail invalide");
   if (account.members.some((member) => member.email === email)) throw new Error("Cette personne appartient déjà à l’entreprise");
@@ -374,6 +375,12 @@ export async function inviteCollaborator(account: TenantAccount, actor: TenantMe
 export async function declareBankTransfer(account: TenantAccount, actor: TenantMember, input: { payerName: string; transferReference: string; paidOn: string }) {
   if (actor.role !== "owner") throw new Error("Seul le propriétaire peut déclarer un virement");
   if (account.plan === "lifetime") return account;
+  const payerName = stringValue(input.payerName);
+  const customerTransferReference = stringValue(input.transferReference).slice(0, 120);
+  const paidOn = stringValue(input.paidOn).slice(0, 10);
+  if (payerName.length < 2) throw new Error("Nom du payeur requis");
+  if (customerTransferReference.length < 4) throw new Error("Référence bancaire invalide");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(paidOn) || paidOn > todayIso()) throw new Error("Date d’exécution du virement invalide");
   const subscriptionStatus: SubscriptionStatus = "payment_declared";
   const status: SubscriptionStatus = accountAllowsApplication(account) ? "active" : subscriptionStatus;
   const updated: TenantAccount = {
@@ -382,9 +389,9 @@ export async function declareBankTransfer(account: TenantAccount, actor: TenantM
     subscription: {
       ...account.subscription,
       status: subscriptionStatus,
-      payerName: stringValue(input.payerName || account.subscription.payerName),
-      customerTransferReference: stringValue(input.transferReference).slice(0, 120),
-      paidOn: stringValue(input.paidOn).slice(0, 10),
+      payerName,
+      customerTransferReference,
+      paidOn,
     },
     updatedAt: new Date().toISOString(),
   };
@@ -419,6 +426,9 @@ export async function setTenantSubscriptionStatus(tenantId: string, status: "act
   const account = await getAccountById(tenantId);
   if (!account) throw new Error("Entreprise introuvable");
   if (account.plan === "lifetime") return account;
+  if (status === "active" && account.subscription.status !== "payment_declared") {
+    throw new Error("Le client doit d’abord déclarer le paiement avant sa validation");
+  }
   const periodStart = status === "active"
     ? (accountAllowsApplication(account) && account.subscription.currentPeriodEnd ? account.subscription.currentPeriodEnd : todayIso())
     : account.subscription.currentPeriodStart;

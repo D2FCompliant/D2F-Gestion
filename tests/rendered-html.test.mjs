@@ -26,7 +26,7 @@ test("server-renders the D2F Gestion cockpit", async () => {
   assert.doesNotMatch(html, /codex-preview|Your site is taking shape|react-loading-skeleton/i);
 
   const shell = await readFile(new URL("../app/session-shell.tsx", import.meta.url), "utf8");
-  assert.match(shell, /src="\/erp\/index\.html\?v=20260716-saas-v1"/);
+  assert.match(shell, /src="\/erp\/index\.html\?v=20260716-brand-payment-v2"/);
   assert.match(shell, /title="D2F Gestion"/);
 });
 
@@ -72,8 +72,8 @@ test("keeps Supabase access tenant-scoped and server-side", async () => {
   assert.match(envExample, /SUPABASE_URL/);
   assert.match(envExample, /D2F_SESSION_SECRET/);
   assert.match(envExample, /D2F_MONTHLY_PRICE_EUR/);
-  assert.match(legacyHtml, /D2F Gestion/);
-  assert.match(legacyHtml, /\/d2f-gestion-logo\.png\?v=20260710-brand-2026/);
+  assert.match(legacyHtml, /D2F – Gestion/);
+  assert.doesNotMatch(legacyHtml, /\/d2f-gestion-logo\.png\?v=20260710-brand-2026/);
   assert.match(legacyHtml, /© D2F Compliant d\.o\.o 2026/);
   assert.match(legacyHtml, /web-api-shim\.js/);
 });
@@ -92,6 +92,26 @@ test("ships a branded Cloudflare gateway without exposing the Worker origin", as
   assert.match(config, /"D2F_PUBLIC_URL": "https:\/\/gestion\.d2fcompliant\.org"/);
   assert.match(config, /"D2F_OWNER_EMAIL": "contact@d2fcompliant\.org"/);
   assert.match(config, /"D2F_DATA_OWNER_KEY": "owner@d2f\.local"/);
+});
+
+test("shows one visible product brand and blocks clients until payment is verified", async () => {
+  const [shell, styles, legacyHtml, accounts, signup, subscription] = await Promise.all([
+    readFile(new URL("../app/session-shell.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
+    readFile(new URL("../public/erp/index.html", import.meta.url), "utf8"),
+    readFile(new URL("../lib/saas/accounts.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/auth/signup/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/auth/subscription/route.ts", import.meta.url), "utf8"),
+  ]);
+  assert.doesNotMatch(legacyHtml, /class="brand"/);
+  assert.match(styles, /\.account-brand img \{ width:72px; height:72px/);
+  assert.match(shell, /PORTAIL DE RÈGLEMENT/);
+  assert.match(shell, /confirmTransfer/);
+  assert.match(shell, /Confirmer reçu \+ 1 mois/);
+  assert.match(accounts, /currentPeriodStart && account\.subscription\.currentPeriodEnd/);
+  assert.match(accounts, /account\.subscription\.status !== "payment_declared"/);
+  assert.match(signup, /acceptPaymentTerms/);
+  assert.match(subscription, /body\.confirmTransfer !== true/);
 });
 
 test("hydrates invoice client names from the tenant client records", async () => {

@@ -1,4 +1,4 @@
-import { signUpWithPassword, normalizedEmail, safeOrigin } from "../../../lib/auth/server";
+import { signUpWithPassword, isPlatformAdminEmail, normalizedEmail, safeOrigin } from "../../../lib/auth/server";
 import { createTenantAccount } from "../../../lib/saas/accounts";
 import { getSupabaseAdmin } from "../../../lib/supabase/server";
 import { json, messageFromError, sessionResponse } from "../_shared";
@@ -27,6 +27,7 @@ export async function POST(request: Request) {
     }
     if (fullName.length < 2 || companyName.length < 2 || companyIdentifier.length < 3) return json("Informations entreprise incomplètes", 400);
     if (body.acceptTerms !== true) return json("Vous devez accepter les conditions d’utilisation et la politique de confidentialité", 400);
+    if (!isPlatformAdminEmail(email) && body.acceptPaymentTerms !== true) return json("Vous devez confirmer que l’accès sera activé uniquement après validation du paiement", 400);
     const signup = await signUpWithPassword({
       email,
       password,
@@ -39,7 +40,9 @@ export async function POST(request: Request) {
     if (signup.session) return sessionResponse(request, signup.user, account);
     return json({
       requiresEmailConfirmation: true,
-      message: "Entreprise créée. Consultez votre e-mail pour confirmer le compte, puis connectez-vous.",
+      message: account.plan === "lifetime"
+        ? "Compte D2F créé. Consultez votre e-mail pour confirmer l’accès, puis connectez-vous."
+        : "Entreprise créée, mais l’application reste verrouillée. Confirmez votre e-mail, connectez-vous au portail de règlement, puis déclarez le virement effectué.",
       bankTransferReference: account.subscription.bankTransferReference,
       subscriptionStatus: account.status,
     });

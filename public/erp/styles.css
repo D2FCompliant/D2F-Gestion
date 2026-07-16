@@ -135,16 +135,18 @@ body{
 
 /* Topbar */
 .topbar{
-  height: 70px;
+  height: 52px;
   display:flex;
   align-items:center;
-  justify-content: space-between;
-  padding: 12px 14px;
+  justify-content: flex-end;
+  padding: 7px 14px;
   border-bottom: 1px solid var(--stroke);
   background: rgba(255,255,255,.55);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
 }
+
+.topbar--workspace .topbar__right{ margin-left: auto; }
 
 .brand{ display:flex; align-items:center; gap:12px; }
 .brand__mark{

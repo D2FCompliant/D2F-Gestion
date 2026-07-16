@@ -11,6 +11,7 @@ export async function POST(request: Request) {
     const actor = memberFor(account, session.userId, session.email);
     if (!actor) return json("Accès révoqué", 403);
     const body = await request.json() as Record<string, unknown>;
+    if (body.confirmTransfer !== true) return json("Vous devez confirmer que le virement a réellement été exécuté", 400);
     const updated = await declareBankTransfer(account, actor, {
       payerName: String(body.payerName || ""),
       transferReference: String(body.transferReference || ""),
