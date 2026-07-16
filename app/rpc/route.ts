@@ -5,6 +5,9 @@ import it from "../../renderer/i18n/it.json";
 import sr from "../../renderer/i18n/sr.json";
 import rejectionReasons from "../../Electron/resources/rejection-reasons.xp-z12-012.v1.2.json";
 import { getOwnerEmail, getSupabaseAdmin, SupabaseConfigurationError } from "../../lib/supabase/server";
+import { createDocumentPdf, pdfBytesToBase64 } from "../../lib/document-pdf";
+import { createUblDocument, textToBase64 } from "../../lib/ubl";
+import { getIntegration, listTransmissions, saveIntegration, testIntegration, transmitIntegration, type IntegrationType } from "../../lib/integrations";
 
 export const dynamic = "force-dynamic";
 
@@ -53,6 +56,11 @@ function round2(value: number) {
 
 function today() {
   return new Date().toISOString().slice(0, 10);
+}
+
+function safeFileName(input: unknown, fallback: string) {
+  const normalized = String(input || fallback).normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9._-]+/g, "-").replace(/^-+|-+$/g, "");
+  return normalized || fallback;
 }
 
 function defaultCompany() {
@@ -193,6 +201,8 @@ async function getCompany(ownerEmail: string) {
   if (error) throw error;
   if (!data) return defaultCompany();
   const company = object(data.data);
+  delete company._integrations;
+  delete company._transmissions;
   const meta = { ...jsonObject(company.meta_json), ...object(company.meta) };
   const useCaseMeta = jsonObject(company.use_case_meta_json);
   const conformity = { ...object(useCaseMeta.conformity), ...object(company.conformity) };
@@ -210,7 +220,9 @@ async function getCompany(ownerEmail: string) {
 async function saveCompany(ownerEmail: string, input: JsonRecord) {
   const supabase = getSupabaseAdmin();
   const previous = await getCompany(ownerEmail);
-  const company = { ...previous, ...input, id: "1" };
+  const { data: rawRow } = await supabase.from("d2f_company").select("data").eq("owner_email", ownerEmail).maybeSingle();
+  const hidden = object(rawRow?.data);
+  const company = { ...previous, ...input, ...((hidden._integrations || hidden._transmissions) ? { _integrations: hidden._integrations, _transmissions: hidden._transmissions } : {}), id: "1" };
   delete company.owner_email;
   const { data, error } = await supabase.from("d2f_company").upsert({ owner_email: ownerEmail, data: company, updated_at: new Date().toISOString() }, { onConflict: "owner_email" }).select("data,created_at,updated_at").single();
   if (error) throw error;
@@ -405,7 +417,8 @@ function isMutationMethod(method: string) {
   return [
     "save", "upsert", "create", "update", "record", "remove", "delete", "importCsv", "duplicate",
     "setStatus", "issue", "createFromQuote", "createDeposit", "createCreditNote", "setInboundConfig",
-    "setConformityConfig", "saveConfig",
+    "setConformityConfig", "saveConfig", "setLogo", "clearLogo", "accept", "reject", "dispute",
+    "send", "sendInvoice", "sendNow", "archive", "importFile",
   ].includes(action);
 }
 
@@ -543,6 +556,62 @@ function previewResult(method: string) {
   return undefined;
 }
 
+async function documentBundle(ownerEmail: string, entity: "quotes" | "invoices", id: string) {
+  const document = await getRecord(ownerEmail, entity, id);
+  if (!document) throw new Error(entity === "quotes" ? "Devis introuvable" : "Facture introuvable");
+  const seller = await getCompany(ownerEmail);
+  const buyer = await getRecord(ownerEmail, "clients", String(document.client_id || ""));
+  if (!buyer) throw new Error("Le client associé au document est introuvable");
+  const lines = Array.isArray(document.lines) ? document.lines.map(object) : [];
+  return { document, seller, buyer, lines };
+}
+
+async function exportDocumentPdf(ownerEmail: string, entity: "quotes" | "invoices", args: unknown[]) {
+  const id = idFrom(first(args));
+  const locale = String(args[1] || object(first(args)).locale || "fr").slice(0, 2);
+  const bundle = await documentBundle(ownerEmail, entity, id);
+  const config = object(args[2]);
+  const sellerOverride = entity === "quotes" ? object(args[3]) : object(config.sellerOverride);
+  const seller = { ...bundle.seller, ...sellerOverride };
+  const bytes = await createDocumentPdf({ kind: entity === "quotes" ? "quote" : "invoice", document: bundle.document, lines: bundle.lines, seller, buyer: bundle.buyer, locale });
+  const number = bundle.document.invoice_number || bundle.document.number || bundle.document.id;
+  const fileName = `${safeFileName(number, entity === "quotes" ? "devis" : "facture")}.pdf`;
+
+  const archive = await getIntegration(getSupabaseAdmin(), ownerEmail, "archive").catch(() => null);
+  let archiveResult: unknown = null;
+  if (archive?.enabled && archive?.configured) {
+    const body = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
+    archiveResult = await transmitIntegration(getSupabaseAdmin(), ownerEmail, "archive", { documentId: id, documentNumber: String(number || ""), content: body, contentType: "application/pdf", metadata: { file_name: fileName, locale, source: "pdf_export" } });
+  }
+  return { ok: true, path: fileName, filePath: fileName, fileName, mimeType: "application/pdf", downloadBase64: pdfBytesToBase64(bytes), archive: archiveResult };
+}
+
+async function exportInvoiceUbl(ownerEmail: string, input: unknown) {
+  const id = idFrom(input);
+  const bundle = await documentBundle(ownerEmail, "invoices", id);
+  if (invoiceStatus(bundle.document) !== "issued") throw new Error("La facture doit être émise avant l'export UBL");
+  const xml = createUblDocument(bundle);
+  const number = bundle.document.invoice_number || bundle.document.id;
+  const fileName = `${safeFileName(number, "facture")}.xml`;
+  return { ok: true, xml, filename: fileName, fileName, mimeType: "application/xml", downloadBase64: textToBase64(xml) };
+}
+
+async function conformitySummary(ownerEmail: string) {
+  const [invoices, payments] = await Promise.all([listRecords(ownerEmail, "invoices"), listRecords(ownerEmail, "payments")]);
+  const issued = invoices.filter((invoice) => invoiceStatus(invoice) === "issued");
+  const flux8 = issued.filter((invoice) => String(invoice.country || invoice.buyer_country || "FR").toUpperCase() !== "FR").length;
+  const flux9 = issued.filter((invoice) => String(invoice.customer_type || "").toUpperCase() === "B2C").length;
+  const flux10 = payments.filter((payment) => String(payment.status || "posted").toLowerCase() !== "cancelled").length;
+  return { flux8, flux9, flux10 };
+}
+
+async function saveTransmissionIntegration(ownerEmail: string, args: unknown[]) {
+  const payload = object(first(args));
+  const type = String(payload.type || payload.integration_type || "") as IntegrationType;
+  if (!["pa", "archive", "email"].includes(type)) throw new Error("Type de connecteur invalide");
+  return saveIntegration(getSupabaseAdmin(), ownerEmail, type, payload);
+}
+
 async function dispatch(ownerEmail: string, method: string, args: unknown[]) {
   if (method === "i18n:load") {
     const localeArg = object(first(args));
@@ -552,6 +621,18 @@ async function dispatch(ownerEmail: string, method: string, args: unknown[]) {
   if (method === "xpReject:load" || method === "rejectionReasons:load") return rejectionReasons;
   if (method === "company:get") return getCompany(ownerEmail);
   if (method === "company:save") return saveCompany(ownerEmail, object(first(args)));
+  if (method === "company:setLogo") {
+    const company = await getCompany(ownerEmail);
+    const input = object(first(args));
+    const logoDataUrl = String(input.dataUrl || input.data_url || first(args) || "");
+    if (!/^data:image\/(png|jpe?g|webp);base64,/i.test(logoDataUrl)) throw new Error("Le logo doit être une image PNG, JPEG ou WebP");
+    if (logoDataUrl.length > 3_000_000) throw new Error("Le logo dépasse la taille maximale de 2 Mo");
+    return saveCompany(ownerEmail, { ...company, logo_data_url: logoDataUrl, logo_path: "" });
+  }
+  if (method === "company:clearLogo") {
+    const company = await getCompany(ownerEmail);
+    return saveCompany(ownerEmail, { ...company, logo_data_url: "", logo_path: "" });
+  }
   if (method === "company:getInboundConfig") return object((await getCompany(ownerEmail)).inbound);
   if (method === "company:setInboundConfig") {
     const company = await getCompany(ownerEmail);
@@ -564,6 +645,47 @@ async function dispatch(ownerEmail: string, method: string, args: unknown[]) {
   }
   if (method === "dashboard:get") return dashboard(ownerEmail);
   if (method === "dashboard:metrics") return dashboardMetrics(ownerEmail, object(first(args)).year);
+  if (method === "quotes:exportPdf") return exportDocumentPdf(ownerEmail, "quotes", args);
+  if (method === "invoices:exportPdf") return exportDocumentPdf(ownerEmail, "invoices", args);
+  if (method === "invoices:exportUbl") return exportInvoiceUbl(ownerEmail, first(args));
+
+  if (method === "connections:get") {
+    const type = String(object(first(args)).type || "pa") as IntegrationType;
+    if (!["pa", "archive", "email"].includes(type)) throw new Error("Type de connecteur invalide");
+    return getIntegration(getSupabaseAdmin(), ownerEmail, type);
+  }
+  if (method === "connections:save") return saveTransmissionIntegration(ownerEmail, args);
+  if (method === "connections:test") {
+    const type = String(object(first(args)).type || "pa") as IntegrationType;
+    if (!["pa", "archive", "email"].includes(type)) throw new Error("Type de connecteur invalide");
+    return testIntegration(getSupabaseAdmin(), ownerEmail, type);
+  }
+  if (method === "connections:listTransmissions" || method === "conformity:openQueue") return listTransmissions(getSupabaseAdmin(), ownerEmail);
+  if (method === "connections:sendInvoice") {
+    const payload = object(first(args));
+    const bundle = await documentBundle(ownerEmail, "invoices", idFrom(payload));
+    if (invoiceStatus(bundle.document) !== "issued") throw new Error("La facture doit être émise avant transmission à la PA");
+    const xml = createUblDocument(bundle);
+    return transmitIntegration(getSupabaseAdmin(), ownerEmail, "pa", { documentId: String(bundle.document.id || ""), documentNumber: String(bundle.document.invoice_number || ""), content: xml, contentType: "application/xml", metadata: { format: "UBL-2.1", standard: "EN16931", profile: "XP-Z12-013" } });
+  }
+  if (method === "conformity:rebuildPeriod") {
+    const queued = await conformitySummary(ownerEmail);
+    return { ok: true, queued, kpis: queued, next_due: object(first(args)).periodEnd || object(first(args)).period_end || today() };
+  }
+  if (method === "conformity:sendNow") {
+    const queued = await conformitySummary(ownerEmail);
+    const config = await getIntegration(getSupabaseAdmin(), ownerEmail, "pa");
+    if (!config.enabled || !config.configured) throw new Error("Configurez et testez la Plateforme Agréée avant l'envoi");
+    const report = JSON.stringify({ type: "e-reporting", generated_at: new Date().toISOString(), period: object(first(args)), flows: queued });
+    const sent = await transmitIntegration(getSupabaseAdmin(), ownerEmail, "pa", { documentNumber: `EREPORT-${today()}`, content: report, contentType: "application/json", metadata: { flows: queued } });
+    return { ...sent, queued, next_due: today(), message: "Transmission e-reporting remise à la Plateforme Agréée" };
+  }
+  if (method === "email:send") {
+    const payload = object(first(args));
+    const config = await getIntegration(getSupabaseAdmin(), ownerEmail, "email").catch(() => null);
+    if (!config?.enabled || !config?.configured) return { ok: true, requiresClientMail: true, to: payload.to, subject: payload.subject, text: payload.text };
+    return transmitIntegration(getSupabaseAdmin(), ownerEmail, "email", { documentNumber: String(payload.attachmentName || ""), content: JSON.stringify(payload), contentType: "application/json", metadata: { to: payload.to } });
+  }
 
   const [namespace, action] = method.split(":");
   const entity = namespace as Entity;
@@ -627,13 +749,41 @@ async function dispatch(ownerEmail: string, method: string, args: unknown[]) {
       const payments = await listRecords(ownerEmail, "payments", { invoiceId: id });
       return round2(payments.reduce((sum, payment) => sum + numberValue(payment.amount), 0));
     }
+    if (entity === "inbound" && action === "importFile") {
+      const payload = object(first(args));
+      const filename = String(payload.filename || "document");
+      return saveRecord(ownerEmail, "inbound", { id: crypto.randomUUID(), filename, file_name: filename, mime: String(payload.mimeType || payload.mime || "application/octet-stream"), raw_base64: String(payload.contentBase64 || ""), raw_text: String(payload.text || ""), status: "received", received_at: new Date().toISOString(), supplier_name: String(payload.supplier_name || ""), invoice_number: String(payload.invoice_number || filename.replace(/\.[^.]+$/, "")), date: String(payload.date || today()), total_ttc: numberValue(payload.total_ttc) });
+    }
+    if (entity === "inbound" && ["accept", "reject", "dispute"].includes(action)) {
+      const id = idFrom(first(args));
+      const source = await getRecord(ownerEmail, "inbound", id);
+      if (!source) throw new Error("Facture fournisseur introuvable");
+      const status = action === "accept" ? "accepted" : action === "reject" ? "rejected" : "disputed";
+      return saveRecord(ownerEmail, "inbound", { ...source, ...object(first(args)), id, status, decided_at: new Date().toISOString() });
+    }
+    if (entity === "inbound" && action === "exportXml") {
+      const record = await getRecord(ownerEmail, "inbound", idFrom(first(args)));
+      if (!record) throw new Error("Facture fournisseur introuvable");
+      const rawText = String(record.raw_text || "");
+      if (!rawText.trim().startsWith("<")) throw new Error("Le document reçu ne contient pas de XML exportable");
+      const fileName = `${safeFileName(record.filename || record.invoice_number, "facture-fournisseur")}.xml`;
+      return { ok: true, fileName, filePath: fileName, mimeType: "application/xml", downloadBase64: textToBase64(rawText) };
+    }
+    if (entity === "inbound" && action === "exportPdf") {
+      const record = await getRecord(ownerEmail, "inbound", idFrom(first(args)));
+      if (!record) throw new Error("Facture fournisseur introuvable");
+      const company = await getCompany(ownerEmail);
+      const supplier = { legal_name: record.supplier_name || record.supplier || "Fournisseur", country: record.supplier_country || "FR", vat_id: record.supplier_vat_id || "" };
+      const totalTtc = numberValue(record.total_ttc || record.amount_due);
+      const bytes = await createDocumentPdf({ kind: "invoice", document: { ...record, invoice_number: record.invoice_number || record.filename, total_ht: record.total_ht || totalTtc, total_tva: record.total_tva || 0, total_ttc: totalTtc, amount_due: totalTtc }, lines: Array.isArray(record.lines) && record.lines.length ? record.lines.map(object) : [{ description: record.description || record.filename || "Facture fournisseur", quantity: 1, unit_price_ht: record.total_ht || totalTtc, tva_percent: 0 }], seller: supplier, buyer: company, locale: object(first(args)).locale || "fr" });
+      const fileName = `${safeFileName(record.invoice_number || record.filename, "facture-fournisseur")}.pdf`;
+      return { ok: true, fileName, filePath: fileName, mimeType: "application/pdf", downloadBase64: pdfBytesToBase64(bytes) };
+    }
   }
   if (method === "audit:path") return { ok: true, logPath: "Supabase • piste d’audit sécurisée" };
   if (method === "audit:read") return readAuditEvents(ownerEmail, object(first(args)));
   if (method === "audit:verify") return verifyAuditEvents(ownerEmail);
-  if (method.startsWith("files:") || method.includes("exportPdf") || method.includes("exportUbl") || method.startsWith("email:")) {
-    throw new Error("Cette fonction de fichier ou d’envoi nécessite encore un service serveur dédié dans la version web.");
-  }
+  if (method.startsWith("files:")) throw new Error("Cette fonction doit être exécutée par le navigateur");
   if (method.startsWith("inbound:") || method.startsWith("connections:") || method.startsWith("conformity:")) return { ok: true };
   throw new Error(`Méthode web non prise en charge : ${method}`);
 }

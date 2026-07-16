@@ -20,7 +20,7 @@ test("server-renders the D2F Gestion cockpit", async () => {
   assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
   const html = await response.text();
   assert.match(html, /<title>D2F Gestion — Pilotez votre activité<\/title>/i);
-  assert.match(html, /src="\/erp\/index\.html\?v=20260710-audit-credit-v1"/);
+  assert.match(html, /src="\/erp\/index\.html\?v=20260716-web-pdf-pa-v1"/);
   assert.match(html, /title="D2F Gestion"/);
   assert.match(html, /og\.png/);
   assert.doesNotMatch(html, /codex-preview|Your site is taking shape|react-loading-skeleton/i);
@@ -137,4 +137,27 @@ test("ships an immutable Supabase audit trail instead of an empty web stub", asy
   assert.match(migration, /pg_advisory_xact_lock/);
   assert.match(migration, /extensions\.digest\(convert_to\(new\.canonical_text/);
   assert.match(importer, /load_and_verify/);
+});
+
+test("provides web-native PDFs, UBL, file handling, and connector storage", async () => {
+  const [route, pdf, ubl, integrations, shim, migration] = await Promise.all([
+    readFile(new URL("../app/rpc/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../lib/document-pdf.ts", import.meta.url), "utf8"),
+    readFile(new URL("../lib/ubl.ts", import.meta.url), "utf8"),
+    readFile(new URL("../lib/integrations.ts", import.meta.url), "utf8"),
+    readFile(new URL("../public/erp/renderer/web-api-shim.js", import.meta.url), "utf8"),
+    readFile(new URL("../supabase/migrations/20260716110000_integrations_and_transmissions.sql", import.meta.url), "utf8"),
+  ]);
+  assert.match(route, /createDocumentPdf/);
+  assert.match(route, /createUblDocument/);
+  assert.match(route, /connections:sendInvoice/);
+  assert.doesNotMatch(route, /Cette fonction de fichier ou d.envoi nécessite encore un service serveur dédié/);
+  assert.match(pdf, /PDFDocument/);
+  assert.match(ubl, /urn:oasis:names:specification:ubl/);
+  assert.match(integrations, /AES-GCM/);
+  assert.match(integrations, /d2f_integrations/);
+  assert.match(shim, /downloadBase64/);
+  assert.match(shim, /type = "file"/);
+  assert.match(migration, /create table if not exists public\.d2f_integrations/);
+  assert.match(migration, /create table if not exists public\.d2f_transmissions/);
 });

@@ -1825,8 +1825,9 @@ function fillCompanyForm(c) {
   const fallback = $("companyLogoFallback");
 
   if (img && fallback) {
-    if (c?.logo_path) {
-      img.src = `file://${c.logo_path}`;
+    const logoSource = c?.logo_data_url || c?.logo_path || "";
+    if (logoSource) {
+      img.src = /^(data:|https?:)/i.test(logoSource) ? logoSource : `file://${logoSource}`;
       img.style.display = "block";
       fallback.style.display = "none";
     } else {
@@ -2024,7 +2025,7 @@ function cfPushChat(role, text) {
   wrap.style.margin = "8px 0";
   wrap.style.opacity = role === "user" ? "0.95" : "1";
   wrap.innerHTML = `
-    <div style="font-size:12px;opacity:.7;margin-bottom:2px;">${role === "user" ? "Vous" : "Agent"}</div>
+    <div style="font-size:12px;opacity:.7;margin-bottom:2px;">${role === "user" ? t("conformity.chat.you", "Vous") : t("conformity.chat.agent", "Agent")}</div>
     <div style="line-height:1.35;white-space:pre-wrap;">${text}</div>
   `;
   box.appendChild(wrap);
@@ -2054,27 +2055,110 @@ function cfComputeEligibility(cfg) {
 
   const concerned = emitsB2c || intl; // simplifié
   const reasons = [];
-  if (emitsB2c) reasons.push("Vous émettez du B2C (flux e-reporting requis).");
-  if (intl) reasons.push("Vous avez des opérations internationales (flux e-reporting requis).");
-  if (!emitsB2c && !intl) reasons.push("A priori moins concerné par le e-reporting (cas B2B domestique pur).");
+  if (emitsB2c) reasons.push(t("conformity.reason.b2c", "Vous émettez du B2C (flux e-reporting requis)."));
+  if (intl) reasons.push(t("conformity.reason.intl", "Vous avez des opérations internationales (flux e-reporting requis)."));
+  if (!emitsB2c && !intl) reasons.push(t("conformity.reason.none", "A priori moins concerné par le e-reporting (cas B2B domestique pur)."));
 
   const warnings = [];
-  if (!platformOk) warnings.push("Plateforme non choisie (PA, OTHER).");
-  if (!cfg.periodicity) warnings.push("Périodicité manquante.");
+  if (!platformOk) warnings.push(t("conformity.warning.platform", "Plateforme non choisie (PA, OTHER)."));
+  if (!cfg.periodicity) warnings.push(t("conformity.warning.periodicity", "Périodicité manquante."));
 
   return { concerned, reasons, warnings };
 }
 
 function cfMissingFields(cfg) {
   const missing = [];
-  if (!cfg.scope) missing.push("Scope");
-  if (!cfg.periodicity) missing.push("Périodicité");
-  if (!cfg.archiving) missing.push("Archivage");
-  if (!cfg.platform) missing.push("Plateforme");
+  if (!cfg.scope) missing.push(t("conformity.scope.label", "Périmètre"));
+  if (!cfg.periodicity) missing.push(t("conformity.periodicity.label", "Périodicité"));
+  if (!cfg.archiving) missing.push(t("conformity.archiving.label", "Archivage"));
+  if (!cfg.platform) missing.push(t("conformity.platform.label", "Plateforme"));
   return missing;
 }
 
+const integrationFields = {
+  pa: {
+    provider: "cf-pa-provider-name", base: "cf-pa-base-url", auth: "cf-pa-auth-type", secret: "cf-pa-secret",
+    health: "cf-pa-health-path", submit: "cf-pa-submit-path", enabled: "cf-pa-enabled", status: "cf-pa-status", save: "cf-pa-save", test: "cf-pa-test",
+  },
+  archive: {
+    provider: "cf-archive-provider-name", base: "cf-archive-base-url", auth: "cf-archive-auth-type", secret: "cf-archive-secret",
+    submit: "cf-archive-submit-path", retention: "cf-archive-retention", enabled: "cf-archive-enabled", status: "cf-archive-status", save: "cf-archive-save", test: "cf-archive-test",
+  },
+};
+
+function integrationStatus(type, text, isError = false) {
+  const el = $(integrationFields[type]?.status);
+  if (!el) return;
+  el.textContent = text;
+  el.style.color = isError ? "#dc2626" : "";
+}
+
+function integrationPayload(type) {
+  const ids = integrationFields[type];
+  return {
+    type,
+    provider_name: $(ids.provider)?.value?.trim() || "",
+    base_url: $(ids.base)?.value?.trim() || "",
+    auth_type: $(ids.auth)?.value || "bearer",
+    secret: $(ids.secret)?.value || "",
+    health_path: ids.health ? ($(ids.health)?.value?.trim() || "/health") : "/health",
+    submit_path: $(ids.submit)?.value?.trim() || (type === "archive" ? "/archives" : "/invoices"),
+    retention_years: ids.retention ? Number($(ids.retention)?.value || 10) : undefined,
+    enabled: !!$(ids.enabled)?.checked,
+  };
+}
+
+async function loadIntegrationForm(type) {
+  const ids = integrationFields[type];
+  if (!ids || !window.api?.connections?.get) return;
+  try {
+    const cfg = await window.api.connections.get({ type });
+    if ($(ids.provider)) $(ids.provider).value = cfg?.provider_name || "";
+    if ($(ids.base)) $(ids.base).value = cfg?.base_url || "";
+    if ($(ids.auth)) $(ids.auth).value = cfg?.auth_type || "bearer";
+    if ($(ids.health)) $(ids.health).value = cfg?.health_path || "/health";
+    if ($(ids.submit)) $(ids.submit).value = cfg?.submit_path || (type === "archive" ? "/archives" : "/invoices");
+    if ($(ids.retention)) $(ids.retention).value = String(cfg?.retention_years || 10);
+    if ($(ids.enabled)) $(ids.enabled).checked = !!cfg?.enabled;
+    if ($(ids.secret)) $(ids.secret).value = "";
+    integrationStatus(type, cfg?.configured ? t("integrations.configured", "Configuré — le secret est conservé chiffré côté serveur") : t("integrations.not_configured", "Non configuré"));
+  } catch (error) {
+    integrationStatus(type, t("integrations.load_error", "Impossible de charger le connecteur : {msg}", { msg: error.message }), true);
+  }
+}
+
+async function saveIntegrationForm(type) {
+  integrationStatus(type, t("integrations.saving", "Enregistrement…"));
+  const saved = await window.api.connections.save(integrationPayload(type));
+  if ($(integrationFields[type].secret)) $(integrationFields[type].secret).value = "";
+  integrationStatus(type, saved?.configured ? t("integrations.saved", "Connecteur enregistré et secret chiffré") : t("integrations.saved_no_secret", "Configuration enregistrée — secret encore manquant"));
+  return saved;
+}
+
+async function testIntegrationForm(type) {
+  integrationStatus(type, t("integrations.testing", "Test de connexion…"));
+  try {
+    const result = await window.api.connections.test({ type });
+    integrationStatus(type, t("integrations.test_ok", "Connexion réussie ({status})", { status: result?.status || "OK" }));
+  } catch (error) {
+    integrationStatus(type, t("integrations.test_failed", "Échec du test : {msg}", { msg: error.message }), true);
+  }
+}
+
+let integrationsBound = false;
+function bindIntegrationForms() {
+  if (integrationsBound) return;
+  integrationsBound = true;
+  for (const type of Object.keys(integrationFields)) {
+    const ids = integrationFields[type];
+    $(ids.save)?.addEventListener("click", () => saveIntegrationForm(type).catch((error) => integrationStatus(type, error.message, true)));
+    $(ids.test)?.addEventListener("click", () => testIntegrationForm(type));
+  }
+}
+
 async function cfLoadToForm() {
+  bindIntegrationForms();
+  await Promise.all([loadIntegrationForm("pa"), loadIntegrationForm("archive")]);
   const raw = await window.api.conformity.getConfig();
   const cfg = cfNormalizeConfig(raw || {});
 
@@ -2104,19 +2188,19 @@ async function cfLoadToForm() {
   cfSetHint(
     "cf-help-scope",
     cfg.scope === "FR"
-      ? "FR : activité principalement en France. INTL : vous avez des opérations hors France."
-      : "INTL : vous avez des opérations hors France (UE/hors UE)."
+      ? t("conformity.help.scope_fr", "FR : activité principalement en France. INTL : vous avez des opérations hors France.")
+      : t("conformity.help.scope_intl", "INTL : vous avez des opérations hors France (UE/hors UE).")
   );
 
   // Periodicity: si FR, rappeler que c’est piloté par TVA
   cfSetHint(
     "cf-help-periodicity",
     jurisdiction === "FR"
-      ? "France : la fréquence de transmission e-reporting dépend du régime de TVA (cette valeur peut être imposée)."
-      : "Choisissez la fréquence de constitution/contrôle interne (selon vos process)."
+      ? t("conformity.help.periodicity_fr", "France : la fréquence de transmission e-reporting dépend du régime de TVA.")
+      : t("conformity.help.periodicity_intl", "Choisissez la fréquence de constitution et de contrôle interne.")
   );
 
-  cfSetHint("cf-help-archiving", "ON recommandé : conserve les preuves et exports.");
+  cfSetHint("cf-help-archiving", t("conformity.help.archiving", "ON recommandé : conserve les preuves et exports."));
 
   const kindLabel =
     safeKind === "PA"
@@ -2128,20 +2212,20 @@ async function cfLoadToForm() {
   cfSetHint(
   "cf-help-platform",
   cfg.scope === "FR"
-    ? "France : PA = Plateforme Agréée. Indiquez le nom de la plateforme utilisée."
-    : "International : indiquez le nom du portail/plateforme utilisé(e) pour le e-reporting."
+    ? t("conformity.help.platform_fr", "France : PA = Plateforme Agréée. Indiquez la plateforme utilisée.")
+    : t("conformity.help.platform_intl", "International : indiquez le portail ou la plateforme utilisé pour le e-reporting.")
 );
 
-  cfSetHint("cf-help-nextdue", "Info : prochaine échéance interne (pas un envoi automatique).");
-  cfSetHint("cf-help-b2c", "Oui si vous facturez des particuliers.");
-  cfSetHint("cf-help-intl", "Oui si vous vendez/achetez hors France (UE/hors UE).");
+  cfSetHint("cf-help-nextdue", t("conformity.help.next_due", "Prochaine échéance interne, distincte d'un envoi automatique."));
+  cfSetHint("cf-help-b2c", t("conformity.help.b2c", "Oui si vous facturez des particuliers."));
+  cfSetHint("cf-help-intl", t("conformity.help.intl", "Oui si vous vendez ou achetez hors France."));
 
   // --- Eligibility hint ---
   const elig = cfComputeEligibility(cfg);
   const hint = [
     elig.concerned
-      ? "✅ Vous êtes probablement concerné par du e-reporting."
-      : "🟡 Vous êtes probablement moins concerné (à confirmer).",
+      ? t("conformity.eligibility.concerned", "✅ Vous êtes probablement concerné par du e-reporting.")
+      : t("conformity.eligibility.less", "🟡 Vous êtes probablement moins concerné (à confirmer)."),
     ...elig.reasons,
     elig.warnings.length ? "⚠️ " + elig.warnings.join(" ") : ""
   ]
@@ -2184,15 +2268,15 @@ function cfScheduleSave() {
       const cfg = cfNormalizeConfig(payload);
       const elig = cfComputeEligibility(cfg);
       cfSetHint("cf-eligibility-hint", [
-        elig.concerned ? "✅ Vous êtes probablement concerné par du e-reporting." : "🟡 Vous êtes probablement moins concerné (à confirmer).",
+        elig.concerned ? t("conformity.eligibility.concerned", "✅ Vous êtes probablement concerné par du e-reporting.") : t("conformity.eligibility.less", "🟡 Vous êtes probablement moins concerné (à confirmer)."),
         ...elig.reasons,
         elig.warnings.length ? ("⚠️ " + elig.warnings.join(" ")) : ""
       ].filter(Boolean).join(" "));
-      $("appStatus") && ($("appStatus").textContent = "Sauvé");
-      setTimeout(() => $("appStatus") && ($("appStatus").textContent = "Prêt"), 800);
+      $("appStatus") && ($("appStatus").textContent = t("status.saved", "Enregistré"));
+      setTimeout(() => $("appStatus") && ($("appStatus").textContent = t("status.ready", "Prêt")), 800);
     } catch (e) {
       console.error(e);
-      $("appStatus") && ($("appStatus").textContent = "Erreur");
+      $("appStatus") && ($("appStatus").textContent = t("dashboard.error", "Erreur"));
     }
   }, 250);
 }
@@ -5081,7 +5165,7 @@ case "invoices:recordPayment": {
 
       case "exports:pdfQuote": {
         const quoteId = getSelectedExportQuoteId() || state.quoteDraft?.id || state.selectedQuoteId;
-        if (!quoteId) throw new Error("Sélectionner un devis.");
+        if (!quoteId) throw new Error(t("err.exports.select_quote", "Sélectionner un devis."));
 
         const locale = getExportLocale();
         const company = await ensureCompanyLoaded();
@@ -5102,16 +5186,16 @@ case "invoices:recordPayment": {
 
         const res = await window.api.quotes.exportPdf(quoteId, locale, config, sellerOverride);
 
-        if (res?.ok) setStatus(`PDF devis exporté: ${res.path}`);
-        else if (res?.canceled) setStatus("Export PDF annulé");
-        else throw new Error(res?.error || "Export PDF devis échoué");
+        if (res?.ok) setStatus(t("exports.pdf_quote_ready", "PDF du devis téléchargé : {name}", { name: res.path }));
+        else if (res?.canceled) setStatus(t("status.pdfexport_canceled", "Export PDF annulé"));
+        else throw new Error(res?.error || t("err.exports.pdf_quote_failed", "Export PDF devis échoué"));
         break;
       }
 
       case "exports:pdfInvoice": {
         const invoiceId =
           getSelectedExportInvoiceId() || state.invoiceDraft?.id || state.selectedInvoiceId;
-        if (!invoiceId) throw new Error("Sélectionner une facture.");
+        if (!invoiceId) throw new Error(t("err.exports.select_invoice", "Sélectionner une facture."));
 
         const locale = getExportLocale();
 
@@ -5126,9 +5210,9 @@ case "invoices:recordPayment": {
 
         const res = await window.api.invoices.exportPdf(invoiceId, locale, config);
 
-        if (res?.ok) setStatus(`PDF facture exporté: ${res.path}`);
-        else if (res?.canceled) setStatus("Export PDF annulé");
-        else throw new Error(res?.error || "Export PDF facture échoué");
+        if (res?.ok) setStatus(t("exports.pdf_invoice_ready", "PDF de la facture téléchargé : {name}", { name: res.path }));
+        else if (res?.canceled) setStatus(t("status.pdfexport_canceled", "Export PDF annulé"));
+        else throw new Error(res?.error || t("err.exports.pdf_invoice_failed", "Export PDF facture échoué"));
         break;
       }
 
@@ -5198,7 +5282,7 @@ console.log("CLIENT =", buyer);
           );
         }
 
-        await window.api.email.send({
+        const mailResult = await window.api.email.send({
           to: buyer.email,
 
           subject:
@@ -5225,9 +5309,9 @@ console.log("CLIENT =", buyer);
         `${quote.quote.number}.pdf`
     });
 
-        setStatus(
-         `Devis envoyé à ${buyer.email}`
-        );
+        setStatus(mailResult?.mode === "mailto"
+          ? t("exports.email_prepared", "E-mail préparé pour {email} — ajoutez le PDF téléchargé en pièce jointe.", { email: buyer.email })
+          : t("exports.quote_sent", "Devis envoyé à {email}", { email: buyer.email }));
 
         break;
       }
@@ -5298,7 +5382,7 @@ console.log("CLIENT =", buyer);
   );
 }
 
-  await window.api.email.send({
+  const mailResult = await window.api.email.send({
     to: buyer.email,
 
     subject:
@@ -5324,13 +5408,21 @@ console.log("CLIENT =", buyer);
         `${invoice.invoice.invoice_number}.pdf`
     });
 
-  setStatus(
-    `Facture envoyée à ${buyer.email}`
-  );
+  setStatus(mailResult?.mode === "mailto"
+    ? t("exports.email_prepared", "E-mail préparé pour {email} — ajoutez le PDF téléchargé en pièce jointe.", { email: buyer.email })
+    : t("exports.invoice_sent", "Facture envoyée à {email}", { email: buyer.email }));
 
   break;
 }
       
+      case "exports:peppolSend": {
+        const invoiceId = getSelectedExportInvoiceId() || state.invoiceDraft?.id || state.selectedInvoiceId;
+        if (!invoiceId) throw new Error(t("err.exports.select_invoice", "Sélectionner une facture."));
+        const result = await window.api.connections.sendInvoice({ id: invoiceId });
+        setStatus(t("exports.pa_sent", "Facture transmise à {provider} — statut : {status}", { provider: result?.provider || "PA", status: result?.status || "submitted" }));
+        break;
+      }
+
       case "exports:peppolXml": {
         const invoiceId =
           getSelectedExportInvoiceId() || state.invoiceDraft?.id || state.selectedInvoiceId;
@@ -5453,9 +5545,9 @@ function initConformityAiAgent() {
   };
 
   const yesNoUnknown = (s) => {
-    const v = String(s || "").trim().toLowerCase();
-    if (["oui", "o", "yes", "y", "1", "true"].includes(v)) return true;
-    if (["non", "n", "no", "0", "false"].includes(v)) return false;
+    const v = String(s || "").trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    if (["oui", "o", "yes", "y", "si", "s", "da", "d", "1", "true"].includes(v)) return true;
+    if (["non", "n", "no", "ne", "0", "false"].includes(v)) return false;
     return null;
   };
 
@@ -5493,12 +5585,12 @@ function initConformityAiAgent() {
       hasIntl,
       concerned: emitsB2C || hasIntl,
       why: !emitsB2C && !hasIntl
-        ? "Pas de e-reporting si pas de B2C et pas d’international (la France B2B = plutôt e-invoicing)."
+        ? t("conformity.eligibility.none")
         : emitsB2C && !hasIntl
-          ? "Concerné e-reporting via B2C (flux 9/10)."
+          ? t("conformity.eligibility.b2c_only")
           : !emitsB2C && hasIntl
-            ? "Concerné e-reporting via international (flux 8 + paiements)."
-            : "Concerné e-reporting via B2C + international.",
+            ? t("conformity.eligibility.intl_only")
+            : t("conformity.eligibility.b2c_and_intl"),
     };
   };
 
@@ -5547,8 +5639,13 @@ function initConformityAiAgent() {
     else if (window.api?.company?.setConformityConfig) await window.api.company.setConformityConfig(payload);
 
     await refreshModule("conformity").catch(() => {});
-    post("assistant", `✅ J’ai appliqué des recommandations.\n- Scope: ${rec.scope}\n- Périodicité: ${state.conformity.periodicity}\n- Archivage: ${rec.archiving}\n- Plateforme: ${rec.platform || "—"}`);
-    post("assistant", `Statut: ${elig.concerned ? "✅ Concerné e-reporting" : "🟦 Non concerné e-reporting"}\n${elig.why}`);
+    post("assistant", t("conformity.ai.recommendations_applied", "✅ Recommandations appliquées.\n- Scope: {scope}\n- Périodicité: {periodicity}\n- Archivage: {archiving}\n- Plateforme: {platform}", {
+      scope: rec.scope,
+      periodicity: state.conformity.periodicity,
+      archiving: rec.archiving,
+      platform: rec.platform || "—",
+    }));
+    post("assistant", `${elig.concerned ? t("conformity.ai.concerned") : t("conformity.ai.not_concerned")}\n${elig.why}`);
   };
 
   const updateHelpTextsAndMissing = async () => {
@@ -5558,42 +5655,35 @@ function initConformityAiAgent() {
     const vr = co?.vat_regime || state.company?.vat_regime || "";
 
     // Aides “quoi remplir”
-    if (help.scope()) help.scope().textContent =
-      "FR = périmètre France. INTL = si vous avez des opérations hors France (export / services à l’étranger).";
+    if (help.scope()) help.scope().textContent = t("conformity.help.scope_fr");
 
-    if (help.per()) help.per().textContent =
-      `D = quotidien (cas spécifiques), M = mensuel (souvent), B = bimestriel (selon régime). Régime TVA détecté: ${vr || "—"}`;
+    if (help.per()) help.per().textContent = `${t("conformity.help.periodicity_fr")} ${t("conformity.ai.vat_regime", "Régime TVA : {regime}", { regime: vr || "—" })}`;
 
-    if (help.arch()) help.arch().textContent =
-      "ON recommandé: conserve la preuve de calcul/envoi et la piste d’audit.";
+    if (help.arch()) help.arch().textContent = t("conformity.help.archiving");
 
-    if (help.plat()) help.plat().textContent =
-      "Choisis le canal cible: PA (plateforme). Ce champ est déclaratif tant que pas d’intégration technique.";
+    if (help.plat()) help.plat().textContent = t("conformity.help.platform_fr");
 
-    if (help.b2c()) help.b2c().textContent =
-      "Oui si vius facturez des particuliers (B2C).";
+    if (help.b2c()) help.b2c().textContent = t("conformity.help.b2c");
 
-    if (help.intl()) help.intl().textContent =
-      "Oui si vous avez des ventes/prestations hors France (export, services à l’étranger, etc.).";
+    if (help.intl()) help.intl().textContent = t("conformity.help.intl");
 
-    if (help.nextdue()) help.nextdue().textContent =
-      "Info interne: prochaine échéance prévue. Ne remplace pas un calendrier réglementaire.";
+    if (help.nextdue()) help.nextdue().textContent = t("conformity.help.next_due");
 
     // Vérif complétude minimale “pré-config”
     const missing = [];
 
     // Concerné => il faut au moins plateforme + periodicité + archivage
     if (elig.concerned) {
-      if (!String(s.platform || "").trim()) missing.push("Plateforme (PA/OTHER)");
-      if (!String(s.periodicity || "").trim()) missing.push("Périodicité (D/M/B)");
-      if (!String(s.archiving || "").trim()) missing.push("Archivage (ON recommandé)");
+      if (!String(s.platform || "").trim()) missing.push(t("conformity.ai.missing_platform"));
+      if (!String(s.periodicity || "").trim()) missing.push(t("conformity.ai.missing_periodicity"));
+      if (!String(s.archiving || "").trim()) missing.push(t("conformity.ai.missing_archiving"));
       // scope utile surtout si international
       if (elig.hasIntl && String(s.scope || "").toUpperCase() !== "INTL") {
-        missing.push("Scope (mettre INTL car international = oui)");
+        missing.push(t("conformity.ai.missing_scope_intl"));
       }
     } else {
       // non concerné => on ne force pas plateforme, mais on garde des conseils
-      if (!String(s.archiving || "").trim()) missing.push("Archivage (recommandé même si non concerné e-reporting)");
+      if (!String(s.archiving || "").trim()) missing.push(t("conformity.ai.missing_archiving_advised"));
     }
 
     if (missingBox && missingList) {
@@ -5608,11 +5698,16 @@ function initConformityAiAgent() {
 
     // résumé
     const summaryLines = [];
-    summaryLines.push(`${elig.concerned ? "✅" : "🟦"} ${elig.concerned ? "Concerné e-reporting" : "Non concerné e-reporting"}`);
+    summaryLines.push(elig.concerned ? t("conformity.ai.concerned") : t("conformity.ai.not_concerned"));
     summaryLines.push(elig.why);
     summaryLines.push("");
-    summaryLines.push(`Champs actuels: scope=${s.scope || "—"}, periodicity=${s.periodicity || "—"}, archiving=${s.archiving || "—"}, platform=${s.platform || "—"}`);
-    if (missing.length) summaryLines.push(`\nÀ compléter: ${missing.join(", ")}`);
+    summaryLines.push(t("conformity.ai.current_fields", "Champs actuels : scope={scope}, periodicity={periodicity}, archiving={archiving}, platform={platform}", {
+      scope: s.scope || "—",
+      periodicity: s.periodicity || "—",
+      archiving: s.archiving || "—",
+      platform: s.platform || "—",
+    }));
+    if (missing.length) summaryLines.push(`\n${t("conformity.ai.to_complete")}: ${missing.join(", ")}`);
 
     summaryEl.textContent = summaryLines.join("\n");
   };
@@ -5620,7 +5715,7 @@ function initConformityAiAgent() {
   // Script “diagnostic” : questions courtes + mapping vers tes champs
   const script = [
     {
-      q: "Question 1/5 — Facturez-vous des particuliers (B2C) ? (oui/non)",
+      q: () => t("conformity.ai.q_b2c"),
       onAnswer: async (txt) => {
         const v = yesNoUnknown(txt);
         agent.answers.sellsB2C = v;
@@ -5631,7 +5726,7 @@ function initConformityAiAgent() {
       },
     },
     {
-      q: "Question 2/5 — Faites-vous des ventes/prestations hors France (international) ? (oui/non)",
+      q: () => t("conformity.ai.q_intl"),
       onAnswer: async (txt) => {
         const v = yesNoUnknown(txt);
         agent.answers.hasInternational = v;
@@ -5643,7 +5738,7 @@ function initConformityAiAgent() {
       },
     },
     {
-      q: "Question 3/5 — Vous voulez passer par quelle voie ? PA, OTHER (répondre: pa/other)",
+      q: () => t("conformity.ai.q_platform"),
       onAnswer: async (txt) => {
         const v = String(txt || "").trim().toUpperCase();
         const ok = ["PA", "OTHER"].includes(v) ? v : null;
@@ -5655,7 +5750,7 @@ function initConformityAiAgent() {
       },
     },
     {
-      q: "Question 4/5 — Votre périodicité est-elle mensuelle ? (oui = M / non = on laisse selon TVA)",
+      q: () => t("conformity.ai.q_monthly"),
       onAnswer: async (txt) => {
         const v = yesNoUnknown(txt);
         if (v === true) {
@@ -5665,7 +5760,7 @@ function initConformityAiAgent() {
       },
     },
     {
-      q: "Question 5/5 — Activer l’archivage (recommandé) ? (oui/non)",
+      q: () => t("conformity.ai.q_archive"),
       onAnswer: async (txt) => {
         const v = yesNoUnknown(txt);
         if (v !== null) {
@@ -5689,9 +5784,9 @@ function initConformityAiAgent() {
   const startDiagnostic = async () => {
     agent.step = 0;
     chat.innerHTML = "";
-    post("assistant", "Bonjour 👋 On fait un mini diagnostic réforme (e-reporting). Répondez simplement (oui/non/pa/autre).");
+    post("assistant", t("conformity.ai.welcome"));
     await updateHelpTextsAndMissing().catch(() => {});
-    post("assistant", script[0].q);
+    post("assistant", script[0].q());
     input.focus();
   };
 
@@ -5703,7 +5798,7 @@ function initConformityAiAgent() {
 
     const cur = script[agent.step];
     if (!cur) {
-      post("assistant", "Diagnostic déjà terminé. Vous pouvez cliquer “Recommandations” ou “Vérifier complétude”.");
+      post("assistant", t("conformity.ai.already_finished"));
       return;
     }
 
@@ -5714,14 +5809,14 @@ function initConformityAiAgent() {
       await runCheckAndSave();
 
       if (agent.step < script.length) {
-        post("assistant", script[agent.step].q);
+        post("assistant", script[agent.step].q());
       } else {
         const elig = computeEligibility();
-        post("assistant", `✅ Diagnostic terminé.\nStatut: ${elig.concerned ? "Concerné e-reporting" : "Non concerné e-reporting"}\n${elig.why}`);
-        post("assistant", "Vous pouvez cliquer “Recommandations” pour pré-remplir les champs.");
+        post("assistant", `${t("conformity.ai.finished")}\n${elig.concerned ? t("conformity.ai.concerned") : t("conformity.ai.not_concerned")}\n${elig.why}`);
+        post("assistant", t("conformity.ai.can_recommend"));
       }
     } catch (e) {
-      post("assistant", `Oups: ${e.message || e}`);
+      post("assistant", t("conformity.ai.error", "Erreur : {msg}", { msg: e.message || e }));
     }
   };
 
@@ -5729,13 +5824,13 @@ function initConformityAiAgent() {
   startBtn.onclick = () => startDiagnostic().catch(console.error);
 
   recommendBtn.onclick = () => {
-    post("assistant", "Je calcule des recommandations à partir de votre société + vos réponses…");
-    applyRecommendationsToUi().catch((e) => post("assistant", `Erreur recommandations: ${e.message || e}`));
+    post("assistant", t("conformity.ai.calculating"));
+    applyRecommendationsToUi().catch((e) => post("assistant", t("conformity.ai.error", "Erreur : {msg}", { msg: e.message || e })));
   };
 
   checkBtn.onclick = () => {
     updateHelpTextsAndMissing().catch(console.error);
-    post("assistant", "✅ Vérification complétude effectuée (voir “Champs à compléter” et le résumé).");
+    post("assistant", t("conformity.ai.check_done"));
   };
 
   sendBtn.onclick = () => handleUserText(input.value).finally(() => (input.value = ""));

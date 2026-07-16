@@ -15,7 +15,7 @@
                  object-src 'none';
                  base-uri 'none'">
 
-  <link rel="stylesheet" href="./styles.css?v=20260710-audit-credit-v1" />
+  <link rel="stylesheet" href="./styles.css?v=20260716-web-pdf-pa-v1" />
 </head>
 
 <body>
@@ -917,7 +917,7 @@
   <!-- Préférences -->
   <div class="card export-settings">
 
-    <div class="card__title">
+    <div class="card__title" data-i18n="exports.settings.title">
       Préférences d'envoi
     </div>
 
@@ -935,7 +935,7 @@
         </select>
       </label>
 
-      <div class="hint u-mt">
+      <div class="hint u-mt" data-i18n="exports.settings.client_language_hint">
         Utilisée pour les PDF et les emails envoyés au client.
       </div>
 
@@ -949,11 +949,11 @@
     <!-- DEVIS -->
     <div class="card card--accent">
 
-      <div class="card__title">
+      <div class="card__title" data-i18n="exports.quotes.title">
         📝 Devis
       </div>
 
-      <div class="hint">
+      <div class="hint" data-i18n="exports.quotes.description">
         Préparation et transmission des devis.
       </div>
 
@@ -967,22 +967,25 @@
         <button
           class="btn export-action"
           type="button"
-          data-action="exports:pdfQuote">
+          data-action="exports:pdfQuote"
+          data-i18n="exports.quotes.generate_pdf">
           📄 Générer PDF
         </button>
 
         <button
           class="btn btn--secondary export-action"
           type="button"
-          data-action="exports:openSelectedQuote">
+          data-action="exports:openSelectedQuote"
+          data-i18n="exports.quotes.preview">
           👁 Prévisualiser
         </button>
 
         <button
           class="btn btn--secondary export-action"
           type="button"
-          data-action="exports:mailQuote">
-          📧 Envoyer au client (Génère le PDF et envoi le mail)
+          data-action="exports:mailQuote"
+          data-i18n="exports.quotes.send_mail">
+          📧 Envoyer au client
         </button>
 
       </div>
@@ -992,11 +995,11 @@
     <!-- FACTURES -->
     <div class="card card--accent2">
 
-      <div class="card__title">
+      <div class="card__title" data-i18n="exports.invoices.title">
         🧾 Factures
       </div>
 
-      <div class="hint">
+      <div class="hint" data-i18n="exports.invoices.description">
         Gestion des factures et facturation électronique.
       </div>
 
@@ -1010,28 +1013,32 @@
         <button
           class="btn export-action"
           type="button"
-          data-action="exports:pdfInvoice">
+          data-action="exports:pdfInvoice"
+          data-i18n="exports.invoices.generate_pdf">
           📄 Générer PDF
         </button>
 
         <button
           class="btn btn--secondary export-action"
           type="button"
-          data-action="exports:openSelectedInvoice">
+          data-action="exports:openSelectedInvoice"
+          data-i18n="exports.invoices.preview">
           👁 Prévisualiser
         </button>
 
         <button
           class="btn btn--secondary export-action"
           type="button"
-          data-action="exports:mailInvoice">
+          data-action="exports:mailInvoice"
+          data-i18n="exports.invoices.send_mail">
           📧 Envoyer au client 
         </button>
 
         <button
           class="btn btn--primary export-action"
           type="button"
-          data-action="exports:peppolSend">
+          data-action="exports:peppolSend"
+          data-i18n="exports.invoices.send_structured">
           📤 Transmettre au format structuré
         </button>
 
@@ -1075,6 +1082,50 @@
                 </select>
                 <div class="hint" id="cf-help-periodicity"></div>
               </label>
+            </div>
+
+            <div class="card u-mt integrationCard">
+              <div class="card__title" data-i18n="integrations.pa.title">Connexion à la Plateforme Agréée</div>
+              <div class="hint" data-i18n="integrations.pa.hint">Connecteur serveur compatible avec l’API de la PA choisie (profil XP Z12-013 à adapter au fournisseur).</div>
+              <div class="form u-mt">
+                <div class="row2">
+                  <label><span data-i18n="integrations.provider_name">Prestataire</span><input id="cf-pa-provider-name" type="text" data-i18n-attr="placeholder:integrations.pa.provider_ph" placeholder="Nom de la PA" /></label>
+                  <label><span data-i18n="integrations.base_url">Adresse API HTTPS</span><input id="cf-pa-base-url" type="url" placeholder="https://api.plateforme.example" /></label>
+                </div>
+                <div class="row2">
+                  <label><span data-i18n="integrations.auth_type">Authentification</span><select id="cf-pa-auth-type"><option value="bearer">Bearer token</option><option value="apikey">API key</option></select></label>
+                  <label><span data-i18n="integrations.secret">Secret API</span><input id="cf-pa-secret" type="password" autocomplete="new-password" data-i18n-attr="placeholder:integrations.secret_ph" placeholder="Conservé chiffré côté serveur" /></label>
+                </div>
+                <div class="row2">
+                  <label><span data-i18n="integrations.health_path">Chemin de test</span><input id="cf-pa-health-path" type="text" value="/health" /></label>
+                  <label><span data-i18n="integrations.submit_path">Chemin d’envoi</span><input id="cf-pa-submit-path" type="text" value="/invoices" /></label>
+                </div>
+                <label class="check"><input id="cf-pa-enabled" type="checkbox" /><span data-i18n="integrations.enabled">Connecteur activé</span></label>
+                <div class="actions"><button class="btn" id="cf-pa-save" type="button" data-i18n="action.save">Enregistrer</button><button class="btn btn--secondary" id="cf-pa-test" type="button" data-i18n="integrations.test">Tester la connexion</button></div>
+                <div class="hint" id="cf-pa-status" data-i18n="integrations.not_configured">Non configuré</div>
+              </div>
+            </div>
+
+            <div class="card u-mt integrationCard">
+              <div class="card__title" data-i18n="integrations.archive.title">Archivage électronique à valeur probante</div>
+              <div class="hint" data-i18n="integrations.archive.hint">Dépôt automatique des PDF dans le SAE choisi avec conservation du reçu de dépôt.</div>
+              <div class="form u-mt">
+                <div class="row2">
+                  <label><span data-i18n="integrations.provider_name">Prestataire</span><input id="cf-archive-provider-name" type="text" data-i18n-attr="placeholder:integrations.archive.provider_ph" placeholder="Nom du SAE" /></label>
+                  <label><span data-i18n="integrations.base_url">Adresse API HTTPS</span><input id="cf-archive-base-url" type="url" placeholder="https://api.archive.example" /></label>
+                </div>
+                <div class="row2">
+                  <label><span data-i18n="integrations.auth_type">Authentification</span><select id="cf-archive-auth-type"><option value="bearer">Bearer token</option><option value="apikey">API key</option></select></label>
+                  <label><span data-i18n="integrations.secret">Secret API</span><input id="cf-archive-secret" type="password" autocomplete="new-password" data-i18n-attr="placeholder:integrations.secret_ph" placeholder="Conservé chiffré côté serveur" /></label>
+                </div>
+                <div class="row2">
+                  <label><span data-i18n="integrations.submit_path">Chemin de dépôt</span><input id="cf-archive-submit-path" type="text" value="/archives" /></label>
+                  <label><span data-i18n="integrations.retention_years">Durée de conservation</span><input id="cf-archive-retention" type="number" min="1" max="99" value="10" /></label>
+                </div>
+                <label class="check"><input id="cf-archive-enabled" type="checkbox" /><span data-i18n="integrations.enabled">Connecteur activé</span></label>
+                <div class="actions"><button class="btn" id="cf-archive-save" type="button" data-i18n="action.save">Enregistrer</button><button class="btn btn--secondary" id="cf-archive-test" type="button" data-i18n="integrations.test">Tester la connexion</button></div>
+                <div class="hint" id="cf-archive-status" data-i18n="integrations.not_configured">Non configuré</div>
+              </div>
             </div>
 
             <div class="u-mt grid2">
@@ -1155,7 +1206,7 @@
 
           <div class="card">
             <div class="card__title" data-i18n="conformity.ai.title">Agent IA — assistant réforme</div>
-            <div class="hint">
+            <div class="hint" data-i18n="conformity.ai.description">
               Je te pose quelques questions et je te dis si tu es concerné, et quoi remplir.
             </div>
 
@@ -1171,6 +1222,7 @@
 
             <div class="u-mt" style="display:flex;gap:8px;">
               <input id="cf-ai-input" type="text" placeholder="Réponds (ex: oui / non / je ne sais pas)…"
+                     data-i18n-attr="placeholder:conformity.ai.placeholder"
                      style="flex:1;border-radius:12px;border:1px solid rgba(255,255,255,.15);background:transparent;color:inherit;padding:10px;" />
               <button class="btn btn--secondary" id="cf-ai-send" data-i18n="common.send">Envoyer</button>
             </div>
@@ -1400,12 +1452,12 @@
   </div>
 
   <script src="./xp-z12-012.js"></script>
-  <script src="./receivables.js?v=20260710-audit-credit-v1"></script>
-  <script src="./audit-ui.js?v=20260710-audit-credit-v1"></script>
-  <script src="./renderer/web-electron-shim.js"></script>
-  <script src="./renderer/web-api-shim.js"></script>
-  <script src="./dashboard-ui.js?v=20260710-audit-credit-v1"></script>
-  <script src="./app.js?v=20260710-audit-credit-v1"></script>
+  <script src="./receivables.js?v=20260716-web-pdf-pa-v1"></script>
+  <script src="./audit-ui.js?v=20260716-web-pdf-pa-v1"></script>
+  <script src="./renderer/web-electron-shim.js?v=20260716-web-pdf-pa-v1"></script>
+  <script src="./renderer/web-api-shim.js?v=20260716-web-pdf-pa-v1"></script>
+  <script src="./dashboard-ui.js?v=20260716-web-pdf-pa-v1"></script>
+  <script src="./app.js?v=20260716-web-pdf-pa-v1"></script>
 
   <div id="clientsImportModal" class="modal" aria-hidden="true">
     <div class="modal__backdrop" data-modal-close></div>
