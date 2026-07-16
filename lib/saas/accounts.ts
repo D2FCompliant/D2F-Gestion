@@ -1,6 +1,7 @@
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 import { getSupabaseAdmin } from "../supabase/server";
 import { isPlatformAdminEmail, normalizedEmail, publicBillingConfig } from "../auth/server";
+import { normalizeEstablishmentIdentifier, validateEstablishmentIdentifier } from "../company-identifiers";
 
 type JsonRecord = Record<string, unknown>;
 export type MemberRole = "owner" | "collaborator";
@@ -59,11 +60,11 @@ function d2fDataOwnerKey() {
 }
 
 function missingAccountTable(error: { code?: string; message?: string } | null) {
-  return Boolean(error && (error.code === "42P01" || error.code === "PGRST205" || /d2f_(tenants|tenant_members|subscriptions).*not find|relation .*d2f_/i.test(error.message || "")));
+  return Boolean(error && (error.code === "42P01" || error.code === "PGRST205" || (error.code === "PGRST204" && /identifier_type/i.test(error.message || "")) || /d2f_(tenants|tenant_members|subscriptions).*not find|relation .*d2f_/i.test(error.message || "")));
 }
 
 export function normalizeCompanyIdentifier(value: unknown) {
-  return stringValue(value).toUpperCase().replace(/\s+/g, "").replace(/[^A-Z0-9._-]/g, "").slice(0, 64);
+  return normalizeEstablishmentIdentifier("OT", value);
 }
 
 function transferReference(tenantId: string) {
@@ -244,14 +245,15 @@ export async function createTenantAccount(input: {
 }) {
   const supabase = getSupabaseAdmin();
   const email = normalizedEmail(input.user.email);
-  const companyIdentifier = normalizeCompanyIdentifier(input.companyIdentifier);
-  if (companyIdentifier.length < 3) throw new Error("Identifiant entreprise invalide");
+  const identity = validateEstablishmentIdentifier(input.country, input.companyIdentifier);
+  const companyIdentifier = identity.identifier;
+  const country = identity.country;
   const existingForUser = await findAccountForUser(input.user.id, email);
   if (existingForUser) return existingForUser;
-  const { data: matchingTenant, error: matchError } = await supabase.from("d2f_tenants").select("id").eq("company_identifier", companyIdentifier).maybeSingle();
+  const { data: matchingTenant, error: matchError } = await supabase.from("d2f_tenants").select("id").eq("country", country).eq("company_identifier", companyIdentifier).maybeSingle();
   if (!matchError && matchingTenant) throw new Error("Cet identifiant entreprise est déjà enregistré");
   if (matchError && !missingAccountTable(matchError)) throw matchError;
-  if ((await fallbackAccounts(supabase)).some((account) => account.companyIdentifier === companyIdentifier)) {
+  if ((await fallbackAccounts(supabase)).some((account) => account.country.toUpperCase() === country && account.companyIdentifier === companyIdentifier)) {
     throw new Error("Cet identifiant entreprise est déjà enregistré");
   }
 
@@ -265,7 +267,7 @@ export async function createTenantAccount(input: {
     id: tenantId,
     name: stringValue(input.companyName),
     companyIdentifier,
-    country: stringValue(input.country || "FR").toUpperCase(),
+    country,
     ownerKey,
     plan: lifetime ? "lifetime" : "monthly",
     seatLimit: 2,
@@ -291,6 +293,7 @@ export async function createTenantAccount(input: {
   const { error: tenantError } = await supabase.from("d2f_tenants").insert({
     id: tenantId,
     company_identifier: account.companyIdentifier,
+    identifier_type: identity.identifierType,
     name: account.name,
     country: account.country,
     owner_key: ownerKey,

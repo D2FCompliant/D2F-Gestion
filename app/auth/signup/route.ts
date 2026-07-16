@@ -1,6 +1,7 @@
 import { signUpWithPassword, isPlatformAdminEmail, normalizedEmail, safeOrigin } from "../../../lib/auth/server";
 import { createTenantAccount } from "../../../lib/saas/accounts";
 import { getSupabaseAdmin } from "../../../lib/supabase/server";
+import { validateEstablishmentIdentifier } from "../../../lib/company-identifiers";
 import { json, messageFromError, sessionResponse } from "../_shared";
 
 export const dynamic = "force-dynamic";
@@ -26,6 +27,7 @@ export async function POST(request: Request) {
       return json("Le mot de passe doit contenir au moins 12 caractères, une majuscule, une minuscule et un chiffre", 400);
     }
     if (fullName.length < 2 || companyName.length < 2 || companyIdentifier.length < 3) return json("Informations entreprise incomplètes", 400);
+    validateEstablishmentIdentifier(country, companyIdentifier);
     if (body.acceptTerms !== true) return json("Vous devez accepter les conditions d’utilisation et la politique de confidentialité", 400);
     if (!isPlatformAdminEmail(email) && body.acceptPaymentTerms !== true) return json("Vous devez confirmer que l’accès sera activé uniquement après validation du paiement", 400);
     const signup = await signUpWithPassword({

@@ -10,6 +10,7 @@ import { createUblDocument, textToBase64 } from "../../lib/ubl";
 import { getIntegration, listTransmissions, saveIntegration, testIntegration, transmitIntegration, type IntegrationType } from "../../lib/integrations";
 import { readAppSession, renewedSession, sessionCookie } from "../../lib/auth/server";
 import { accountAllowsApplication, getAccountById, memberFor } from "../../lib/saas/accounts";
+import { validateEstablishmentIdentifier } from "../../lib/company-identifiers";
 
 export const dynamic = "force-dynamic";
 
@@ -242,14 +243,15 @@ async function getCompany(ownerEmail: string) {
   };
 }
 
-async function saveCompany(ownerEmail: string, input: JsonRecord) {
+async function saveCompany(ownerEmail: string, input: JsonRecord, validateIdentity = false) {
   const supabase = getSupabaseAdmin();
   const previous = await getCompany(ownerEmail);
+  const candidate = { ...previous, ...input };
+  if (validateIdentity) validateEstablishmentIdentifier(candidate.country, candidate.legal_id);
   const { data: rawRow } = await supabase.from("d2f_company").select("data").eq("owner_email", ownerEmail).maybeSingle();
   const hidden = object(rawRow?.data);
   const company = {
-    ...previous,
-    ...input,
+    ...candidate,
     ...(hidden._integrations ? { _integrations: hidden._integrations } : {}),
     ...(hidden._transmissions ? { _transmissions: hidden._transmissions } : {}),
     ...(hidden._saas_account ? { _saas_account: hidden._saas_account } : {}),
@@ -644,7 +646,27 @@ async function saveTransmissionIntegration(ownerEmail: string, args: unknown[]) 
   return saveIntegration(getSupabaseAdmin(), ownerEmail, type, payload);
 }
 
-async function dispatch(ownerEmail: string, method: string, args: unknown[]) {
+function expectedEInvoiceProfile(countryValue: unknown) {
+  const country = String(countryValue || "").trim().toUpperCase();
+  return ({ FR: "FR_PA", RS: "RS_SEF", IT: "IT_SDI", ES: "ES_VERIFACTU" } as Record<string, string>)[country] || "GENERIC_EN16931";
+}
+
+async function validatedNationalConnector(ownerEmail: string) {
+  const [company, config] = await Promise.all([
+    getCompany(ownerEmail),
+    getIntegration(getSupabaseAdmin(), ownerEmail, "pa"),
+  ]);
+  const country = String(company.country || "").trim().toUpperCase();
+  const expectedProfile = expectedEInvoiceProfile(country);
+  if (!config.enabled || !config.configured) throw new Error("Configurez le connecteur national et testez-le avant tout envoi");
+  if (String(config.country || "").toUpperCase() !== country || String(config.channel_profile || "") !== expectedProfile) {
+    throw new Error(`Le connecteur enregistré ne correspond pas au pays ${country || "déclaré"}. Enregistrez le profil ${expectedProfile}.`);
+  }
+  if (config.last_test_status !== "ok") throw new Error("Le connecteur doit réussir un test technique avant tout envoi");
+  return { company, config, country, expectedProfile };
+}
+
+async function dispatch(ownerEmail: string, method: string, args: unknown[], tenantIdentity?: { country: string; identifier: string }) {
   if (method === "i18n:load") {
     const localeArg = object(first(args));
     const locale = String(localeArg.locale || first(args) || "fr").toLowerCase().slice(0, 2);
@@ -652,7 +674,14 @@ async function dispatch(ownerEmail: string, method: string, args: unknown[]) {
   }
   if (method === "xpReject:load" || method === "rejectionReasons:load") return rejectionReasons;
   if (method === "company:get") return getCompany(ownerEmail);
-  if (method === "company:save") return saveCompany(ownerEmail, object(first(args)));
+  if (method === "company:save") {
+    const payload = object(first(args));
+    const identity = validateEstablishmentIdentifier(payload.country, payload.legal_id);
+    if (tenantIdentity && (identity.country !== tenantIdentity.country || identity.identifier !== tenantIdentity.identifier)) {
+      throw new Error("Le pays et l’identifiant de la fiche Entreprise doivent rester ceux de l’établissement inscrit. Créez un autre espace D2F pour un autre établissement.");
+    }
+    return saveCompany(ownerEmail, payload, true);
+  }
   if (method === "company:setLogo") {
     const company = await getCompany(ownerEmail);
     const input = object(first(args));
@@ -695,10 +724,13 @@ async function dispatch(ownerEmail: string, method: string, args: unknown[]) {
   if (method === "connections:listTransmissions" || method === "conformity:openQueue") return listTransmissions(getSupabaseAdmin(), ownerEmail);
   if (method === "connections:sendInvoice") {
     const payload = object(first(args));
+    const connector = await validatedNationalConnector(ownerEmail);
     const bundle = await documentBundle(ownerEmail, "invoices", idFrom(payload));
-    if (invoiceStatus(bundle.document) !== "issued") throw new Error("La facture doit être émise avant transmission à la PA");
+    if (invoiceStatus(bundle.document) !== "issued") throw new Error("La facture doit être émise avant transmission au réseau national");
+    if (connector.country === "IT") throw new Error("L’envoi SdI direct exige le format FatturaPA et une recette avec le canal choisi. Ce connecteur n’est pas encore autorisé à transmettre un UBL comme FatturaPA.");
+    if (connector.country === "ES") throw new Error("VERI*FACTU exige des registres AEAT spécifiques et ne correspond pas à l’envoi d’une facture UBL. Configurez un prestataire certifiant le flux avant activation.");
     const xml = createUblDocument(bundle);
-    return transmitIntegration(getSupabaseAdmin(), ownerEmail, "pa", { documentId: String(bundle.document.id || ""), documentNumber: String(bundle.document.invoice_number || ""), content: xml, contentType: "application/xml", metadata: { format: "UBL-2.1", standard: "EN16931", profile: "XP-Z12-013" } });
+    return transmitIntegration(getSupabaseAdmin(), ownerEmail, "pa", { documentId: String(bundle.document.id || ""), documentNumber: String(bundle.document.invoice_number || ""), content: xml, contentType: "application/xml", metadata: { format: "UBL-2.1", standard: "EN16931", channel_profile: connector.expectedProfile, country: connector.country } });
   }
   if (method === "conformity:rebuildPeriod") {
     const queued = await conformitySummary(ownerEmail);
@@ -706,8 +738,8 @@ async function dispatch(ownerEmail: string, method: string, args: unknown[]) {
   }
   if (method === "conformity:sendNow") {
     const queued = await conformitySummary(ownerEmail);
-    const config = await getIntegration(getSupabaseAdmin(), ownerEmail, "pa");
-    if (!config.enabled || !config.configured) throw new Error("Configurez et testez la Plateforme Agréée avant l'envoi");
+    const connector = await validatedNationalConnector(ownerEmail);
+    if (connector.country !== "FR") throw new Error("Cet écran e-reporting correspond au dispositif français. Pour ce pays, utilisez le flux national indiqué dans la fiche Entreprise.");
     const report = JSON.stringify({ type: "e-reporting", generated_at: new Date().toISOString(), period: object(first(args)), flows: queued });
     const sent = await transmitIntegration(getSupabaseAdmin(), ownerEmail, "pa", { documentNumber: `EREPORT-${today()}`, content: report, contentType: "application/json", metadata: { flows: queued } });
     return { ...sent, queued, next_due: today(), message: "Transmission e-reporting remise à la Plateforme Agréée" };
@@ -825,11 +857,13 @@ export async function POST(request: Request) {
   const ownerEmail = appSession?.ownerKey || getOwnerEmail(request);
   if (!ownerEmail) return reply("Authentification requise", 401);
   let refreshedCookie = "";
+  let tenantIdentity: { country: string; identifier: string } | undefined;
   if (appSession) {
     const account = await getAccountById(appSession.tenantId);
     const member = account ? memberFor(account, appSession.userId, appSession.email) : null;
     if (!account || !member) return reply("Accès entreprise révoqué", 403);
     if (!accountAllowsApplication(account)) return reply("Abonnement inactif — validation du virement requise", 402);
+    tenantIdentity = { country: account.country.toUpperCase(), identifier: account.companyIdentifier.toUpperCase() };
     const refreshed = renewedSession({
       userId: appSession.userId,
       email: appSession.email,
@@ -847,7 +881,7 @@ export async function POST(request: Request) {
     method = String(body.method || "");
     const args = Array.isArray(body.args) ? body.args : [];
     if (!method || !method.includes(":")) return reply("Méthode RPC invalide", 400, responseHeaders);
-    const result = await dispatch(ownerEmail, method, args);
+    const result = await dispatch(ownerEmail, method, args, tenantIdentity);
     if (isMutationMethod(method)) await appendAuditEvent(ownerEmail, appSession?.email || ownerEmail, method, args, result);
     return reply(result, 200, responseHeaders);
   } catch (error) {

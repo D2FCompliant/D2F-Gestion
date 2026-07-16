@@ -26,7 +26,7 @@ test("server-renders the D2F Gestion cockpit", async () => {
   assert.doesNotMatch(html, /codex-preview|Your site is taking shape|react-loading-skeleton/i);
 
   const shell = await readFile(new URL("../app/session-shell.tsx", import.meta.url), "utf8");
-  assert.match(shell, /src="\/erp\/index\.html\?v=20260716-brand-payment-v2"/);
+  assert.match(shell, /src="\/erp\/index\.html\?v=20260716-country-profiles-v4"/);
   assert.match(shell, /title="D2F Gestion"/);
 });
 
@@ -112,6 +112,31 @@ test("shows one visible product brand and blocks clients until payment is verifi
   assert.match(accounts, /account\.subscription\.status !== "payment_declared"/);
   assert.match(signup, /acceptPaymentTerms/);
   assert.match(subscription, /body\.confirmTransfer !== true/);
+});
+
+test("scopes tenants to establishments and selects national e-invoicing profiles", async () => {
+  const [portal, identifiers, accounts, signup, html, app, integrations, migration] = await Promise.all([
+    readFile(new URL("../app/portal-i18n.ts", import.meta.url), "utf8"),
+    readFile(new URL("../lib/company-identifiers.ts", import.meta.url), "utf8"),
+    readFile(new URL("../lib/saas/accounts.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/auth/signup/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../public/erp/index.html", import.meta.url), "utf8"),
+    readFile(new URL("../public/erp/app.js", import.meta.url), "utf8"),
+    readFile(new URL("../lib/integrations.ts", import.meta.url), "utf8"),
+    readFile(new URL("../supabase/migrations/20260716190000_country_scoped_establishments.sql", import.meta.url), "utf8"),
+  ]);
+  assert.match(portal, /fr:|en:|sr:|it:|es:/);
+  assert.match(portal, /SIRET de l’établissement \(14 chiffres\)/);
+  assert.match(identifiers, /country === "FR" && !\/\^\\d\{14\}\$\//);
+  assert.match(signup, /validateEstablishmentIdentifier/);
+  assert.match(accounts, /\.eq\("country", country\)\.eq\("company_identifier", companyIdentifier\)/);
+  assert.match(html, /id="company-einvoice-card"/);
+  assert.match(html, /id="cf-pa-environment"/);
+  assert.match(app, /RS_SEF/);
+  assert.match(app, /IT_SDI/);
+  assert.match(app, /ES_VERIFACTU/);
+  assert.match(integrations, /last_test_status/);
+  assert.match(migration, /d2f_tenants_country_company_identifier_idx/);
 });
 
 test("hydrates invoice client names from the tenant client records", async () => {

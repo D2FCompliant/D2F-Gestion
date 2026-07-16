@@ -46,7 +46,10 @@ async function decryptSecret(payload: unknown) {
 }
 
 function publicConfig(input: JsonRecord) {
-  const allowed = ["provider_name", "base_url", "health_path", "submit_path", "status_path", "auth_type", "auth_header", "retention_years", "enabled"];
+  const allowed = [
+    "provider_name", "base_url", "health_path", "submit_path", "status_path", "auth_type", "auth_header", "retention_years", "enabled",
+    "country", "channel_profile", "environment", "public_identifier", "routing_id", "routing_email", "last_test_status", "last_tested_at",
+  ];
   return Object.fromEntries(allowed.filter((key) => input[key] !== undefined).map((key) => [key, input[key]]));
 }
 
@@ -129,7 +132,9 @@ export async function testIntegration(supabase: SupabaseClient, ownerEmail: stri
   const config = await getIntegration(supabase, ownerEmail, type, true);
   if (!config.enabled) throw new Error("Le connecteur est désactivé");
   const result = await connectorFetch(connectorUrl(config.base_url, config.health_path || "/health"), { method: "GET", headers: { ...authorizationHeaders(config, stringValue(config.secret)), accept: "application/json" } });
-  return { ok: true, provider: config.provider_name || type, status: result.status };
+  const lastTestedAt = new Date().toISOString();
+  await saveIntegration(supabase, ownerEmail, type, { ...config, secret: config.secret, last_test_status: "ok", last_tested_at: lastTestedAt });
+  return { ok: true, provider: config.provider_name || type, profile: config.channel_profile || type, status: result.status, tested_at: lastTestedAt };
 }
 
 export async function transmitIntegration(supabase: SupabaseClient, ownerEmail: string, type: IntegrationType, input: { documentId?: string; documentNumber?: string; content: BodyInit; contentType: string; metadata?: JsonRecord }) {

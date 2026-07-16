@@ -15,7 +15,7 @@
                  object-src 'none';
                  base-uri 'none'">
 
-  <link rel="stylesheet" href="./styles.css?v=20260716-web-pdf-pa-v1" />
+  <link rel="stylesheet" href="./styles.css?v=20260716-country-profiles-v4" />
 </head>
 
 <body>
@@ -90,7 +90,7 @@
               </label>
               <div class="row2">
                 <label>
-                  <span data-i18n="company.legal_id">ID légal (SIREN / RSB / autre) *</span>
+                  <span id="co-legal-id-label" data-i18n="company.legal_id">Identifiant légal de l’établissement *</span>
                   <input id="co-legal-id" type="text" data-i18n-attr="placeholder:common.ellipsis" placeholder="..." />
                 </label>
                 <label>
@@ -114,7 +114,8 @@
               <div class="row2">
                 <label>
                   <span data-i18n="company.country">Pays (BT-31) *</span>
-                  <input id="co-country" type="text" data-i18n-attr="placeholder:company.country_ph" placeholder="RS" />
+                  <input id="co-country" type="text" list="company-country-codes" maxlength="2" data-i18n-attr="placeholder:company.country_ph" placeholder="RS" />
+                  <datalist id="company-country-codes"><option value="FR"></option><option value="RS"></option><option value="IT"></option><option value="ES"></option><option value="DE"></option></datalist>
                 </label>
                 <label>
                   <span data-i18n="company.currency">Devise</span>
@@ -282,6 +283,64 @@
                 <span data-i18n="company.bank.extra">Infos complémentaires (optionnel)</span>
                 <input id="co-bank-extra" type="text" data-i18n-attr="placeholder:company.bank.extra_ph" placeholder="Référence virement / domiciliation…" />
               </label>
+            </div>
+          </div>
+
+          <div class="card integrationCard" id="company-einvoice-card">
+            <div class="card__title" id="cf-pa-title" data-i18n="integrations.country.title">Connexion nationale de facturation électronique</div>
+            <div class="hint" id="cf-pa-hint" data-i18n="integrations.country.hint">Le profil attendu est déterminé par le pays déclaré dans la fiche entreprise.</div>
+            <div class="countryProfile u-mt">
+              <span data-i18n="integrations.country_profile">Profil réglementaire</span>
+              <strong id="cf-pa-profile-label">—</strong>
+            </div>
+            <div class="form u-mt">
+              <div class="row2">
+                <label><span data-i18n="integrations.environment">Environnement</span><select id="cf-pa-environment"><option value="sandbox" data-i18n="integrations.environment.sandbox">Test / sandbox</option><option value="production" data-i18n="integrations.environment.production">Production</option></select></label>
+                <label><span id="cf-pa-public-id-label" data-i18n="integrations.public_id">Identifiant public du compte</span><input id="cf-pa-public-id" type="text" /></label>
+              </div>
+              <div class="row2" id="cf-pa-routing-row">
+                <label><span id="cf-pa-routing-label" data-i18n="integrations.routing_id">Code de routage</span><input id="cf-pa-routing-id" type="text" /></label>
+                <label><span id="cf-pa-routing-email-label" data-i18n="integrations.routing_email">Adresse de routage</span><input id="cf-pa-routing-email" type="text" /></label>
+              </div>
+              <div class="row2">
+                <label><span id="cf-pa-provider-label" data-i18n="integrations.provider_name">Prestataire</span><input id="cf-pa-provider-name" type="text" data-i18n-attr="placeholder:integrations.pa.provider_ph" placeholder="Nom du prestataire" /></label>
+                <label><span data-i18n="integrations.base_url">Adresse API HTTPS</span><input id="cf-pa-base-url" type="url" placeholder="https://api.prestataire.example" /></label>
+              </div>
+              <div class="row2">
+                <label><span data-i18n="integrations.auth_type">Authentification</span><select id="cf-pa-auth-type"><option value="bearer">Bearer token</option><option value="apikey">API key</option></select></label>
+                <label><span data-i18n="integrations.auth_header">Nom de l’en-tête API</span><input id="cf-pa-auth-header" type="text" placeholder="ApiKey" /></label>
+              </div>
+              <label><span id="cf-pa-secret-label" data-i18n="integrations.secret">Secret API</span><input id="cf-pa-secret" type="password" autocomplete="new-password" data-i18n-attr="placeholder:integrations.secret_ph" placeholder="Conservé chiffré côté serveur" /></label>
+              <div class="row2">
+                <label><span data-i18n="integrations.health_path">Chemin de test</span><input id="cf-pa-health-path" type="text" value="/health" /></label>
+                <label><span id="cf-pa-submit-label" data-i18n="integrations.submit_path">Chemin d’envoi</span><input id="cf-pa-submit-path" type="text" value="/invoices" /></label>
+              </div>
+              <label class="check"><input id="cf-pa-enabled" type="checkbox" /><span data-i18n="integrations.enabled">Connecteur activé</span></label>
+              <div class="actions"><button class="btn" id="cf-pa-save" type="button" data-i18n="action.save">Enregistrer</button><button class="btn btn--secondary" id="cf-pa-test" type="button" data-i18n="integrations.test">Tester la connexion</button></div>
+              <div class="hint" id="cf-pa-status" data-i18n="integrations.not_configured">Non configuré</div>
+              <div class="hint integrationDisclaimer" data-i18n="integrations.test_disclaimer">Une configuration enregistrée n’est pas une preuve de conformité. Le statut connecté exige un test dans l’environnement du prestataire ; la production exige ensuite ses habilitations et recettes métier.</div>
+            </div>
+          </div>
+
+          <div class="card integrationCard">
+            <div class="card__title" data-i18n="integrations.archive.title">Archivage électronique à valeur probante</div>
+            <div class="hint" data-i18n="integrations.archive.hint">Dépôt automatique des PDF dans le SAE choisi avec conservation du reçu de dépôt.</div>
+            <div class="form u-mt">
+              <div class="row2">
+                <label><span data-i18n="integrations.provider_name">Prestataire</span><input id="cf-archive-provider-name" type="text" data-i18n-attr="placeholder:integrations.archive.provider_ph" placeholder="Nom du SAE" /></label>
+                <label><span data-i18n="integrations.base_url">Adresse API HTTPS</span><input id="cf-archive-base-url" type="url" placeholder="https://api.archive.example" /></label>
+              </div>
+              <div class="row2">
+                <label><span data-i18n="integrations.auth_type">Authentification</span><select id="cf-archive-auth-type"><option value="bearer">Bearer token</option><option value="apikey">API key</option></select></label>
+                <label><span data-i18n="integrations.secret">Secret API</span><input id="cf-archive-secret" type="password" autocomplete="new-password" data-i18n-attr="placeholder:integrations.secret_ph" placeholder="Conservé chiffré côté serveur" /></label>
+              </div>
+              <div class="row2">
+                <label><span data-i18n="integrations.submit_path">Chemin de dépôt</span><input id="cf-archive-submit-path" type="text" value="/archives" /></label>
+                <label><span data-i18n="integrations.retention_years">Durée de conservation</span><input id="cf-archive-retention" type="number" min="1" max="99" value="10" /></label>
+              </div>
+              <label class="check"><input id="cf-archive-enabled" type="checkbox" /><span data-i18n="integrations.enabled">Connecteur activé</span></label>
+              <div class="actions"><button class="btn" id="cf-archive-save" type="button" data-i18n="action.save">Enregistrer</button><button class="btn btn--secondary" id="cf-archive-test" type="button" data-i18n="integrations.test">Tester la connexion</button></div>
+              <div class="hint" id="cf-archive-status" data-i18n="integrations.not_configured">Non configuré</div>
             </div>
           </div>
         </div>
@@ -1069,50 +1128,6 @@
               </label>
             </div>
 
-            <div class="card u-mt integrationCard">
-              <div class="card__title" data-i18n="integrations.pa.title">Connexion à la Plateforme Agréée</div>
-              <div class="hint" data-i18n="integrations.pa.hint">Connecteur serveur compatible avec l’API de la PA choisie (profil XP Z12-013 à adapter au fournisseur).</div>
-              <div class="form u-mt">
-                <div class="row2">
-                  <label><span data-i18n="integrations.provider_name">Prestataire</span><input id="cf-pa-provider-name" type="text" data-i18n-attr="placeholder:integrations.pa.provider_ph" placeholder="Nom de la PA" /></label>
-                  <label><span data-i18n="integrations.base_url">Adresse API HTTPS</span><input id="cf-pa-base-url" type="url" placeholder="https://api.plateforme.example" /></label>
-                </div>
-                <div class="row2">
-                  <label><span data-i18n="integrations.auth_type">Authentification</span><select id="cf-pa-auth-type"><option value="bearer">Bearer token</option><option value="apikey">API key</option></select></label>
-                  <label><span data-i18n="integrations.secret">Secret API</span><input id="cf-pa-secret" type="password" autocomplete="new-password" data-i18n-attr="placeholder:integrations.secret_ph" placeholder="Conservé chiffré côté serveur" /></label>
-                </div>
-                <div class="row2">
-                  <label><span data-i18n="integrations.health_path">Chemin de test</span><input id="cf-pa-health-path" type="text" value="/health" /></label>
-                  <label><span data-i18n="integrations.submit_path">Chemin d’envoi</span><input id="cf-pa-submit-path" type="text" value="/invoices" /></label>
-                </div>
-                <label class="check"><input id="cf-pa-enabled" type="checkbox" /><span data-i18n="integrations.enabled">Connecteur activé</span></label>
-                <div class="actions"><button class="btn" id="cf-pa-save" type="button" data-i18n="action.save">Enregistrer</button><button class="btn btn--secondary" id="cf-pa-test" type="button" data-i18n="integrations.test">Tester la connexion</button></div>
-                <div class="hint" id="cf-pa-status" data-i18n="integrations.not_configured">Non configuré</div>
-              </div>
-            </div>
-
-            <div class="card u-mt integrationCard">
-              <div class="card__title" data-i18n="integrations.archive.title">Archivage électronique à valeur probante</div>
-              <div class="hint" data-i18n="integrations.archive.hint">Dépôt automatique des PDF dans le SAE choisi avec conservation du reçu de dépôt.</div>
-              <div class="form u-mt">
-                <div class="row2">
-                  <label><span data-i18n="integrations.provider_name">Prestataire</span><input id="cf-archive-provider-name" type="text" data-i18n-attr="placeholder:integrations.archive.provider_ph" placeholder="Nom du SAE" /></label>
-                  <label><span data-i18n="integrations.base_url">Adresse API HTTPS</span><input id="cf-archive-base-url" type="url" placeholder="https://api.archive.example" /></label>
-                </div>
-                <div class="row2">
-                  <label><span data-i18n="integrations.auth_type">Authentification</span><select id="cf-archive-auth-type"><option value="bearer">Bearer token</option><option value="apikey">API key</option></select></label>
-                  <label><span data-i18n="integrations.secret">Secret API</span><input id="cf-archive-secret" type="password" autocomplete="new-password" data-i18n-attr="placeholder:integrations.secret_ph" placeholder="Conservé chiffré côté serveur" /></label>
-                </div>
-                <div class="row2">
-                  <label><span data-i18n="integrations.submit_path">Chemin de dépôt</span><input id="cf-archive-submit-path" type="text" value="/archives" /></label>
-                  <label><span data-i18n="integrations.retention_years">Durée de conservation</span><input id="cf-archive-retention" type="number" min="1" max="99" value="10" /></label>
-                </div>
-                <label class="check"><input id="cf-archive-enabled" type="checkbox" /><span data-i18n="integrations.enabled">Connecteur activé</span></label>
-                <div class="actions"><button class="btn" id="cf-archive-save" type="button" data-i18n="action.save">Enregistrer</button><button class="btn btn--secondary" id="cf-archive-test" type="button" data-i18n="integrations.test">Tester la connexion</button></div>
-                <div class="hint" id="cf-archive-status" data-i18n="integrations.not_configured">Non configuré</div>
-              </div>
-            </div>
-
             <div class="u-mt grid2">
               <label class="field">
                 <div class="field__label">
@@ -1442,7 +1457,7 @@
   <script src="./renderer/web-electron-shim.js?v=20260716-web-pdf-pa-v1"></script>
   <script src="./renderer/web-api-shim.js?v=20260716-web-pdf-pa-v1"></script>
   <script src="./dashboard-ui.js?v=20260716-web-pdf-pa-v1"></script>
-  <script src="./app.js?v=20260716-web-pdf-pa-v1"></script>
+  <script src="./app.js?v=20260716-country-profiles-v4"></script>
 
   <div id="clientsImportModal" class="modal" aria-hidden="true">
     <div class="modal__backdrop" data-modal-close></div>

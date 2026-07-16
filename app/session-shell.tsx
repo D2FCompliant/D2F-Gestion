@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { normalizePortalLocale, portalCopies, portalIdentifierIsValid, type PortalLocale } from "./portal-i18n";
 
 type Member = { userId: string; email: string; fullName: string; role: "owner" | "collaborator"; status: "active" | "invited" };
 type Account = {
@@ -62,6 +63,27 @@ function AuthPortal({ onAuthenticated }: { onAuthenticated: (session: SessionDat
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [resetMode, setResetMode] = useState(false);
+  const [locale, setLocale] = useState<PortalLocale>("fr");
+  const [country, setCountry] = useState("FR");
+  const copy = portalCopies[locale];
+  const identifier = copy.identifiers[country] || copy.identifiers.DEFAULT;
+  const connector = copy.connectors[country] || copy.connectors.DEFAULT;
+
+  useEffect(() => {
+    const preferred = normalizePortalLocale(localStorage.getItem("d2f-portal-language") || navigator.language);
+    document.documentElement.lang = preferred;
+    const update = window.setTimeout(() => setLocale(preferred), 0);
+    return () => window.clearTimeout(update);
+  }, []);
+
+  function changeLocale(value: string) {
+    const next = normalizePortalLocale(value);
+    setLocale(next);
+    localStorage.setItem("d2f-portal-language", next);
+    document.documentElement.lang = next;
+    setError("");
+    setNotice("");
+  }
 
   async function submitLogin(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -75,7 +97,7 @@ function AuthPortal({ onAuthenticated }: { onAuthenticated: (session: SessionDat
         onAuthenticated(await api("/auth/login", { method: "POST", body: JSON.stringify({ email: form.get("email"), password: form.get("password") }) }));
       }
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Connexion impossible");
+      setError(caught instanceof Error ? caught.message : copy.loginError);
     } finally { setBusy(false); }
   }
 
@@ -85,7 +107,10 @@ function AuthPortal({ onAuthenticated }: { onAuthenticated: (session: SessionDat
     const form = new FormData(event.currentTarget);
     const password = String(form.get("password") || "");
     if (password !== String(form.get("passwordConfirm") || "")) {
-      setError("Les deux mots de passe ne correspondent pas"); setBusy(false); return;
+      setError(copy.passwordMismatch); setBusy(false); return;
+    }
+    if (!portalIdentifierIsValid(country, form.get("companyIdentifier"))) {
+      setError(copy.identifierInvalid); setBusy(false); return;
     }
     try {
       const result = await api("/auth/signup", {
@@ -93,16 +118,16 @@ function AuthPortal({ onAuthenticated }: { onAuthenticated: (session: SessionDat
         body: JSON.stringify({
           companyName: form.get("companyName"), companyIdentifier: form.get("companyIdentifier"), country: form.get("country"),
           fullName: form.get("fullName"), email: form.get("email"), password,
-          acceptTerms: form.get("acceptTerms") === "on", acceptPaymentTerms: form.get("acceptPaymentTerms") === "on", website: form.get("website"),
+          acceptTerms: form.get("acceptTerms") === "on", acceptPaymentTerms: form.get("acceptPaymentTerms") === "on", website: form.get("website"), locale,
         }),
       });
       if (result.user && result.account) onAuthenticated(result);
       else {
-        setNotice(result.message || "Inscription enregistrée. Confirmez votre adresse e-mail.");
+        setNotice(result.message || copy.signupNotice);
         setMode("login");
       }
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Inscription impossible");
+      setError(caught instanceof Error ? caught.message : copy.signupError);
     } finally { setBusy(false); }
   }
 
@@ -111,49 +136,52 @@ function AuthPortal({ onAuthenticated }: { onAuthenticated: (session: SessionDat
       <section className="auth-brand">
         <div className="auth-logo-wrap"><img src="/d2f-gestion-logo.png" alt="D2F Gestion" /></div>
         <p className="eyebrow">D2F COMPLIANT</p>
-        <h1>La gestion conforme, entreprise par entreprise.</h1>
-        <p className="auth-lead">Facturation EN16931, paiements, audit et e-Reporting dans un espace sécurisé réservé à votre société.</p>
+        <h1>{copy.brandTitle}</h1>
+        <p className="auth-lead">{copy.brandLead}</p>
         <div className="auth-benefits">
-          <div><span>01</span><p><strong>Données isolées</strong><br />Une base logique par entreprise.</p></div>
-          <div><span>02</span><p><strong>2 utilisateurs inclus</strong><br />Un propriétaire et un collaborateur.</p></div>
-          <div><span>03</span><p><strong>Session protégée</strong><br />Déconnexion après 30 minutes d’inactivité.</p></div>
+          <div><span>01</span><p><strong>{copy.isolatedTitle}</strong><br />{copy.isolatedText}</p></div>
+          <div><span>02</span><p><strong>{copy.seatsTitle}</strong><br />{copy.seatsText}</p></div>
+          <div><span>03</span><p><strong>{copy.sessionTitle}</strong><br />{copy.sessionText}</p></div>
         </div>
       </section>
       <section className="auth-panel">
         <div className="auth-card">
+          <label className="portal-language"><span>{copy.language}</span><select value={locale} onChange={(event) => changeLocale(event.target.value)} aria-label={copy.language}><option value="fr">FR · Français</option><option value="en">EN · English</option><option value="sr">SR · Srpski</option><option value="it">IT · Italiano</option><option value="es">ES · Español</option></select></label>
           <div className="auth-tabs" role="tablist" aria-label="Accès D2F">
-            <button className={mode === "login" ? "is-active" : ""} onClick={() => { setMode("login"); setResetMode(false); setError(""); }} type="button">Connexion</button>
-            <button className={mode === "signup" ? "is-active" : ""} onClick={() => { setMode("signup"); setError(""); }} type="button">Créer une entreprise</button>
+            <button className={mode === "login" ? "is-active" : ""} onClick={() => { setMode("login"); setResetMode(false); setError(""); }} type="button">{copy.loginTab}</button>
+            <button className={mode === "signup" ? "is-active" : ""} onClick={() => { setMode("signup"); setError(""); }} type="button">{copy.signupTab}</button>
           </div>
           {mode === "login" ? (
             <form className="auth-form" onSubmit={submitLogin}>
-              <div><p className="eyebrow">ESPACE SÉCURISÉ</p><h2>{resetMode ? "Réinitialiser l’accès" : "Bienvenue"}</h2><p>{resetMode ? "Nous vous envoyons un lien sécurisé." : "Connectez-vous avec vos identifiants D2F."}</p></div>
-              <label>Adresse e-mail<input name="email" type="email" autoComplete="email" required /></label>
-              {!resetMode && <label>Mot de passe<input name="password" type="password" autoComplete="current-password" required /></label>}
+              <div><p className="eyebrow">{copy.secureSpace}</p><h2>{resetMode ? copy.resetTitle : copy.welcome}</h2><p>{resetMode ? copy.resetLead : copy.loginLead}</p></div>
+              <label>{copy.email}<input name="email" type="email" autoComplete="email" required /></label>
+              {!resetMode && <label>{copy.password}<input name="password" type="password" autoComplete="current-password" required /></label>}
               {error && <p className="form-message is-error" role="alert">{error}</p>}
               {notice && <p className="form-message is-ok">{notice}</p>}
-              <button className="primary-action" disabled={busy}>{busy ? "Veuillez patienter…" : resetMode ? "Envoyer le lien" : "Se connecter"}</button>
-              <button className="link-action" type="button" onClick={() => { setResetMode(!resetMode); setError(""); setNotice(""); }}>{resetMode ? "Retour à la connexion" : "Mot de passe oublié ?"}</button>
+              <button className="primary-action" disabled={busy}>{busy ? copy.wait : resetMode ? copy.sendLink : copy.login}</button>
+              <button className="link-action" type="button" onClick={() => { setResetMode(!resetMode); setError(""); setNotice(""); }}>{resetMode ? copy.backToLogin : copy.forgot}</button>
             </form>
           ) : (
             <form className="auth-form signup-form" onSubmit={submitSignup}>
-              <div><p className="eyebrow">ABONNEMENT MENSUEL</p><h2>Créer votre espace</h2><p>La création ouvre uniquement le portail de règlement. L’application reste verrouillée jusqu’à validation du paiement par D2F.</p></div>
+              <div><p className="eyebrow">{copy.monthly}</p><h2>{copy.createSpace}</h2><p>{copy.signupLead}</p></div>
+              <p className="establishment-note">{copy.identifierScope}</p>
               <div className="form-grid">
-                <label>Raison sociale<input name="companyName" autoComplete="organization" required /></label>
-                <label>ID entreprise / TVA<input name="companyIdentifier" placeholder="SIREN, SIRET ou identifiant national" required /></label>
-                <label>Pays<select name="country" defaultValue="FR"><option value="FR">France</option><option value="RS">Serbie</option><option value="IT">Italie</option><option value="ES">Espagne</option><option value="DE">Allemagne</option><option value="OTHER">Autre</option></select></label>
-                <label>Nom du propriétaire<input name="fullName" autoComplete="name" required /></label>
-                <label className="span-2">E-mail professionnel<input name="email" type="email" autoComplete="email" required /></label>
-                <label>Mot de passe<input name="password" type="password" autoComplete="new-password" minLength={12} required /></label>
-                <label>Confirmer<input name="passwordConfirm" type="password" autoComplete="new-password" minLength={12} required /></label>
+                <label>{copy.companyName}<input name="companyName" autoComplete="organization" required /></label>
+                <label>{copy.country}<select name="country" value={country} onChange={(event) => { setCountry(event.target.value); setError(""); }}><option value="FR">{copy.countries.FR}</option><option value="RS">{copy.countries.RS}</option><option value="IT">{copy.countries.IT}</option><option value="ES">{copy.countries.ES}</option><option value="DE">{copy.countries.DE}</option><option value="OTHER">{copy.countries.OTHER}</option></select></label>
+                <label className="span-2">{identifier.label}<input name="companyIdentifier" placeholder={identifier.placeholder} inputMode={["FR", "RS"].includes(country) ? "numeric" : "text"} required /></label>
+                <p className="connector-note span-2"><span>{copy.expectedConnection}</span><strong>{connector}</strong></p>
+                <label>{copy.ownerName}<input name="fullName" autoComplete="name" required /></label>
+                <label>{copy.workEmail}<input name="email" type="email" autoComplete="email" required /></label>
+                <label>{copy.password}<input name="password" type="password" autoComplete="new-password" minLength={12} required /></label>
+                <label>{copy.confirmPassword}<input name="passwordConfirm" type="password" autoComplete="new-password" minLength={12} required /></label>
                 <label className="honeypot" aria-hidden="true">Site web<input name="website" tabIndex={-1} autoComplete="off" /></label>
               </div>
-              <label className="check-line"><input name="acceptTerms" type="checkbox" required /> <span>Je confirme être autorisé à engager l’entreprise et accepte le traitement des données nécessaire au service.</span></label>
-              <label className="check-line"><input name="acceptPaymentTerms" type="checkbox" required /> <span>Je comprends que l’inscription ne vaut pas paiement : l’accès au logiciel sera activé seulement après déclaration puis validation du règlement.</span></label>
+              <label className="check-line"><input name="acceptTerms" type="checkbox" required /> <span>{copy.terms}</span></label>
+              <label className="check-line"><input name="acceptPaymentTerms" type="checkbox" required /> <span>{copy.paymentTerms}</span></label>
               {error && <p className="form-message is-error" role="alert">{error}</p>}
               {notice && <p className="form-message is-ok">{notice}</p>}
-              <button className="primary-action" disabled={busy}>{busy ? "Création…" : "Créer l’entreprise"}</button>
-              <p className="security-note">Votre mot de passe est géré par Supabase Auth et n’est jamais enregistré par D2F Gestion.</p>
+              <button className="primary-action" disabled={busy}>{busy ? copy.creating : copy.createCompany}</button>
+              <p className="security-note">{copy.passwordSecurity}</p>
             </form>
           )}
         </div>
@@ -302,7 +330,7 @@ export default function SessionShell() {
 
   return <main className="app-session-shell">
     <header className="account-bar"><div className="account-brand"><img src="/d2f-gestion-logo.png" alt="" /><strong>D2F Gestion</strong><span>{session.account.name}</span></div><div className="account-actions">{warning > 0 && <span className="idle-warning">Déconnexion dans {warning} s</span>}<button className="account-button" onClick={() => setDrawer(true)}><span>{initials}</span><span><strong>{session.user.fullName}</strong><small>{formatStatus(session.account.status)}</small></span></button><button className="logout-button" onClick={logout}>Déconnexion</button></div></header>
-    {session.account.canUseApplication ? <iframe className="web-app-frame" src="/erp/index.html?v=20260716-brand-payment-v2" title="D2F Gestion" allow="clipboard-read; clipboard-write" /> : <LockedSubscription session={session} onOpen={() => setDrawer(true)} />}
+    {session.account.canUseApplication ? <iframe className="web-app-frame" src="/erp/index.html?v=20260716-country-profiles-v4" title="D2F Gestion" allow="clipboard-read; clipboard-write" /> : <LockedSubscription session={session} onOpen={() => setDrawer(true)} />}
     {drawer && <AccountDrawer session={session} onSession={setSession} onClose={() => setDrawer(false)} />}
   </main>;
 }

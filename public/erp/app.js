@@ -645,6 +645,7 @@ function renderToolbar(moduleKey) {
     await Promise.all([loadI18n(newLang), loadI18n(DEFAULT_LANG)]);
     applyStaticI18n(document);
     renderNavI18n();
+    updateCountryEInvoicingProfile(state.company || {});
 
     const cur = state?.currentModule || moduleKey || "dashboard";
     const titleEl = dom.title();
@@ -970,6 +971,8 @@ function requireFilled(label, value) {
 function validateCompanyEN16931(c) {
   requireFilled("Société: raison sociale obligatoire (BG-4/BT-27)", c?.legal_name);
   requireFilled("Société: pays obligatoire (BT-31)", c?.country);
+  requireFilled("Société: identifiant d’établissement obligatoire", c?.legal_id);
+  validateEstablishmentIdentity(c);
 }
 function validateBuyerEN16931(b) {
   requireFilled("Client: nom obligatoire (BG-7/BT-44)", b?.name);
@@ -1676,6 +1679,52 @@ function ensurePaymentModal() {
 
 /* ----------------- Company UI ----------------- */
 
+const COUNTRY_EINVOICE_PROFILES = {
+  FR: { code: "FR_PA", submitPath: "/invoices", authType: "bearer", authHeader: "", titleKey: "integrations.profile.fr.title", title: "France — Plateforme Agréée (PA)", hintKey: "integrations.profile.fr.hint", hint: "Le SIRET de l’établissement et les identifiants fournis par la PA sont requis.", idKey: "company.identifier.fr", idLabel: "SIRET de l’établissement *", publicKey: "integrations.profile.fr.public_id", publicLabel: "SIRET / identifiant du compte PA", routeKey: "integrations.profile.fr.routing_id", routeLabel: "Identifiant de routage PA", routeEmailKey: "integrations.profile.fr.routing_email", routeEmailLabel: "Adresse de routage (si fournie)", showRoutes: true },
+  RS: { code: "RS_SEF", submitPath: "/api/publicApi/sales-invoice/ubl", authType: "apikey", authHeader: "ApiKey", titleKey: "integrations.profile.rs.title", title: "Serbie — Sistem eFaktura (SEF)", hintKey: "integrations.profile.rs.hint", hint: "D2F est en Serbie : le connecteur attendu est SEF via API, avec PIB et clé API SEF.", idKey: "company.identifier.rs", idLabel: "PIB (9 chiffres) *", publicKey: "integrations.profile.rs.public_id", publicLabel: "PIB du compte SEF", routeKey: "integrations.profile.rs.routing_id", routeLabel: "Identifiant SEF complémentaire", routeEmailKey: "integrations.profile.rs.routing_email", routeEmailLabel: "Contact technique SEF", showRoutes: false },
+  IT: { code: "IT_SDI", titleKey: "integrations.profile.it.title", title: "Italie — Sistema di Interscambio (SdI)", hintKey: "integrations.profile.it.hint", hint: "La facture XML transite par SdI via un canal ou un prestataire habilité ; renseignez le Codice Destinatario ou la PEC.", idKey: "company.identifier.it", idLabel: "Partita IVA ou Codice Fiscale *", publicKey: "integrations.profile.it.public_id", publicLabel: "Partita IVA du compte SdI", routeKey: "integrations.profile.it.routing_id", routeLabel: "Codice Destinatario", routeEmailKey: "integrations.profile.it.routing_email", routeEmailLabel: "PEC", showRoutes: true },
+  ES: { code: "ES_VERIFACTU", titleKey: "integrations.profile.es.title", title: "Espagne — AEAT VERI*FACTU", hintKey: "integrations.profile.es.hint", hint: "VERI*FACTU concerne l’envoi des registres à l’AEAT ; FACe reste un canal distinct pour les factures au secteur public.", idKey: "company.identifier.es", idLabel: "NIF de l’entreprise *", publicKey: "integrations.profile.es.public_id", publicLabel: "NIF du compte AEAT", routeKey: "integrations.profile.es.routing_id", routeLabel: "Mode (VERIFACTU / NO VERIFACTU)", routeEmailKey: "integrations.profile.es.routing_email", routeEmailLabel: "Alias du certificat / prestataire", showRoutes: true },
+  DEFAULT: { code: "GENERIC_EN16931", titleKey: "integrations.profile.default.title", title: "Profil EN16931 — connecteur national à qualifier", hintKey: "integrations.profile.default.hint", hint: "Le pays n’a pas encore de profil D2F validé. Aucun statut de conformité nationale ne sera affiché sans qualification du canal.", idKey: "company.identifier.default", idLabel: "Identifiant national de l’établissement *", publicKey: "integrations.public_id", publicLabel: "Identifiant public du compte", routeKey: "integrations.routing_id", routeLabel: "Code de routage", routeEmailKey: "integrations.routing_email", routeEmailLabel: "Adresse de routage", showRoutes: true },
+};
+
+function companyCountryCode(value) {
+  const country = String(value || "").trim().toUpperCase().slice(0, 2);
+  return /^[A-Z]{2}$/.test(country) ? country : "DEFAULT";
+}
+
+function companyEInvoiceProfile(value) {
+  return COUNTRY_EINVOICE_PROFILES[companyCountryCode(value)] || COUNTRY_EINVOICE_PROFILES.DEFAULT;
+}
+
+function validateEstablishmentIdentity(company) {
+  const country = companyCountryCode(company?.country);
+  const identifier = String(company?.legal_id || "").toUpperCase().replace(/\s+/g, "").replace(/^IT/, "");
+  if (country === "FR" && !/^\d{14}$/.test(identifier)) throw new Error(t("company.identifier.fr.error", "Le SIRET de l’établissement doit comporter exactement 14 chiffres."));
+  if (country === "RS" && !/^\d{9}$/.test(identifier)) throw new Error(t("company.identifier.rs.error", "Le PIB serbe doit comporter exactement 9 chiffres."));
+  if (country === "IT" && !/^(\d{11}|[A-Z0-9]{16})$/.test(identifier)) throw new Error(t("company.identifier.it.error", "Indiquez une Partita IVA de 11 chiffres ou un Codice Fiscale de 16 caractères."));
+  if (country === "ES" && !/^[A-Z0-9][A-Z0-9._-]{7,11}$/.test(identifier)) throw new Error(t("company.identifier.es.error", "Le NIF espagnol indiqué n’est pas valide."));
+}
+
+function updateCountryEInvoicingProfile(company = state?.company || {}, config = state?.integrationConfigs?.pa || {}) {
+  const country = companyCountryCode($("co-country")?.value || company?.country);
+  const profile = companyEInvoiceProfile(country);
+  if ($("co-legal-id-label")) $("co-legal-id-label").textContent = t(profile.idKey, profile.idLabel);
+  if ($("cf-pa-title")) $("cf-pa-title").textContent = t(profile.titleKey, profile.title);
+  if ($("cf-pa-hint")) $("cf-pa-hint").textContent = t(profile.hintKey, profile.hint);
+  if ($("cf-pa-profile-label")) $("cf-pa-profile-label").textContent = profile.code;
+  if ($("cf-pa-public-id-label")) $("cf-pa-public-id-label").textContent = t(profile.publicKey, profile.publicLabel);
+  if ($("cf-pa-routing-label")) $("cf-pa-routing-label").textContent = t(profile.routeKey, profile.routeLabel);
+  if ($("cf-pa-routing-email-label")) $("cf-pa-routing-email-label").textContent = t(profile.routeEmailKey, profile.routeEmailLabel);
+  if ($("cf-pa-routing-row")) $("cf-pa-routing-row").style.display = profile.showRoutes ? "" : "none";
+  if ($("cf-pa-submit-path") && !config?.submit_path && (!$("cf-pa-submit-path").value || $("cf-pa-submit-path").value === "/invoices")) $("cf-pa-submit-path").value = profile.submitPath || "/invoices";
+  if ($("cf-pa-auth-type") && !config?.auth_type) $("cf-pa-auth-type").value = profile.authType || "bearer";
+  if ($("cf-pa-auth-header") && !config?.auth_header) $("cf-pa-auth-header").value = profile.authHeader || "";
+  if (config?.country && String(config.country).toUpperCase() !== country && $("cf-pa-status")) {
+    integrationStatus("pa", t("integrations.country_mismatch", "Le pays a changé : enregistrez de nouveau le connecteur avant de l’activer."), true);
+  }
+  return { country, profile };
+}
+
 function safeJsonParse(x, fallback = {}) {
   if (!x) return fallback;
   if (typeof x === "object") return x;
@@ -1733,7 +1782,7 @@ function companyPayloadFromForm() {
     legal_id: $("co-legal-id")?.value,
     vat_id: $("co-vat-id")?.value,
     vat_regime: $("co-vat-regime")?.value || "REAL_NORMAL_MONTHLY",
-    country: $("co-country")?.value,
+    country: $("co-country")?.value?.trim().toUpperCase(),
     currency: $("co-currency")?.value,
     street: $("co-street")?.value,
     street2: $("co-street2")?.value,
@@ -1820,6 +1869,7 @@ function fillCompanyForm(c) {
   const annualTarget = round2(num(meta?.annual_target_ht, 0));
   if ($("co-annual-target-ht")) $("co-annual-target-ht").value = annualTarget ? String(annualTarget) : "";
   if ($("co-meta-json")) $("co-meta-json").value = c?.meta_json || "{}";
+  updateCountryEInvoicingProfile(c || {});
 
   const img = $("companyLogoPreview");
   const fallback = $("companyLogoFallback");
@@ -1840,6 +1890,7 @@ function fillCompanyForm(c) {
 
 async function saveCompanyFromUI() {
   const payload = companyPayloadFromForm();
+  validateCompanyEN16931(payload);
   const meta = safeJsonParse(payload.meta_json, {});
   const v = validatePeppolEndpoint({
     scheme: meta.peppol_endpoint_scheme,
@@ -2078,7 +2129,9 @@ function cfMissingFields(cfg) {
 const integrationFields = {
   pa: {
     provider: "cf-pa-provider-name", base: "cf-pa-base-url", auth: "cf-pa-auth-type", secret: "cf-pa-secret",
-    health: "cf-pa-health-path", submit: "cf-pa-submit-path", enabled: "cf-pa-enabled", status: "cf-pa-status", save: "cf-pa-save", test: "cf-pa-test",
+    authHeader: "cf-pa-auth-header",
+    health: "cf-pa-health-path", submit: "cf-pa-submit-path", environment: "cf-pa-environment", publicId: "cf-pa-public-id",
+    routingId: "cf-pa-routing-id", routingEmail: "cf-pa-routing-email", enabled: "cf-pa-enabled", status: "cf-pa-status", save: "cf-pa-save", test: "cf-pa-test",
   },
   archive: {
     provider: "cf-archive-provider-name", base: "cf-archive-base-url", auth: "cf-archive-auth-type", secret: "cf-archive-secret",
@@ -2095,15 +2148,23 @@ function integrationStatus(type, text, isError = false) {
 
 function integrationPayload(type) {
   const ids = integrationFields[type];
+  const jurisdiction = type === "pa" ? updateCountryEInvoicingProfile() : null;
   return {
     type,
     provider_name: $(ids.provider)?.value?.trim() || "",
     base_url: $(ids.base)?.value?.trim() || "",
     auth_type: $(ids.auth)?.value || "bearer",
+    auth_header: ids.authHeader ? ($(ids.authHeader)?.value?.trim() || "") : undefined,
     secret: $(ids.secret)?.value || "",
     health_path: ids.health ? ($(ids.health)?.value?.trim() || "/health") : "/health",
     submit_path: $(ids.submit)?.value?.trim() || (type === "archive" ? "/archives" : "/invoices"),
     retention_years: ids.retention ? Number($(ids.retention)?.value || 10) : undefined,
+    country: jurisdiction?.country,
+    channel_profile: jurisdiction?.profile?.code,
+    environment: ids.environment ? ($(ids.environment)?.value || "sandbox") : undefined,
+    public_identifier: ids.publicId ? ($(ids.publicId)?.value?.trim() || "") : undefined,
+    routing_id: ids.routingId ? ($(ids.routingId)?.value?.trim() || "") : undefined,
+    routing_email: ids.routingEmail ? ($(ids.routingEmail)?.value?.trim() || "") : undefined,
     enabled: !!$(ids.enabled)?.checked,
   };
 }
@@ -2116,12 +2177,26 @@ async function loadIntegrationForm(type) {
     if ($(ids.provider)) $(ids.provider).value = cfg?.provider_name || "";
     if ($(ids.base)) $(ids.base).value = cfg?.base_url || "";
     if ($(ids.auth)) $(ids.auth).value = cfg?.auth_type || "bearer";
+    if ($(ids.authHeader)) $(ids.authHeader).value = cfg?.auth_header || "";
     if ($(ids.health)) $(ids.health).value = cfg?.health_path || "/health";
     if ($(ids.submit)) $(ids.submit).value = cfg?.submit_path || (type === "archive" ? "/archives" : "/invoices");
     if ($(ids.retention)) $(ids.retention).value = String(cfg?.retention_years || 10);
+    if ($(ids.environment)) $(ids.environment).value = cfg?.environment || "sandbox";
+    if ($(ids.publicId)) $(ids.publicId).value = cfg?.public_identifier || "";
+    if ($(ids.routingId)) $(ids.routingId).value = cfg?.routing_id || "";
+    if ($(ids.routingEmail)) $(ids.routingEmail).value = cfg?.routing_email || "";
     if ($(ids.enabled)) $(ids.enabled).checked = !!cfg?.enabled;
     if ($(ids.secret)) $(ids.secret).value = "";
-    integrationStatus(type, cfg?.configured ? t("integrations.configured", "Configuré — le secret est conservé chiffré côté serveur") : t("integrations.not_configured", "Non configuré"));
+    state.integrationConfigs = { ...(state.integrationConfigs || {}), [type]: cfg || {} };
+    const jurisdiction = type === "pa" ? updateCountryEInvoicingProfile(state.company || {}, cfg || {}) : null;
+    const countryMismatch = type === "pa" && cfg?.country && String(cfg.country).toUpperCase() !== jurisdiction?.country;
+    integrationStatus(type, countryMismatch
+      ? t("integrations.country_mismatch", "Le pays a changé : enregistrez de nouveau le connecteur avant de l’activer.")
+      : cfg?.last_test_status === "ok"
+      ? t("integrations.technical_test_ok", "Connexion technique testée avec succès le {date}", { date: String(cfg.last_tested_at || "").slice(0, 16).replace("T", " ") || "—" })
+      : cfg?.configured
+        ? t("integrations.configured_test_required", "Configuration enregistrée — test technique encore requis")
+        : t("integrations.not_configured", "Non configuré"));
   } catch (error) {
     integrationStatus(type, t("integrations.load_error", "Impossible de charger le connecteur : {msg}", { msg: error.message }), true);
   }
@@ -2130,6 +2205,7 @@ async function loadIntegrationForm(type) {
 async function saveIntegrationForm(type) {
   integrationStatus(type, t("integrations.saving", "Enregistrement…"));
   const saved = await window.api.connections.save(integrationPayload(type));
+  state.integrationConfigs = { ...(state.integrationConfigs || {}), [type]: saved || {} };
   if ($(integrationFields[type].secret)) $(integrationFields[type].secret).value = "";
   integrationStatus(type, saved?.configured ? t("integrations.saved", "Connecteur enregistré et secret chiffré") : t("integrations.saved_no_secret", "Configuration enregistrée — secret encore manquant"));
   return saved;
@@ -2139,7 +2215,7 @@ async function testIntegrationForm(type) {
   integrationStatus(type, t("integrations.testing", "Test de connexion…"));
   try {
     const result = await window.api.connections.test({ type });
-    integrationStatus(type, t("integrations.test_ok", "Connexion réussie ({status})", { status: result?.status || "OK" }));
+    integrationStatus(type, t("integrations.test_ok", "Connexion technique réussie ({status}) — la recette métier reste requise", { status: result?.status || "OK" }));
   } catch (error) {
     integrationStatus(type, t("integrations.test_failed", "Échec du test : {msg}", { msg: error.message }), true);
   }
@@ -3624,6 +3700,8 @@ async function refreshModule(moduleKey) {
   if (moduleKey === "company") {
     state.company = await window.api.company.get();
     if (state.company) fillCompanyForm(state.company);
+    bindIntegrationForms();
+    await Promise.all([loadIntegrationForm("pa"), loadIntegrationForm("archive")]);
     return;
   }
 
@@ -4476,8 +4554,8 @@ case "payments:record": {
 case "company:save": {
   const keepModule = state.currentModuleKey;
   const payload = companyPayloadFromForm();
+  validateCompanyEN16931(payload);
   const saved = await window.api.company.save(payload);
-  validateCompanyEN16931(saved);
   state.company = saved;
   fillCompanyForm(saved);
   await applyVatForQuote({ silent: true }).catch(() => {});
@@ -6094,7 +6172,8 @@ function init() {
     // seller country impacts AUTO
     $("co-country")?.addEventListener("input", () => {
       state.company = state.company || {};
-      state.company.country = $("co-country")?.value;
+      state.company.country = $("co-country")?.value?.trim().toUpperCase();
+      updateCountryEInvoicingProfile(state.company);
       applyVatForQuote({ silent: true }).catch(() => {});
       applyVatForInvoice({ silent: true }).catch(() => {});
     });
