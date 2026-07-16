@@ -19,6 +19,8 @@ type Account = {
     payerName: string;
     customerTransferReference: string;
     paidOn: string;
+    currentPeriodStart: string;
+    currentPeriodEnd: string;
   };
   role: "owner" | "collaborator";
   canUseApplication: boolean;
@@ -26,7 +28,7 @@ type Account = {
   billing: { amountEur: number | null; currency: string; beneficiary: string; iban: string; bic: string };
 };
 type SessionData = { user: { id: string; email: string; fullName: string; role: string }; account: Account; idleTimeoutSeconds: number };
-type AdminCompany = { id: string; name: string; companyIdentifier: string; status: string; plan: string; members: number; amountEur: number | null; payerName: string; transferReference: string; paidOn: string };
+type AdminCompany = { id: string; name: string; companyIdentifier: string; status: string; subscriptionStatus: string; plan: string; members: number; amountEur: number | null; payerName: string; transferReference: string; paidOn: string; currentPeriodEnd: string };
 
 async function api(path: string, init?: RequestInit) {
   const response = await fetch(path, {
@@ -47,6 +49,11 @@ function formatStatus(status: string) {
     payment_declared: "Virement déclaré — validation D2F en cours",
     suspended: "Abonnement suspendu",
   } as Record<string, string>)[status] || status;
+}
+
+function formatDate(value: string) {
+  if (!value) return "—";
+  return new Intl.DateTimeFormat("fr-FR", { dateStyle: "medium", timeZone: "UTC" }).format(new Date(`${value}T00:00:00.000Z`));
 }
 
 function AuthPortal({ onAuthenticated }: { onAuthenticated: (session: SessionData) => void }) {
@@ -213,13 +220,13 @@ function AccountDrawer({ session, onSession, onClose }: { session: SessionData; 
   return <div className="drawer-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}><aside className="account-drawer" aria-label="Compte entreprise">
     <div className="drawer-head"><div><p className="eyebrow">COMPTE ENTREPRISE</p><h2>{account.name}</h2><p>{account.companyIdentifier}</p></div><button className="close-button" onClick={onClose} aria-label="Fermer">×</button></div>
     <section className="account-section"><div className="section-title"><h3>Abonnement</h3><span className={`status-pill status-${account.status}`}>{formatStatus(account.status)}</span></div>
-      <div className="info-grid"><div><span>Formule</span><strong>{account.plan === "lifetime" ? "D2F à vie" : "Mensuelle"}</strong></div><div><span>Utilisateurs</span><strong>{account.members.length} / {account.seatLimit}</strong></div><div><span>Montant</span><strong>{account.plan === "lifetime" ? "0 €" : account.subscription.amountEur ? `${account.subscription.amountEur.toFixed(2)} € / mois` : "À confirmer par D2F"}</strong></div><div><span>Paiement</span><strong>{account.plan === "lifetime" ? "Aucun" : "Virement bancaire"}</strong></div></div>
-      {account.plan === "monthly" && <><div className="bank-box"><p><span>Bénéficiaire</span><strong>{account.billing.beneficiary}</strong></p><p><span>IBAN</span><strong>{account.billing.iban || "Communiqué par D2F"}</strong></p><p><span>BIC</span><strong>{account.billing.bic || "Communiqué par D2F"}</strong></p><p><span>Référence obligatoire</span><strong>{account.subscription.bankTransferReference}</strong></p></div>{account.role === "owner" && <form className="compact-form" onSubmit={declarePayment}><h4>Déclarer un virement effectué</h4><label>Titulaire<input name="payerName" defaultValue={account.subscription.payerName} required /></label><label>Référence de votre banque<input name="transferReference" defaultValue={account.subscription.customerTransferReference} required /></label><label>Date du virement<input name="paidOn" type="date" defaultValue={account.subscription.paidOn} required /></label><button className="secondary-action">Enregistrer la déclaration</button></form>}</>}
+      <div className="info-grid"><div><span>Formule</span><strong>{account.plan === "lifetime" ? "D2F à vie" : "Mensuelle"}</strong></div><div><span>Utilisateurs</span><strong>{account.members.length} / {account.seatLimit}</strong></div><div><span>Montant</span><strong>{account.plan === "lifetime" ? "0 €" : account.subscription.amountEur ? `${account.subscription.amountEur.toFixed(2)} € / mois` : "À confirmer par D2F"}</strong></div><div><span>{account.plan === "lifetime" ? "Paiement" : "Accès payé jusqu’au"}</span><strong>{account.plan === "lifetime" ? "Aucun" : formatDate(account.subscription.currentPeriodEnd)}</strong></div></div>
+      {account.plan === "monthly" && <><div className="bank-box"><p><span>Bénéficiaire</span><strong>{account.billing.beneficiary}</strong></p><p><span>IBAN</span><strong>{account.billing.iban || "Communiqué par D2F"}</strong></p><p><span>BIC</span><strong>{account.billing.bic || "Communiqué par D2F"}</strong></p><p><span>Référence obligatoire</span><strong>{account.subscription.bankTransferReference}</strong></p></div>{account.subscription.status === "payment_declared" && <p className="form-message is-ok">Virement déclaré — D2F doit valider le prochain mois.</p>}{account.role === "owner" && account.subscription.status !== "payment_declared" && <form className="compact-form" onSubmit={declarePayment}><h4>{account.status === "active" ? "Déclarer le virement du mois suivant" : "Déclarer un virement effectué"}</h4><label>Titulaire<input name="payerName" defaultValue={account.subscription.payerName} required /></label><label>Référence de votre banque<input name="transferReference" defaultValue={account.subscription.customerTransferReference} required /></label><label>Date du virement<input name="paidOn" type="date" defaultValue={account.subscription.paidOn} required /></label><button className="secondary-action">Enregistrer la déclaration</button></form>}</>}
     </section>
     <section className="account-section"><div className="section-title"><h3>Collaborateurs</h3><span>{account.members.length} siège{account.members.length > 1 ? "s" : ""} utilisé{account.members.length > 1 ? "s" : ""}</span></div><div className="member-list">{account.members.map((member) => <div key={member.userId}><span className="member-avatar">{(member.fullName || member.email).slice(0, 1).toUpperCase()}</span><p><strong>{member.fullName || member.email}</strong><small>{member.email} · {member.role === "owner" ? "Propriétaire" : member.status === "invited" ? "Invitation envoyée" : "Collaborateur"}</small></p></div>)}</div>
       {account.role === "owner" && account.members.length < account.seatLimit && <form className="compact-form" onSubmit={invite}><h4>Inviter le deuxième utilisateur</h4><label>Nom<input name="fullName" required /></label><label>E-mail professionnel<input name="email" type="email" required /></label><button className="secondary-action">Envoyer l’invitation</button></form>}
     </section>
-    {account.isPlatformAdmin && <section className="account-section admin-section"><div className="section-title"><h3>Administration D2F</h3><button className="mini-action" onClick={loadAdmin}>{adminLoading ? "Chargement…" : "Actualiser"}</button></div>{adminCompanies.map((company) => <div className="admin-company" key={company.id}><div><strong>{company.name}</strong><small>{company.companyIdentifier} · {formatStatus(company.status)} · {company.members}/2 utilisateurs</small>{company.transferReference && <small>Virement : {company.transferReference} · {company.paidOn || "date non indiquée"}</small>}</div>{company.plan !== "lifetime" && <div><button onClick={() => setCompanyStatus(company.id, "active")}>Activer</button><button onClick={() => setCompanyStatus(company.id, "suspended")}>Suspendre</button></div>}</div>)}</section>}
+    {account.isPlatformAdmin && <section className="account-section admin-section"><div className="section-title"><h3>Administration D2F</h3><button className="mini-action" onClick={loadAdmin}>{adminLoading ? "Chargement…" : "Actualiser"}</button></div>{adminCompanies.map((company) => <div className="admin-company" key={company.id}><div><strong>{company.name}</strong><small>{company.companyIdentifier} · {formatStatus(company.status)} · {company.members}/2 utilisateurs</small>{company.currentPeriodEnd && <small>Accès payé jusqu’au {formatDate(company.currentPeriodEnd)}</small>}{company.transferReference && <small>Virement : {company.transferReference} · {company.paidOn || "date non indiquée"} · {formatStatus(company.subscriptionStatus)}</small>}</div>{company.plan !== "lifetime" && <div><button onClick={() => setCompanyStatus(company.id, "active")}>Valider + 1 mois</button><button onClick={() => setCompanyStatus(company.id, "suspended")}>Suspendre</button></div>}</div>)}</section>}
     {error && <p className="form-message is-error">{error}</p>}{message && <p className="form-message is-ok">{message}</p>}
   </aside></div>;
 }

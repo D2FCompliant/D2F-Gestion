@@ -56,6 +56,9 @@ test("keeps Supabase access tenant-scoped and server-side", async () => {
   assert.match(auth, /isPlatformAdminEmail/);
   assert.match(accounts, /seatLimit: 2/);
   assert.match(accounts, /account\.members\.length >= account\.seatLimit/);
+  assert.match(accounts, /currentPeriodEnd/);
+  assert.match(accounts, /addUtcMonth/);
+  assert.match(accounts, /accountAllowsApplication\(account\)/);
   assert.match(accounts, /ownerKey = lifetime \? normalizedEmail\(process\.env\.D2F_OWNER_EMAIL\) : `tenant:/);
   assert.doesNotMatch(accounts, /\.or\(`/);
   assert.match(migration, /enable row level security/);

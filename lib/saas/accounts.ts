@@ -34,6 +34,8 @@ export type TenantAccount = {
     payerName: string;
     customerTransferReference: string;
     paidOn: string;
+    currentPeriodStart: string;
+    currentPeriodEnd: string;
   };
   createdAt: string;
   updatedAt: string;
@@ -64,6 +66,35 @@ function transferReference(tenantId: string) {
   return `D2F-${new Date().getUTCFullYear()}-${tenantId.replace(/-/g, "").slice(0, 10).toUpperCase()}`;
 }
 
+function isoDate(value: unknown) {
+  return stringValue(value).slice(0, 10);
+}
+
+function todayIso() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function addUtcMonth(value: string) {
+  const date = new Date(`${value}T00:00:00.000Z`);
+  const day = date.getUTCDate();
+  date.setUTCDate(1);
+  date.setUTCMonth(date.getUTCMonth() + 1);
+  const lastDay = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 1, 0)).getUTCDate();
+  date.setUTCDate(Math.min(day, lastDay));
+  return date.toISOString().slice(0, 10);
+}
+
+function accountWithEffectivePeriod(account: TenantAccount) {
+  if (account.plan !== "monthly" || account.status !== "active" || !account.subscription.currentPeriodEnd) return account;
+  if (account.subscription.currentPeriodEnd >= todayIso()) return account;
+  const status: SubscriptionStatus = account.subscription.status === "payment_declared" ? "payment_declared" : "pending_payment";
+  return {
+    ...account,
+    status,
+    subscription: { ...account.subscription, status },
+  };
+}
+
 function accountFromFallback(ownerKey: string, raw: unknown): TenantAccount | null {
   const value = object(raw);
   if (!value.id) return null;
@@ -79,7 +110,7 @@ function accountFromFallback(ownerKey: string, raw: unknown): TenantAccount | nu
     };
   }) : [];
   const status = stringValue(value.status || subscription.status || "pending_payment") as SubscriptionStatus;
-  return {
+  return accountWithEffectivePeriod({
     id: stringValue(value.id),
     name: stringValue(value.name),
     companyIdentifier: stringValue(value.companyIdentifier || value.company_identifier),
@@ -99,10 +130,12 @@ function accountFromFallback(ownerKey: string, raw: unknown): TenantAccount | nu
       payerName: stringValue(subscription.payerName || subscription.payer_name),
       customerTransferReference: stringValue(subscription.customerTransferReference || subscription.customer_transfer_reference),
       paidOn: stringValue(subscription.paidOn || subscription.paid_on),
+      currentPeriodStart: isoDate(subscription.currentPeriodStart || subscription.current_period_start),
+      currentPeriodEnd: isoDate(subscription.currentPeriodEnd || subscription.current_period_end),
     },
     createdAt: stringValue(value.createdAt || value.created_at),
     updatedAt: stringValue(value.updatedAt || value.updated_at),
-  };
+  });
 }
 
 function fallbackShape(account: TenantAccount) {
@@ -141,7 +174,7 @@ async function dedicatedAccount(supabase: SupabaseClient, tenantId: string): Pro
   if (memberError) throw memberError;
   if (subscriptionError) throw subscriptionError;
   const status = stringValue(tenant.status || subscription?.status || "pending_payment") as SubscriptionStatus;
-  return {
+  return accountWithEffectivePeriod({
     id: String(tenant.id),
     name: stringValue(tenant.name),
     companyIdentifier: stringValue(tenant.company_identifier),
@@ -167,10 +200,12 @@ async function dedicatedAccount(supabase: SupabaseClient, tenantId: string): Pro
       payerName: stringValue(subscription?.payer_name),
       customerTransferReference: stringValue(subscription?.customer_transfer_reference),
       paidOn: stringValue(subscription?.paid_on),
+      currentPeriodStart: isoDate(subscription?.current_period_start),
+      currentPeriodEnd: isoDate(subscription?.current_period_end),
     },
     createdAt: stringValue(tenant.created_at),
     updatedAt: stringValue(tenant.updated_at),
-  };
+  });
 }
 
 export async function findAccountForUser(userId: string, email: string) {
@@ -242,6 +277,8 @@ export async function createTenantAccount(input: {
       payerName: stringValue(input.payerName || input.companyName),
       customerTransferReference: "",
       paidOn: "",
+      currentPeriodStart: "",
+      currentPeriodEnd: "",
     },
     createdAt: now,
     updatedAt: now,
@@ -298,7 +335,9 @@ export async function ensureD2FLifetimeAccount(user: User) {
 }
 
 export function accountAllowsApplication(account: TenantAccount) {
-  return account.status === "lifetime" || account.status === "active";
+  if (account.status === "lifetime") return true;
+  if (account.status !== "active") return false;
+  return !account.subscription.currentPeriodEnd || account.subscription.currentPeriodEnd >= todayIso();
 }
 
 export function memberFor(account: TenantAccount, userId: string, email: string) {
@@ -331,13 +370,14 @@ export async function inviteCollaborator(account: TenantAccount, actor: TenantMe
 export async function declareBankTransfer(account: TenantAccount, actor: TenantMember, input: { payerName: string; transferReference: string; paidOn: string }) {
   if (actor.role !== "owner") throw new Error("Seul le propriétaire peut déclarer un virement");
   if (account.plan === "lifetime") return account;
-  const status: SubscriptionStatus = "payment_declared";
+  const subscriptionStatus: SubscriptionStatus = "payment_declared";
+  const status: SubscriptionStatus = accountAllowsApplication(account) ? "active" : subscriptionStatus;
   const updated: TenantAccount = {
     ...account,
     status,
     subscription: {
       ...account.subscription,
-      status,
+      status: subscriptionStatus,
       payerName: stringValue(input.payerName || account.subscription.payerName),
       customerTransferReference: stringValue(input.transferReference).slice(0, 120),
       paidOn: stringValue(input.paidOn).slice(0, 10),
@@ -346,7 +386,7 @@ export async function declareBankTransfer(account: TenantAccount, actor: TenantM
   };
   const supabase = getSupabaseAdmin();
   const { error } = await supabase.from("d2f_subscriptions").update({
-    status,
+    status: subscriptionStatus,
     payer_name: updated.subscription.payerName,
     customer_transfer_reference: updated.subscription.customerTransferReference,
     paid_on: updated.subscription.paidOn || null,
@@ -375,7 +415,16 @@ export async function setTenantSubscriptionStatus(tenantId: string, status: "act
   const account = await getAccountById(tenantId);
   if (!account) throw new Error("Entreprise introuvable");
   if (account.plan === "lifetime") return account;
-  const updated = { ...account, status, subscription: { ...account.subscription, status }, updatedAt: new Date().toISOString() };
+  const periodStart = status === "active"
+    ? (accountAllowsApplication(account) && account.subscription.currentPeriodEnd ? account.subscription.currentPeriodEnd : todayIso())
+    : account.subscription.currentPeriodStart;
+  const periodEnd = status === "active" ? addUtcMonth(periodStart) : account.subscription.currentPeriodEnd;
+  const updated = {
+    ...account,
+    status,
+    subscription: { ...account.subscription, status, currentPeriodStart: periodStart, currentPeriodEnd: periodEnd },
+    updatedAt: new Date().toISOString(),
+  };
   const supabase = getSupabaseAdmin();
   const { error } = await supabase.from("d2f_tenants").update({ status, updated_at: new Date().toISOString() }).eq("id", tenantId);
   if (error) {
@@ -383,6 +432,11 @@ export async function setTenantSubscriptionStatus(tenantId: string, status: "act
     await saveFallbackAccount(supabase, updated);
     return updated;
   }
-  await supabase.from("d2f_subscriptions").update({ status, updated_at: new Date().toISOString() }).eq("tenant_id", tenantId);
+  await supabase.from("d2f_subscriptions").update({
+    status,
+    current_period_start: periodStart || null,
+    current_period_end: periodEnd || null,
+    updated_at: new Date().toISOString(),
+  }).eq("tenant_id", tenantId);
   return (await getAccountById(tenantId)) || updated;
 }

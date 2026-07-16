@@ -17,12 +17,14 @@ export async function GET(request: Request) {
     name: account.name,
     companyIdentifier: account.companyIdentifier,
     status: account.status,
+    subscriptionStatus: account.subscription.status,
     plan: account.plan,
     members: account.members.length,
     amountEur: account.subscription.amountEur,
     payerName: account.subscription.payerName,
     transferReference: account.subscription.customerTransferReference,
     paidOn: account.subscription.paidOn,
+    currentPeriodEnd: account.subscription.currentPeriodEnd,
     createdAt: account.createdAt,
   })));
 }
