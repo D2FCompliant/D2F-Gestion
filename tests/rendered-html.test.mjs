@@ -26,7 +26,7 @@ test("server-renders the D2F Gestion cockpit", async () => {
   assert.doesNotMatch(html, /codex-preview|Your site is taking shape|react-loading-skeleton/i);
 
   const shell = await readFile(new URL("../app/session-shell.tsx", import.meta.url), "utf8");
-  assert.match(shell, /src="\/erp\/index\.html\?v=20260716-documents-v9"/);
+  assert.match(shell, /src="\/erp\/index\.html\?v=20260716-documents-v10"/);
   assert.match(shell, /title="D2F Gestion"/);
 });
 
@@ -37,8 +37,8 @@ test("ships a touch-first smartphone layout", async () => {
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
     readFile(new URL("../public/erp/index.html", import.meta.url), "utf8"),
   ]);
-  assert.match(html, /styles\.css\?v=20260716-documents-v9/);
-  assert.match(html, /app\.js\?v=20260716-documents-v9/);
+  assert.match(html, /styles\.css\?v=20260716-documents-v10/);
+  assert.match(html, /app\.js\?v=20260716-documents-v10/);
   assert.match(styles, /@media \(max-width: 760px\)/);
   assert.match(styles, /position:fixed;\s*z-index:1000;\s*left:0;\s*right:0;\s*bottom:0/);
   assert.match(styles, /grid-template-columns:minmax\(0,1fr\) minmax\(0,1fr\) !important/);
@@ -65,7 +65,8 @@ test("renders human-readable document lists on desktop and smartphone", async ()
   assert.match(styles, /grid-template-columns:minmax\(360px,410px\) minmax\(0,1fr\)/);
   assert.match(styles, /max-height:min\(44dvh,370px\)/);
   assert.match(styles, /\.documentListItem\.is-selected/);
-  assert.match(styles, /grid-template-rows:auto minmax\(18px,max-content\) auto/);
+  assert.match(styles, /flex:0 0 auto/);
+  assert.match(styles, /grid-template-rows:auto auto auto/);
   assert.match(styles, /-webkit-line-clamp:2/);
   assert.match(styles, /\.documentListClient\{[\s\S]*?min-height:18px/);
 });

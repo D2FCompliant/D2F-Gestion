@@ -3655,10 +3655,11 @@ textarea{ resize: vertical; }
 }
 
 .documentListItem{
-  min-height:0;
+  flex:0 0 auto;
+  min-height:94px;
   height:auto;
   display:grid;
-  grid-template-rows:auto minmax(18px,max-content) auto;
+  grid-template-rows:auto auto auto;
   align-content:start;
   gap:5px;
   padding:9px 12px;
@@ -3838,7 +3839,8 @@ textarea{ resize: vertical; }
   }
 
   .documentListItem{
-    min-height:0;
+    flex:0 0 auto;
+    min-height:94px;
     height:auto;
     padding:9px 11px;
     gap:5px;
