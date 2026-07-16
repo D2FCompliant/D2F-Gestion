@@ -482,7 +482,9 @@ function invoiceFullToDraft(full) {
 }
 
 function setButtonDisabled(btn, disabled) {
+  if (!btn) return;
   btn.disabled = !!disabled;
+  btn.setAttribute("aria-disabled", disabled ? "true" : "false");
   btn.style.opacity = disabled ? "0.5" : "1";
   btn.style.cursor = disabled ? "not-allowed" : "pointer";
 }
