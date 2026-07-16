@@ -163,6 +163,8 @@ export function publicBillingConfig() {
 }
 
 export function safeOrigin(request: Request) {
+  const configured = String(process.env.D2F_PUBLIC_URL || "").trim().replace(/\/$/, "");
+  if (/^https:\/\/[^/]+$/i.test(configured)) return configured;
   const url = new URL(request.url);
   return `${url.protocol}//${url.host}`;
 }

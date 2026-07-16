@@ -77,6 +77,20 @@ test("keeps Supabase access tenant-scoped and server-side", async () => {
   assert.match(legacyHtml, /web-api-shim\.js/);
 });
 
+test("ships a branded Cloudflare gateway without exposing the Worker origin", async () => {
+  const [auth, worker, gateway, config] = await Promise.all([
+    readFile(new URL("../lib/auth/server.ts", import.meta.url), "utf8"),
+    readFile(new URL("../worker/index.ts", import.meta.url), "utf8"),
+    readFile(new URL("../cloudflare-gateway/_worker.js", import.meta.url), "utf8"),
+    readFile(new URL("../wrangler.cloudflare.jsonc", import.meta.url), "utf8"),
+  ]);
+  assert.match(auth, /D2F_PUBLIC_URL/);
+  assert.match(worker, /D2F_GATEWAY_SECRET/);
+  assert.match(gateway, /x-d2f-gateway/);
+  assert.match(gateway, /gestion\.d2fcompliant\.org/);
+  assert.match(config, /"D2F_PUBLIC_URL": "https:\/\/gestion\.d2fcompliant\.org"/);
+});
+
 test("hydrates invoice client names from the tenant client records", async () => {
   const route = await readFile(new URL("../app/rpc/route.ts", import.meta.url), "utf8");
   assert.match(route, /const clientNames = new Map/);

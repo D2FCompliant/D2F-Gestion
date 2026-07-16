@@ -1,0 +1,24 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "d2f-gestion",
+  "account_id": "d3ea9b11330ba35a703ce8e62ddaadc4",
+  "main": "dist/server/index.js",
+  "compatibility_date": "2026-05-15",
+  "compatibility_flags": ["nodejs_compat"],
+  "no_bundle": true,
+  "rules": [
+    { "type": "ESModule", "globs": ["**/*.js", "**/*.mjs"] }
+  ],
+  "assets": {
+    "directory": "dist/client"
+  },
+  "observability": {
+    "enabled": true
+  },
+  "vars": {
+    "NODE_ENV": "production",
+    "D2F_PUBLIC_URL": "https://gestion.d2fcompliant.org",
+    "D2F_OWNER_EMAIL": "contact@d2fcompliant.com",
+    "SUPABASE_URL": "https://ttvtufxfcvzwjwvtfifp.supabase.co"
+  }
+}
