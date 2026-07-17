@@ -4808,3 +4808,31 @@ button.dashManagementKpi:hover{border-color:rgba(99,102,241,.38);transform:trans
   .page[data-page="quotes"] .table__row > :nth-child(6),
   .page[data-page="invoices"] .table__row > :nth-child(6){grid-column:auto;justify-self:stretch;}
 }
+
+
+/* CSV history import */
+.documentCsvImportPanel{ width:min(900px,calc(100vw - 32px)); }
+.documentCsvDropzone{
+  width:100%; min-height:190px; padding:28px; border:2px dashed #9eb5c9; border-radius:18px;
+  background:#f7fafc; color:#10263a; display:flex; flex-direction:column; align-items:center;
+  justify-content:center; gap:8px; text-align:center; cursor:pointer; transition:.18s ease;
+}
+.documentCsvDropzone:hover,.documentCsvDropzone:focus-visible,.documentCsvDropzone.is-dragging{
+  border-color:var(--accent,#147cc1); background:#eef8ff; box-shadow:0 0 0 4px rgba(20,124,193,.1);
+}
+.documentCsvDropzone__icon{
+  display:grid; place-items:center; width:58px; height:58px; border-radius:15px;
+  background:linear-gradient(135deg,#167fc4,#13b7d1); color:#fff; font-size:14px; font-weight:900; letter-spacing:.08em;
+}
+.documentCsvDropzone strong{ font-size:18px; }
+.documentCsvDropzone span:not(.documentCsvDropzone__icon){ color:#60758b; }
+.documentCsvDropzone small{ min-height:20px; color:#0f6f45; font-weight:800; }
+.documentCsvImportHelp{ margin:16px 0; display:flex; flex-wrap:wrap; gap:8px 12px; color:#60758b; }
+.documentCsvImportHelp strong{ color:#10263a; }
+.documentCsvImportGrid{ display:grid; grid-template-columns:minmax(0,1.4fr) minmax(240px,.8fr); gap:16px; }
+.documentCsvPreview,.documentCsvReport{ min-height:150px; white-space:pre-wrap; overflow:auto; }
+@media (max-width:700px){
+  .documentCsvImportPanel{ width:calc(100vw - 16px); }
+  .documentCsvDropzone{ min-height:160px; padding:20px 14px; }
+  .documentCsvImportGrid{ grid-template-columns:1fr; }
+}

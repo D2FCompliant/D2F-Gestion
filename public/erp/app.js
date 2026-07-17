@@ -808,6 +808,7 @@ function renderToolbar(moduleKey) {
 
 function toolbarDirectActionIds(moduleKey) {
   if (moduleKey === "quotes") {
+    if (state.quoteDraft?.historical_import) return ["quotes:new"];
     const hasId = !!state.quoteDraft?.id;
     const status = canonicalQuoteStatus(state.quoteDraft);
     if (hasId && status === "sent") return ["quotes:accept", "quotes:reject"];
@@ -817,6 +818,7 @@ function toolbarDirectActionIds(moduleKey) {
   }
 
   if (moduleKey === "invoices") {
+    if (state.invoiceDraft?.historical_import) return ["invoices:new"];
     if (state.invoiceDraft?.id && isDraftInvoice()) return ["invoices:save", "invoices:issue"];
     if (state.invoiceDraft?.id) return ["invoices:toCreditNote", "invoices:recordPayment"];
     return ["invoices:save", "invoices:new"];
@@ -850,6 +852,8 @@ function createToolbarActionButton(action, moduleKey, inOverflow = false) {
 }
 
 function isToolbarActionDisabled(actionId, moduleKey) {
+  if (moduleKey === "quotes" && state.quoteDraft?.historical_import) return !["quotes:new", "quotes:importCsv"].includes(actionId);
+  if (moduleKey === "invoices" && state.invoiceDraft?.historical_import) return !["invoices:new", "invoices:importCsv"].includes(actionId);
   if (moduleKey === "quotes") {
     const hasId = !!state.quoteDraft?.id;
     const quoteState = canonicalQuoteStatus(state.quoteDraft);
@@ -1324,6 +1328,7 @@ function canonicalQuoteStatus(q) {
   if (raw === "rejected" || raw === "refused" || raw === "declined") return "rejected";
   if (raw === "cancelled" || raw === "canceled") return "cancelled";
   if (raw === "sent") return "sent";
+  if (raw === "historical") return "historical";
   return "draft";
 }
 
@@ -1369,17 +1374,19 @@ async function computeAndRenderDashboard() {
 
   state.quotes = quotes;
   state.invoices = invoices;
+  const operationalQuotes = quotes.filter((record) => !record.historical_import);
+  const operationalInvoices = invoices.filter((record) => !record.historical_import);
 
-  const qInProgress = quotes.filter((q) => ["draft", "sent"].includes(canonicalQuoteStatus(q))).length;
-  const qAccepted = quotes.filter((q) => canonicalQuoteStatus(q) === "accepted").length;
-  const qRefused = quotes.filter((q) => canonicalQuoteStatus(q) === "rejected").length;
+  const qInProgress = operationalQuotes.filter((q) => ["draft", "sent"].includes(canonicalQuoteStatus(q))).length;
+  const qAccepted = operationalQuotes.filter((q) => canonicalQuoteStatus(q) === "accepted").length;
+  const qRefused = operationalQuotes.filter((q) => canonicalQuoteStatus(q) === "rejected").length;
 
-  const receivableSummary = window.D2FReceivables.summarize(invoices, paymentsAll);
+  const receivableSummary = window.D2FReceivables.summarize(operationalInvoices, paymentsAll);
   const issued = receivableSummary.rows.length;
   const paid = receivableSummary.paidCount;
   const credited = receivableSummary.creditedCount;
   const waiting = receivableSummary.waitingCount;
-  const ca = computeRecognizedRevenueHT(invoices);
+  const ca = computeRecognizedRevenueHT(operationalInvoices);
 
   const paidByInvoice = new Map();
   let totalPay = 0;
@@ -1398,7 +1405,7 @@ async function computeAndRenderDashboard() {
     totalPay += amt;
   }
 
-  const depositsIssued = invoices.filter((i) => invoiceStatus(i) === "issued" && isDepositInvoice(i));
+  const depositsIssued = operationalInvoices.filter((i) => invoiceStatus(i) === "issued" && isDepositInvoice(i));
 
   let depositsIssuedTtc = 0;
   let depositsPaidTtc = 0;
@@ -2408,8 +2415,8 @@ function renderQuoteDocumentList(container, rows, selectedId) {
       selectedId,
       number: String(quote.number || quote.id || "—"),
       client: String(quote.client_name || "—"),
-      status: t(`quotes.status.${quoteState}`, quoteState),
-      tone: toneByStatus[quoteState] || "neutral",
+      status: quote.historical_import ? t("history.status", "Historique (lecture seule)") : t(`quotes.status.${quoteState}`, quoteState),
+      tone: quote.historical_import ? "neutral" : toneByStatus[quoteState] || "neutral",
       date: formatDocumentListDate(quote.date),
       total: formatDocumentListMoney(quote.total_ttc, quote.currency),
     }));
@@ -2438,7 +2445,10 @@ function renderInvoiceDocumentList(container, rows, selectedId, payments, status
       : t("payments.invoice_status.issued", "Émise");
     let remaining = null;
 
-    if (kind === "credit_note") {
+    if (invoice.historical_import) {
+      tone = "neutral";
+      label = t("history.status", "Historique (lecture seule)");
+    } else if (kind === "credit_note") {
       tone = "credited";
       label = t("documents.credit_note_issued", "Avoir émis");
     } else if (receivable) {
@@ -3313,6 +3323,233 @@ function parseCsv(text, delimiter, hasHeader) {
   }
 
   return { headers, data, delimiter: d };
+}
+
+
+const DOCUMENT_CSV_ALIASES = {
+  number: ["number", "numero", "document_number", "invoice_number", "quote_number", "reference", "ref", "facture", "devis"],
+  date: ["date", "document_date", "invoice_date", "quote_date", "date_document"],
+  client_name: ["client", "client_name", "nom_client", "customer", "customer_name", "acheteur"],
+  total_ttc: ["total_ttc", "ttc", "montant_ttc", "total", "amount", "montant"],
+  total_ht: ["total_ht", "ht", "montant_ht", "subtotal_ht", "net"],
+  total_tva: ["total_tva", "tva", "montant_tva", "vat", "vat_amount"],
+  due_date: ["due_date", "date_echeance", "echeance", "payment_due_date"],
+  valid_until: ["valid_until", "date_validite", "validite"],
+  currency: ["currency", "devise", "monnaie"],
+  description: ["description", "objet", "libelle", "designation"],
+};
+
+function normalizedCsvHeader(value) {
+  return String(value || "")
+    .replace(/^\uFEFF/, "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+}
+
+function documentCsvColumn(headers, field) {
+  const aliases = DOCUMENT_CSV_ALIASES[field] || [];
+  return headers.findIndex((header) => aliases.includes(normalizedCsvHeader(header)));
+}
+
+function documentCsvMoney(value) {
+  let raw = String(value == null ? "" : value).trim().replace(/[\s\u00a0€$£]/g, "");
+  if (!raw) return 0;
+  const comma = raw.lastIndexOf(",");
+  const dot = raw.lastIndexOf(".");
+  if (comma > dot) raw = raw.replace(/\./g, "").replace(",", ".");
+  else if (dot > comma && comma >= 0) raw = raw.replace(/,/g, "");
+  else if (comma >= 0) raw = raw.replace(",", ".");
+  const amount = Number(raw);
+  return Number.isFinite(amount) ? amount : NaN;
+}
+
+function documentCsvDate(value) {
+  const raw = String(value || "").trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+  const match = raw.match(/^(\d{1,2})[/.\-](\d{1,2})[/.\-](\d{4})$/);
+  if (!match) return "";
+  return match[3] + "-" + String(match[2]).padStart(2, "0") + "-" + String(match[1]).padStart(2, "0");
+}
+
+function documentRowsFromCsv(parsed, entity, fileName) {
+  const required = ["number", "date", "client_name", "total_ttc"];
+  const indexes = Object.fromEntries(Object.keys(DOCUMENT_CSV_ALIASES).map((field) => [field, documentCsvColumn(parsed.headers, field)]));
+  const missing = required.filter((field) => indexes[field] < 0);
+  if (missing.length) {
+    const labels = { number: "numéro", date: "date", client_name: "client", total_ttc: "total TTC" };
+    throw new Error(t("import.csv_missing_columns", "Colonnes CSV obligatoires manquantes : {columns}").replace("{columns}", missing.map((field) => labels[field]).join(", ")));
+  }
+  const cell = (row, field) => indexes[field] < 0 ? "" : String(row[indexes[field]] == null ? "" : row[indexes[field]]).trim();
+  const rows = [];
+  const rejected = [];
+  parsed.data.forEach((row, rowIndex) => {
+    const number = cell(row, "number");
+    const date = documentCsvDate(cell(row, "date"));
+    const clientName = cell(row, "client_name");
+    const totalTtc = documentCsvMoney(cell(row, "total_ttc"));
+    const totalVatRaw = cell(row, "total_tva");
+    const totalVat = totalVatRaw ? documentCsvMoney(totalVatRaw) : 0;
+    const totalHtRaw = cell(row, "total_ht");
+    const totalHt = totalHtRaw ? documentCsvMoney(totalHtRaw) : totalTtc - totalVat;
+    if (!number || !date || !clientName || !Number.isFinite(totalTtc) || !Number.isFinite(totalHt) || !Number.isFinite(totalVat)) {
+      rejected.push(rowIndex + 2);
+      return;
+    }
+    const base = {
+      date,
+      client_name: clientName,
+      currency: (cell(row, "currency") || "EUR").toUpperCase().slice(0, 3),
+      status: "historical",
+      historical_import: true,
+      source_csv_name: fileName,
+      imported_at: new Date().toISOString(),
+      subtotal_ht: totalHt,
+      total_ht: totalHt,
+      total_tva: totalVat,
+      total_ttc: totalTtc,
+      lines: [],
+      description: cell(row, "description"),
+    };
+    rows.push(entity === "quotes"
+      ? { ...base, number, valid_until: documentCsvDate(cell(row, "valid_until")) }
+      : { ...base, invoice_number: number, due_date: documentCsvDate(cell(row, "due_date")), type: "final", amount_due: totalTtc });
+  });
+  return { rows, rejected };
+}
+
+async function importItemsCsvFile() {
+  const selected = await window.api.files.pickCsv();
+  if (!selected || selected.canceled) return;
+  const parsed = parseCsv(selected.text || "", "auto", true);
+  const aliases = {
+    ref: ["ref", "reference", "sku", "code"],
+    name: ["name", "nom", "label", "libelle", "designation"],
+    unit_price_ht: ["unit_price_ht", "prix_ht", "prix_unitaire_ht", "price"],
+    tva_percent: ["tva_percent", "tva", "vat", "vat_rate"],
+    item_type: ["item_type", "type", "nature"],
+  };
+  const index = Object.fromEntries(Object.entries(aliases).map(([field, names]) => [field, parsed.headers.findIndex((header) => names.includes(normalizedCsvHeader(header)))]));
+  if (index.ref < 0 || index.name < 0 || index.unit_price_ht < 0) throw new Error("Colonnes obligatoires : référence, nom, prix HT.");
+  const value = (row, field) => index[field] < 0 ? "" : String(row[index[field]] == null ? "" : row[index[field]]).trim();
+  const rows = parsed.data.map((row) => ({
+    ref: value(row, "ref"),
+    name: value(row, "name"),
+    unit_price_ht: documentCsvMoney(value(row, "unit_price_ht")),
+    tva_percent: value(row, "tva_percent") ? documentCsvMoney(value(row, "tva_percent")) : 20,
+    item_type: (value(row, "item_type") || "SERVICE").toUpperCase() === "GOODS" ? "GOODS" : "SERVICE",
+    unit_code: "C62",
+    active: 1,
+  })).filter((row) => row.ref && row.name && Number.isFinite(row.unit_price_ht));
+  if (!rows.length) throw new Error(t("import.csv_no_rows", "Le fichier CSV ne contient aucune ligne exploitable."));
+  const result = await window.api.items.importCsv({ rows, fileName: selected.name || selected.filename || "" });
+  await refreshModule("items");
+  setStatus((result?.imported || 0) + " article(s) importé(s) ; " + (result?.skipped || 0) + " doublon(s) ignoré(s).");
+}
+
+function openDocumentCsvImport(entity) {
+  const modalId = "documentCsvImportModal";
+  const fileInput = $("documentCsvImportFile");
+  const dropzone = $("documentCsvDropzone");
+  const fileName = $("documentCsvFileName");
+  const preview = $("documentCsvPreview");
+  const report = $("documentCsvReport");
+  const analyzeButton = $("documentCsvAnalyzeBtn");
+  const runButton = $("documentCsvRunBtn");
+  if (![fileInput, dropzone, fileName, preview, report, analyzeButton, runButton].every(Boolean)) throw new Error("Interface d’import CSV indisponible.");
+  let selectedFile = null;
+  let importRows = [];
+  const entityLabel = entity === "quotes" ? "devis" : "factures";
+  $("documentCsvImportTitle").textContent = entity === "quotes" ? "Importer des devis historiques CSV" : "Importer des factures historiques CSV";
+  $("documentCsvDropzoneTitle").textContent = "Cliquez pour choisir un fichier CSV";
+  $("documentCsvDropzoneHint").textContent = "ou déposez-le ici · 10 Mo maximum";
+  $("documentCsvExpectedTitle").textContent = "Colonnes reconnues";
+  $("documentCsvExpectedColumns").textContent = "numéro, date, client, total TTC · HT, TVA, échéance et devise sont optionnels";
+  $("documentCsvPreviewTitle").textContent = "Prévisualisation";
+  $("documentCsvReportTitle").textContent = "Rapport";
+  analyzeButton.textContent = "Analyser";
+  runButton.textContent = "Importer";
+
+  const resetAnalysis = () => {
+    importRows = [];
+    preview.textContent = "";
+    report.textContent = "";
+    runButton.disabled = true;
+  };
+  const selectFile = (file) => {
+    resetAnalysis();
+    selectedFile = file || null;
+    if (!selectedFile) { fileName.textContent = ""; return; }
+    if (!/\.csv$/i.test(selectedFile.name) && !/csv|text/i.test(selectedFile.type || "")) {
+      selectedFile = null;
+      fileName.textContent = "";
+      report.textContent = "❌ Utilisez un fichier CSV.";
+      return;
+    }
+    if (selectedFile.size > 10 * 1024 * 1024) {
+      selectedFile = null;
+      fileName.textContent = "";
+      report.textContent = "❌ Le fichier dépasse la taille maximale de 10 Mo.";
+      return;
+    }
+    fileName.textContent = selectedFile.name + " · " + Math.max(1, Math.round(selectedFile.size / 1024)) + " Ko";
+  };
+
+  fileInput.value = "";
+  selectFile(null);
+  dropzone.onclick = () => fileInput.click();
+  fileInput.onchange = () => selectFile(fileInput.files && fileInput.files[0]);
+  dropzone.ondragover = (event) => { event.preventDefault(); dropzone.classList.add("is-dragging"); };
+  dropzone.ondragleave = () => dropzone.classList.remove("is-dragging");
+  dropzone.ondrop = (event) => {
+    event.preventDefault();
+    dropzone.classList.remove("is-dragging");
+    selectFile(event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files[0]);
+  };
+  analyzeButton.onclick = async () => {
+    try {
+      if (!selectedFile) throw new Error("Choisissez ou déposez d’abord un fichier CSV.");
+      const parsed = parseCsv(await selectedFile.text(), "auto", true);
+      const prepared = documentRowsFromCsv(parsed, entity, selectedFile.name);
+      importRows = prepared.rows;
+      if (!importRows.length) throw new Error(t("import.csv_no_rows", "Le fichier CSV ne contient aucune ligne exploitable."));
+      preview.textContent = [
+        importRows.length + " " + entityLabel + " prêt(s) à importer",
+        prepared.rejected.length ? prepared.rejected.length + " ligne(s) ignorée(s) : " + prepared.rejected.join(", ") : "Toutes les lignes sont valides.",
+        "",
+        ...importRows.slice(0, 8).map((row) => (row.number || row.invoice_number) + " · " + row.date + " · " + row.client_name + " · " + Number(row.total_ttc).toFixed(2) + " " + row.currency),
+        ...(importRows.length > 8 ? ["… et " + (importRows.length - 8) + " autre(s)"] : []),
+      ].join("\n");
+      report.textContent = "✅ Analyse terminée. Vérifiez les " + importRows.length + " ligne(s), puis cliquez sur Importer.";
+      runButton.textContent = "Importer " + importRows.length;
+      runButton.disabled = false;
+    } catch (error) {
+      importRows = [];
+      runButton.disabled = true;
+      report.textContent = "❌ " + (error && error.message ? error.message : String(error));
+    }
+  };
+  runButton.onclick = async () => {
+    try {
+      if (!importRows.length) throw new Error("Analysez d’abord le fichier CSV.");
+      runButton.disabled = true;
+      report.textContent = "Import en cours…";
+      const result = await window.api[entity].importCsv({ rows: importRows, fileName: selectedFile ? selectedFile.name : "" });
+      const imported = Number(result && result.imported || 0);
+      const skipped = Number(result && result.skipped || 0);
+      report.textContent = "✅ " + imported + " ligne(s) importée(s) ; " + skipped + " doublon(s) ignoré(s).";
+      await refreshModule(entity);
+      setStatus(imported + " " + entityLabel + " historique(s) importé(s).");
+    } catch (error) {
+      report.textContent = "❌ " + (error && error.message ? error.message : String(error));
+      runButton.disabled = false;
+    }
+  };
+  bindModalClose(modalId);
+  openModal(modalId);
 }
 
 // champs client supportés (mapping)
@@ -4949,6 +5186,18 @@ async function handleAction(actionId, payload) {
         break;
       }
       
+      case "items:importCsv":
+        await importItemsCsvFile();
+        break;
+
+      case "quotes:importCsv":
+        openDocumentCsvImport("quotes");
+        break;
+
+      case "invoices:importCsv":
+        openDocumentCsvImport("invoices");
+        break;
+
       case "clients:importCsv": {
         const id = "clientsImportModal";
         bindModalClose(id); // safe

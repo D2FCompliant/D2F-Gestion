@@ -15,7 +15,7 @@
                  object-src 'none';
                  base-uri 'none'">
 
-  <link rel="stylesheet" href="./styles.css?v=20260717-dashboard-receivables-v214" />
+  <link rel="stylesheet" href="./styles.css?v=20260717-csv-history-v215" />
 </head>
 
 <body>
@@ -1535,12 +1535,12 @@
   </aside>
 
   <script src="./xp-z12-012.js"></script>
-  <script src="./receivables.js?v=20260717-dashboard-receivables-v214"></script>
-  <script src="./audit-ui.js?v=20260717-dashboard-receivables-v214"></script>
-  <script src="./renderer/web-electron-shim.js?v=20260717-dashboard-receivables-v214"></script>
-  <script src="./renderer/web-api-shim.js?v=20260717-dashboard-receivables-v214"></script>
-  <script src="./dashboard-ui.js?v=20260717-dashboard-receivables-v214"></script>
-  <script src="./app.js?v=20260717-dashboard-receivables-v214"></script>
+  <script src="./receivables.js?v=20260717-csv-history-v215"></script>
+  <script src="./audit-ui.js?v=20260717-csv-history-v215"></script>
+  <script src="./renderer/web-electron-shim.js?v=20260717-csv-history-v215"></script>
+  <script src="./renderer/web-api-shim.js?v=20260717-csv-history-v215"></script>
+  <script src="./dashboard-ui.js?v=20260717-csv-history-v215"></script>
+  <script src="./app.js?v=20260717-csv-history-v215"></script>
 
   <div id="clientsImportModal" class="modal" aria-hidden="true">
     <div class="modal__backdrop" data-modal-close></div>
@@ -1603,6 +1603,44 @@
         <button class="btn btn--ghost" type="button" data-modal-close data-i18n="ui.cancel">Annuler</button>
         <button class="btn" type="button" id="clImportAnalyzeBtn" data-i18n="clients.import.analyze">Analyser</button>
         <button class="btn btn--secondary" type="button" id="clImportRunBtn" data-i18n="clients.import.run">Importer</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="documentCsvImportModal" class="modal" aria-hidden="true">
+    <div class="modal__backdrop" data-modal-close></div>
+    <div class="modal__panel documentCsvImportPanel" role="dialog" aria-modal="true" aria-labelledby="documentCsvImportTitle">
+      <div class="modal__header">
+        <div class="modal__title" id="documentCsvImportTitle">Importer un historique CSV</div>
+        <button class="icon-btn" type="button" data-modal-close data-i18n-attr="aria-label:ui.close" aria-label="Fermer">✕</button>
+      </div>
+      <div class="modal__body">
+        <input id="documentCsvImportFile" type="file" accept=".csv,text/csv,text/plain" hidden />
+        <button id="documentCsvDropzone" class="documentCsvDropzone" type="button">
+          <span class="documentCsvDropzone__icon" aria-hidden="true">CSV</span>
+          <strong id="documentCsvDropzoneTitle">Cliquez pour choisir un fichier CSV</strong>
+          <span id="documentCsvDropzoneHint">ou déposez-le ici · 10 Mo maximum</span>
+          <small id="documentCsvFileName"></small>
+        </button>
+        <div class="documentCsvImportHelp">
+          <strong id="documentCsvExpectedTitle">Colonnes reconnues</strong>
+          <span id="documentCsvExpectedColumns">numéro, date, client, total TTC · HT, TVA, échéance et devise sont optionnels</span>
+        </div>
+        <div class="documentCsvImportGrid">
+          <section>
+            <div class="card__title" id="documentCsvPreviewTitle">Prévisualisation</div>
+            <div id="documentCsvPreview" class="auditPre documentCsvPreview"></div>
+          </section>
+          <section>
+            <div class="card__title" id="documentCsvReportTitle">Rapport</div>
+            <div id="documentCsvReport" class="auditPre documentCsvReport" aria-live="polite"></div>
+          </section>
+        </div>
+      </div>
+      <div class="modal__footer">
+        <button class="btn btn--ghost" type="button" data-modal-close data-i18n="ui.cancel">Annuler</button>
+        <button class="btn" type="button" id="documentCsvAnalyzeBtn">Analyser</button>
+        <button class="btn btn--secondary" type="button" id="documentCsvRunBtn" disabled>Importer</button>
       </div>
     </div>
   </div>

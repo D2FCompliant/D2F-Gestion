@@ -26,7 +26,7 @@ test("server-renders the D2F Gestion cockpit", async () => {
   assert.doesNotMatch(html, /codex-preview|Your site is taking shape|react-loading-skeleton/i);
 
   const shell = await readFile(new URL("../app/session-shell.tsx", import.meta.url), "utf8");
-  assert.match(shell, /src="\/erp\/index\.html\?v=20260717-dashboard-receivables-v214"/);
+  assert.match(shell, /src="\/erp\/index\.html\?v=20260717-csv-history-v215"/);
   assert.match(shell, /title="D2F Gestion"/);
 });
 
@@ -37,8 +37,8 @@ test("ships a touch-first smartphone layout", async () => {
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
     readFile(new URL("../public/erp/index.html", import.meta.url), "utf8"),
   ]);
-  assert.match(html, /styles\.css\?v=20260717-dashboard-receivables-v214/);
-  assert.match(html, /app\.js\?v=20260717-dashboard-receivables-v214/);
+  assert.match(html, /styles\.css\?v=20260717-csv-history-v215/);
+  assert.match(html, /app\.js\?v=20260717-csv-history-v215/);
   assert.match(styles, /@media \(max-width: 760px\)/);
   assert.match(styles, /position:fixed;\s*z-index:1000;\s*left:0;\s*right:0;\s*bottom:0/);
   assert.match(styles, /grid-template-columns:minmax\(0,1fr\) minmax\(0,1fr\) !important/);
@@ -387,6 +387,24 @@ test("wires every visible command and enforces the quote lifecycle", async () =>
   assert.match(route, /draft: \["sent", "accepted", "rejected"\]/);
   assert.match(route, /sent: \["accepted", "rejected"\]/);
   assert.match(route, /Transition de devis interdite/);
+});
+
+test("supports click and drop CSV history imports for quotes and invoices", async () => {
+  const [html, app, route, styles] = await Promise.all([
+    readFile(new URL("../public/erp/index.html", import.meta.url), "utf8"),
+    readFile(new URL("../public/erp/app.js", import.meta.url), "utf8"),
+    readFile(new URL("../app/rpc/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../public/erp/styles.css", import.meta.url), "utf8"),
+  ]);
+  assert.match(html, /id="documentCsvImportFile" type="file" accept="\.csv/);
+  assert.match(html, /id="documentCsvDropzone"/);
+  assert.match(app, /case "quotes:importCsv"/);
+  assert.match(app, /case "invoices:importCsv"/);
+  assert.match(app, /dropzone\.ondrop/);
+  assert.match(app, /documentRowsFromCsv/);
+  assert.match(route, /Historical CSV imports are deliberately read-only/);
+  assert.match(route, /historical_import: true/);
+  assert.match(styles, /\.documentCsvDropzone\{/);
 });
 
 test("keeps every command once in an adaptive desktop and mobile action bar", async () => {

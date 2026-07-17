@@ -625,13 +625,15 @@ async function dashboard(ownerEmail: string) {
   const [quotes, invoices, payments, clients] = await Promise.all([
     listRecords(ownerEmail, "quotes"), listRecords(ownerEmail, "invoices"), listRecords(ownerEmail, "payments"), listRecords(ownerEmail, "clients"),
   ]);
-  const quoteCounts = groupCount(quotes, "status");
-  const quoteAmounts = quotes.reduce<Record<string, number>>((acc, quote) => {
+  const operationalQuotes = quotes.filter((record) => record.historical_import !== true);
+  const operationalInvoices = invoices.filter((record) => record.historical_import !== true);
+  const quoteCounts = groupCount(operationalQuotes, "status");
+  const quoteAmounts = operationalQuotes.reduce<Record<string, number>>((acc, quote) => {
     const key = String(quote.status || "draft");
     acc[key] = round2((acc[key] || 0) + numberValue(quote.total_ht));
     return acc;
   }, {});
-  const rows = receivableRows(invoices, payments);
+  const rows = receivableRows(operationalInvoices, payments);
   const todayIso = new Date().toISOString().slice(0, 10);
   const dueLimit = new Date();
   dueLimit.setUTCDate(dueLimit.getUTCDate() + 30);
@@ -657,7 +659,7 @@ async function dashboard(ownerEmail: string) {
   const depositsPaid = round2(deposits.reduce((sum, row) => sum + Math.min(row.netDue, row.paid), 0));
   const depositsOverdue = round2(deposits.filter((row) => overdueRows.includes(row)).reduce((sum, row) => sum + row.remaining, 0));
   const dashboardYear = String(new Date().getFullYear());
-  const yearQuoteCounts = groupCount(quotes.filter((quote) => String(quote.date || "").startsWith(dashboardYear)), "status");
+  const yearQuoteCounts = groupCount(operationalQuotes.filter((quote) => String(quote.date || "").startsWith(dashboardYear)), "status");
   const quoteDecisions = (yearQuoteCounts.accepted || 0) + (yearQuoteCounts.rejected || 0);
   const quoteConversionRate = quoteDecisions ? (yearQuoteCounts.accepted || 0) / quoteDecisions : 0;
   const byMethod = Object.entries(payments.reduce<Record<string, number>>((acc, payment) => {
@@ -670,7 +672,7 @@ async function dashboard(ownerEmail: string) {
   return {
     ok: true,
     currency: "EUR",
-    ca_recognized_ht: recognizedRevenueHt(invoices),
+    ca_recognized_ht: recognizedRevenueHt(operationalInvoices),
     deposits: { total_ttc: depositsTotal, issued_ttc: depositsTotal, paid_ttc: depositsPaid, waiting_ttc: round2(depositsTotal - depositsPaid), overdue_ttc: depositsOverdue },
     quotes: {
       counts: { draft: quoteCounts.draft || 0, sent: quoteCounts.sent || 0, accepted: quoteCounts.accepted || 0, rejected: quoteCounts.rejected || 0, done: (quoteCounts.sent || 0) + (quoteCounts.accepted || 0) + (quoteCounts.rejected || 0) },
@@ -694,7 +696,8 @@ async function dashboardMetrics(ownerEmail: string, yearInput: unknown) {
   const year = numberValue(yearInput) || new Date().getFullYear();
   const [company, invoices, payments] = await Promise.all([getCompany(ownerEmail), listRecords(ownerEmail, "invoices"), listRecords(ownerEmail, "payments")]);
   const months = Array.from({ length: 12 }, (_, index) => `${year}-${String(index + 1).padStart(2, "0")}`);
-  const issued = invoices.filter((item) => invoiceStatus(item) === "issued" && String(item.date || "").startsWith(String(year)));
+  const operationalInvoices = invoices.filter((record) => record.historical_import !== true);
+  const issued = operationalInvoices.filter((item) => invoiceStatus(item) === "issued" && String(item.date || "").startsWith(String(year)));
   const yearPayments = payments.filter((item) => String(item.date || "").startsWith(String(year)));
   const cashMonthly = months.map((ym) => ({ ym, cash_deposit: 0, cash_final: 0, cash_total: round2(yearPayments.filter((item) => String(item.date || "").startsWith(ym)).reduce((sum, item) => sum + paymentSignedAmount(item), 0)) }));
   let running = 0;
@@ -703,13 +706,13 @@ async function dashboardMetrics(ownerEmail: string, yearInput: unknown) {
   const annualTarget = numberValue(company.annual_target_ht || meta.annual_target_ht) || null;
   const targetCumulative = months.map((ym, index) => ({ ym, target_cum: annualTarget ? round2(annualTarget * (index + 1) / 12) : 0 }));
   const cashTotal = round2(yearPayments.reduce((sum, item) => sum + paymentSignedAmount(item), 0));
-  const finalRevenue = recognizedRevenueHt(invoices, String(year));
+  const finalRevenue = recognizedRevenueHt(operationalInvoices, String(year));
   const depositRevenue = round2(issued.filter((item) => invoiceType(item) === "deposit").reduce((sum, item) => sum + numberValue(item.total_ttc), 0));
   return {
     ok: true, currency: "EUR", year,
     target: { annual_target_ht: annualTarget, pct_of_target_revenue_ytd: annualTarget ? Math.min(1, finalRevenue / annualTarget) : 0, cash_ytd: cashTotal, remaining_to_target: annualTarget ? Math.max(0, annualTarget - finalRevenue) : null },
     ytd: { recognized: { ca_recognized_ht_ytd: finalRevenue }, cash: { cash_deposit_ytd: 0, cash_final_ytd: cashTotal, cash_total_ytd: cashTotal }, revenue_issued: { revenue_deposit_ytd: depositRevenue, revenue_final_ytd: finalRevenue, revenue_total_ytd: round2(finalRevenue + depositRevenue) } },
-    series: { cash_monthly: cashMonthly, cash_cumulative: cashCumulative, target_cumulative: targetCumulative, recognized_ht_monthly: months.map((ym) => ({ ym, recognized_ht: recognizedRevenueHt(invoices, ym) })) },
+    series: { cash_monthly: cashMonthly, cash_cumulative: cashCumulative, target_cumulative: targetCumulative, recognized_ht_monthly: months.map((ym) => ({ ym, recognized_ht: recognizedRevenueHt(operationalInvoices, ym) })) },
   };
 }
 
@@ -1038,7 +1041,7 @@ async function conformitySummary(ownerEmail: string, periodInput: JsonRecord = {
   ]);
   const companyData = object(company);
   const connectorData = object(connector);
-  const invoiceRecords = invoices.map(object);
+  const invoiceRecords = invoices.map(object).filter((record) => record.historical_import !== true);
   const paymentRecords = payments.map(object);
   const clientRecords = clients.map(object);
   const inboundRecords = inbound.map(object);
@@ -1384,6 +1387,74 @@ async function dispatch(ownerEmail: string, method: string, args: unknown[], ten
         }
       }
       return removeRecord(ownerEmail, entity, id);
+    }
+    if (entity === "items" && action === "importCsv") {
+      const rows = Array.isArray(object(first(args)).rows) ? object(first(args)).rows.slice(0, 2000).map(object) : [];
+      if (!rows.length) throw new Error("Le fichier CSV ne contient aucune ligne exploitable");
+      const occupied = new Set((await listRecords(ownerEmail, "items")).map((item) => String(item.ref || "").trim().toLowerCase()).filter(Boolean));
+      let imported = 0;
+      let skipped = 0;
+      for (const input of rows) {
+        const ref = String(input.ref || "").trim().slice(0, 120);
+        const name = String(input.name || input.label || "").trim().slice(0, 240);
+        if (!ref || !name || occupied.has(ref.toLowerCase())) { skipped += 1; continue; }
+        await saveRecord(ownerEmail, "items", { ref, name, unit_price_ht: numberValue(input.unit_price_ht), tva_percent: numberValue(input.tva_percent), item_type: input.item_type, unit_code: input.unit_code || "C62", active: 1 });
+        occupied.add(ref.toLowerCase());
+        imported += 1;
+      }
+      return { imported, skipped, total: rows.length };
+    }
+
+    // Historical CSV imports are deliberately read-only and excluded from operational reporting.
+    if ((entity === "quotes" || entity === "invoices") && action === "importCsv") {
+      const payload = object(first(args));
+      const rows = Array.isArray(payload.rows) ? payload.rows.slice(0, 2000).map(object) : [];
+      if (!rows.length) throw new Error("Le fichier CSV ne contient aucune ligne exploitable");
+      const existing = await listRecords(ownerEmail, entity);
+      const numberFor = (record: JsonRecord) => String(entity === "quotes" ? record.number : record.invoice_number || record.number).trim().toLowerCase();
+      const occupied = new Set(existing.map(numberFor).filter(Boolean));
+      let imported = 0;
+      let skipped = 0;
+      for (const input of rows) {
+        const documentNumber = String(entity === "quotes" ? input.number : input.invoice_number || input.number).trim().slice(0, 120);
+        const date = isoDate(input.date);
+        const clientName = String(input.client_name || "").trim().slice(0, 240);
+        const totalTtc = numberValue(input.total_ttc);
+        const key = documentNumber.toLowerCase();
+        if (!documentNumber || !date || !clientName || !Number.isFinite(totalTtc)) continue;
+        if (occupied.has(key)) { skipped += 1; continue; }
+        const totalVat = numberValue(input.total_tva);
+        const totalHt = input.total_ht == null || input.total_ht === "" ? round2(totalTtc - totalVat) : numberValue(input.total_ht);
+        const historical: JsonRecord = {
+          id: crypto.randomUUID(),
+          date,
+          client_name: clientName,
+          currency: String(input.currency || "EUR").toUpperCase().slice(0, 3),
+          status: "historical",
+          historical_import: true,
+          source_csv_name: String(payload.fileName || input.source_csv_name || "").slice(0, 240),
+          imported_at: new Date().toISOString(),
+          description: String(input.description || "").slice(0, 1000),
+          subtotal_ht: totalHt,
+          total_ht: totalHt,
+          total_tva: totalVat,
+          total_ttc: totalTtc,
+          lines: [],
+        };
+        if (entity === "quotes") {
+          historical.number = documentNumber;
+          historical.valid_until = isoDate(input.valid_until);
+        } else {
+          historical.invoice_number = documentNumber;
+          historical.due_date = isoDate(input.due_date);
+          historical.type = "final";
+          historical.amount_due = totalTtc;
+        }
+        await saveRecord(ownerEmail, entity, historical);
+        occupied.add(key);
+        imported += 1;
+      }
+      return { imported, skipped, total: rows.length };
     }
     if (entity === "clients" && action === "importCsv") {
       const rows = Array.isArray(object(first(args)).rows) ? object(first(args)).rows as unknown[] : [];
