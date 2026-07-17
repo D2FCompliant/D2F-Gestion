@@ -4754,6 +4754,11 @@ button.dashManagementKpi:hover{border-color:rgba(99,102,241,.38);transform:trans
 }
 .dashSupportCount{min-width:34px;height:34px;display:grid;place-items:center;border-radius:999px;background:rgba(99,102,241,.1);color:var(--accent);font-weight:950;}
 .dashSupportSummary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:0 0 12px;}
+.dashSupportFilters{display:flex;flex-wrap:wrap;gap:7px;margin:0 0 12px;}
+.dashSupportFilters button{display:flex;align-items:center;gap:7px;min-height:36px;padding:7px 12px;border:1px solid rgba(11,18,32,.12);border-radius:999px;background:#fff;color:var(--muted);font-size:11px;font-weight:850;cursor:pointer;}
+.dashSupportFilters button span{display:grid;place-items:center;min-width:21px;height:21px;padding:0 5px;border-radius:999px;background:#edf1f7;color:var(--text);font-size:10px;}
+.dashSupportFilters button.is-active{border-color:var(--accent);background:rgba(99,102,241,.1);color:var(--accent);box-shadow:0 0 0 2px rgba(99,102,241,.08);}
+.dashSupportFilters button.is-active span{background:var(--accent);color:#fff;}
 .dashSupportSummary>div{min-height:68px;padding:10px 12px;border:1px solid rgba(11,18,32,.08);border-radius:13px;background:#f7f9fc;display:flex;align-items:center;justify-content:space-between;gap:10px;}
 .dashSupportSummary span{color:var(--muted);font-size:11px;font-weight:800;}
 .dashSupportSummary strong{font-size:22px;font-weight:950;}
@@ -4776,6 +4781,7 @@ button.dashManagementKpi:hover{border-color:rgba(99,102,241,.38);transform:trans
 .dashTicket__badges .status-in_progress{color:#176bc1;}
 .dashTicket__badges .status-waiting_customer{color:#8d5700;}
 .dashTicket__badges .status-resolved{color:#17824f;}
+.dashTicket__badges .status-closed{color:#637381;}
 .dashTicket time{display:grid;gap:3px;color:var(--text);font-size:11px;font-weight:800;font-style:normal;}
 .dashTicket time small{font-weight:500;}
 .dashTicket__action{display:flex!important;grid-auto-flow:column!important;align-items:center;justify-content:flex-end;gap:6px!important;color:var(--accent);font-size:11px;font-weight:950;}

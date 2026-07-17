@@ -73,6 +73,7 @@ const MANAGEMENT_COPY = Object.freeze({
     conversion: "Taux de transformation", overdueInvoices: "facture(s) échue(s)", missingDueDate: "sans échéance", decidedQuotes: "devis décidés",
     supportAdmin: "File de traitement des tickets clients", supportCustomer: "Mes demandes D2F", supportLeadAdmin: "Suivez, attribuez, répondez et clôturez les demandes depuis l’interface D2F.",
     supportLeadCustomer: "Suivez les réponses de D2F sans quitter votre tableau de bord.", newTicket: "Ouvrir un ticket",
+    filterActive: "En cours", filterClosed: "Clôturés", filterAll: "Tous", ticketDisplay: "Afficher les tickets", noClosedTickets: "Aucun ticket clôturé.", statusClosed: "Clôturé",
     noTickets: "Aucun ticket actif.", noClientTickets: "Aucun ticket client à traiter.", open: "Ouvrir", viewQueue: "Voir toute la file", handle: "Traiter",
     statusOpen: "Nouveau", statusProgress: "En cours", statusWaiting: "En attente client", statusResolved: "Résolu", priorityUrgent: "Urgent", priorityHigh: "Haute", priorityNormal: "Normale", priorityLow: "Faible",
     requester: "Demandeur", updated: "Dernière activité", due30: "Échéances à 30 jours", invoices: "Voir les factures", quotes: "Voir les devis",
@@ -82,6 +83,7 @@ const MANAGEMENT_COPY = Object.freeze({
     conversion: "Quote conversion", overdueInvoices: "overdue invoice(s)", missingDueDate: "without a due date", decidedQuotes: "decided quotes",
     supportAdmin: "Customer ticket processing queue", supportCustomer: "My D2F requests", supportLeadAdmin: "Track, assign, reply to and close customer requests from D2F.",
     supportLeadCustomer: "Track D2F replies without leaving your dashboard.", newTicket: "Open a ticket",
+    filterActive: "Active", filterClosed: "Closed", filterAll: "All", ticketDisplay: "Display tickets", noClosedTickets: "No closed ticket.", statusClosed: "Closed",
     noTickets: "No active ticket.", noClientTickets: "No customer ticket to process.", open: "Open", viewQueue: "View full queue", handle: "Process",
     statusOpen: "New", statusProgress: "In progress", statusWaiting: "Waiting for customer", statusResolved: "Resolved", priorityUrgent: "Urgent", priorityHigh: "High", priorityNormal: "Normal", priorityLow: "Low",
     requester: "Requester", updated: "Last activity", due30: "Due within 30 days", invoices: "View invoices", quotes: "View quotes",
@@ -91,6 +93,7 @@ const MANAGEMENT_COPY = Object.freeze({
     conversion: "Konverzija ponuda", overdueInvoices: "dospelih faktura", missingDueDate: "bez roka plaćanja", decidedQuotes: "odlučenih ponuda",
     supportAdmin: "Red za obradu klijentskih tiketa", supportCustomer: "Moji D2F zahtevi", supportLeadAdmin: "Pratite, dodelite, odgovorite i zatvorite zahteve iz D2F-a.",
     supportLeadCustomer: "Pratite odgovore D2F-a na kontrolnoj tabli.", newTicket: "Otvori tiket",
+    filterActive: "Aktivni", filterClosed: "Zatvoreni", filterAll: "Svi", ticketDisplay: "Prikaži tikete", noClosedTickets: "Nema zatvorenih tiketa.", statusClosed: "Zatvoren",
     noTickets: "Nema aktivnih tiketa.", noClientTickets: "Nema klijentskih tiketa za obradu.", open: "Otvori", viewQueue: "Prikaži ceo red", handle: "Obradi",
     statusOpen: "Nov", statusProgress: "U radu", statusWaiting: "Čeka klijenta", statusResolved: "Rešen", priorityUrgent: "Hitan", priorityHigh: "Visok", priorityNormal: "Normalan", priorityLow: "Nizak",
     requester: "Podnosilac", updated: "Poslednja aktivnost", due30: "Dospelo za 30 dana", invoices: "Vidi fakture", quotes: "Vidi ponude",
@@ -100,6 +103,7 @@ const MANAGEMENT_COPY = Object.freeze({
     conversion: "Conversione preventivi", overdueInvoices: "fatture scadute", missingDueDate: "senza scadenza", decidedQuotes: "preventivi decisi",
     supportAdmin: "Coda di gestione dei ticket clienti", supportCustomer: "Le mie richieste D2F", supportLeadAdmin: "Seguite, assegnate, rispondete e chiudete le richieste da D2F.",
     supportLeadCustomer: "Seguite le risposte D2F dalla dashboard.", newTicket: "Apri un ticket",
+    filterActive: "In corso", filterClosed: "Chiusi", filterAll: "Tutti", ticketDisplay: "Mostra ticket", noClosedTickets: "Nessun ticket chiuso.", statusClosed: "Chiuso",
     noTickets: "Nessun ticket attivo.", noClientTickets: "Nessun ticket cliente da gestire.", open: "Apri", viewQueue: "Vedi tutta la coda", handle: "Gestisci",
     statusOpen: "Nuovo", statusProgress: "In corso", statusWaiting: "In attesa cliente", statusResolved: "Risolto", priorityUrgent: "Urgente", priorityHigh: "Alta", priorityNormal: "Normale", priorityLow: "Bassa",
     requester: "Richiedente", updated: "Ultima attività", due30: "Scadenze entro 30 giorni", invoices: "Vedi fatture", quotes: "Vedi preventivi",
@@ -109,6 +113,7 @@ const MANAGEMENT_COPY = Object.freeze({
     conversion: "Conversión de presupuestos", overdueInvoices: "facturas vencidas", missingDueDate: "sin vencimiento", decidedQuotes: "presupuestos decididos",
     supportAdmin: "Cola de gestión de tickets de clientes", supportCustomer: "Mis solicitudes D2F", supportLeadAdmin: "Siga, asigne, responda y cierre solicitudes desde D2F.",
     supportLeadCustomer: "Siga las respuestas de D2F desde el panel.", newTicket: "Abrir un ticket",
+    filterActive: "En curso", filterClosed: "Cerrados", filterAll: "Todos", ticketDisplay: "Mostrar tickets", noClosedTickets: "No hay tickets cerrados.", statusClosed: "Cerrado",
     noTickets: "No hay tickets activos.", noClientTickets: "No hay tickets de clientes por tratar.", open: "Abrir", viewQueue: "Ver toda la cola", handle: "Tratar",
     statusOpen: "Nuevo", statusProgress: "En curso", statusWaiting: "Esperando cliente", statusResolved: "Resuelto", priorityUrgent: "Urgente", priorityHigh: "Alta", priorityNormal: "Normal", priorityLow: "Baja",
     requester: "Solicitante", updated: "Última actividad", due30: "Vencimientos en 30 días", invoices: "Ver facturas", quotes: "Ver presupuestos",
@@ -399,6 +404,8 @@ function renderLegacy(data) {
 /* -------------------------------------------------------
    Visuals rendering (metrics format)
 ------------------------------------------------------- */
+let _supportTicketFilter = "active";
+
 function renderVisuals({ legacy, metrics, support }) {
   const visuals = ensureDashboardVisualSlots();
   if (!visuals) return;
@@ -440,29 +447,32 @@ function renderVisuals({ legacy, metrics, support }) {
   const allTickets = Array.isArray(support?.tickets) ? support.tickets : [];
   const priorityOrder = { urgent: 0, high: 1, normal: 2, low: 3 };
   const statusOrder = { open: 0, in_progress: 1, waiting_customer: 2, resolved: 3, closed: 4 };
-  const adminQueue = allTickets
-    .filter((ticket) => String(ticket.ticketScope || "customer") === "customer" && String(ticket.status || "") !== "closed")
-    .sort((left, right) => {
-      const priority = n(priorityOrder[String(left.priority || "normal")], 9) - n(priorityOrder[String(right.priority || "normal")], 9);
-      if (priority) return priority;
-      const status = n(statusOrder[String(left.status || "open")], 9) - n(statusOrder[String(right.status || "open")], 9);
-      if (status) return status;
-      return String(right.updatedAt || "").localeCompare(String(left.updatedAt || ""));
-    });
-  const customerQueue = allTickets.filter((ticket) => String(ticket.status || "") !== "closed");
+  const supportTickets = [...allTickets].sort((left, right) => {
+    const closedDifference = Number(String(left.status || "") === "closed") - Number(String(right.status || "") === "closed");
+    if (closedDifference) return closedDifference;
+    const priority = n(priorityOrder[String(left.priority || "normal")], 9) - n(priorityOrder[String(right.priority || "normal")], 9);
+    if (priority) return priority;
+    const status = n(statusOrder[String(left.status || "open")], 9) - n(statusOrder[String(right.status || "open")], 9);
+    if (status) return status;
+    return String(right.updatedAt || "").localeCompare(String(left.updatedAt || ""));
+  });
+  const openTickets = supportTickets.filter((ticket) => String(ticket.status || "") !== "closed");
+  const closedTickets = supportTickets.filter((ticket) => String(ticket.status || "") === "closed");
+  const filteredTickets = _supportTicketFilter === "closed" ? closedTickets : _supportTicketFilter === "all" ? supportTickets : openTickets;
   const supportCounts = {
-    open: adminQueue.filter((ticket) => String(ticket.status || "") === "open").length,
-    progress: adminQueue.filter((ticket) => String(ticket.status || "") === "in_progress").length,
-    waiting: adminQueue.filter((ticket) => String(ticket.status || "") === "waiting_customer").length,
-    urgent: adminQueue.filter((ticket) => String(ticket.priority || "") === "urgent").length,
+    open: openTickets.filter((ticket) => String(ticket.status || "") === "open").length,
+    progress: openTickets.filter((ticket) => String(ticket.status || "") === "in_progress").length,
+    waiting: openTickets.filter((ticket) => String(ticket.status || "") === "waiting_customer").length,
+    urgent: openTickets.filter((ticket) => String(ticket.priority || "") === "urgent").length,
   };
-  const statusLabels = { open: mt("statusOpen"), in_progress: mt("statusProgress"), waiting_customer: mt("statusWaiting"), resolved: mt("statusResolved") };
+  const statusLabels = { open: mt("statusOpen"), in_progress: mt("statusProgress"), waiting_customer: mt("statusWaiting"), resolved: mt("statusResolved"), closed: mt("statusClosed") };
   const priorityLabels = { urgent: mt("priorityUrgent"), high: mt("priorityHigh"), normal: mt("priorityNormal"), low: mt("priorityLow") };
   const supportSummary = support?.isAdmin ? `<div class="dashSupportSummary" aria-label="${esc(mt("supportAdmin"))}"><div><span>${esc(mt("statusOpen"))}</span><strong>${fmtInt(supportCounts.open)}</strong></div><div><span>${esc(mt("statusProgress"))}</span><strong>${fmtInt(supportCounts.progress)}</strong></div><div><span>${esc(mt("statusWaiting"))}</span><strong>${fmtInt(supportCounts.waiting)}</strong></div><div class="is-urgent"><span>${esc(mt("priorityUrgent"))}</span><strong>${fmtInt(supportCounts.urgent)}</strong></div></div>` : "";
-  const activeTickets = (support?.isAdmin ? adminQueue : customerQueue).slice(0, support?.isAdmin ? 6 : 4);
-  const ticketRows = activeTickets.map((ticket) => {
+  const supportFilters = `<div class="dashSupportFilters" aria-label="${esc(mt("ticketDisplay"))}">${["active", "closed", "all"].map((filter) => `<button type="button" data-support-filter="${filter}" class="${_supportTicketFilter === filter ? "is-active" : ""}">${esc(mt(`filter${filter[0].toUpperCase()}${filter.slice(1)}`))}<span>${fmtInt(filter === "active" ? openTickets.length : filter === "closed" ? closedTickets.length : supportTickets.length)}</span></button>`).join("")}</div>`;
+  const visibleTickets = filteredTickets.slice(0, support?.isAdmin ? 8 : 6);
+  const ticketRows = visibleTickets.map((ticket) => {
     const priority = ["urgent", "high", "normal", "low"].includes(String(ticket.priority)) ? String(ticket.priority) : "normal";
-    const status = ["open", "in_progress", "waiting_customer", "resolved"].includes(String(ticket.status)) ? String(ticket.status) : "open";
+    const status = ["open", "in_progress", "waiting_customer", "resolved", "closed"].includes(String(ticket.status)) ? String(ticket.status) : "open";
     return '<button class="dashTicket priority-' + esc(priority) + '" type="button" data-support-ticket="' + esc(ticket.id) + '">'
       + '<span class="dashTicket__identity"><strong>' + esc(ticket.number) + '</strong><small>' + esc(ticket.companyName || "") + '</small></span>'
       + '<span class="dashTicket__subject"><b>' + esc(ticket.subject) + '</b><small>' + esc(mt("requester")) + ' : ' + esc(ticket.requesterName || ticket.contactEmail || "—") + '</small></span>'
@@ -574,14 +584,21 @@ function renderVisuals({ legacy, metrics, support }) {
     </section>
 
     <section class="card dashSupportCard">
-      <header class="dashSectionHead"><div><div class="card__title">${esc(support?.isAdmin ? mt("supportAdmin") : mt("supportCustomer"))}</div><div class="hint">${esc(support?.isAdmin ? mt("supportLeadAdmin") : mt("supportLeadCustomer"))}</div></div><div><span class="dashSupportCount">${fmtInt(support?.isAdmin ? adminQueue.length : support?.attentionCount || 0)}</span><button type="button" class="dashPrimaryAction" data-support-ticket="">${esc(support?.isAdmin ? mt("viewQueue") : `+  ${mt("newTicket")}`)}</button></div></header>
+      <header class="dashSectionHead"><div><div class="card__title">${esc(support?.isAdmin ? mt("supportAdmin") : mt("supportCustomer"))}</div><div class="hint">${esc(support?.isAdmin ? mt("supportLeadAdmin") : mt("supportLeadCustomer"))}</div></div><div><span class="dashSupportCount">${fmtInt(openTickets.length)}</span><button type="button" class="dashPrimaryAction" data-support-ticket="">${esc(support?.isAdmin ? mt("viewQueue") : `+  ${mt("newTicket")}`)}</button></div></header>
       ${supportSummary}
-      <div class="dashTicketList">${ticketRows || `<p class="dashEmpty">${esc(support?.isAdmin ? mt("noClientTickets") : mt("noTickets"))}</p>`}</div>
+      ${supportFilters}
+      <div class="dashTicketList">${ticketRows || `<p class="dashEmpty">${esc(_supportTicketFilter === "closed" ? mt("noClosedTickets") : mt("noTickets"))}</p>`}</div>
     </section>
   `;
   visuals.onclick = (event) => {
-    const element = event.target instanceof Element ? event.target.closest("[data-open-module], [data-support-ticket]") : null;
+    const element = event.target instanceof Element ? event.target.closest("[data-open-module], [data-support-ticket], [data-support-filter]") : null;
     if (!element) return;
+    const supportFilter = element.getAttribute("data-support-filter");
+    if (supportFilter && ["active", "closed", "all"].includes(supportFilter)) {
+      _supportTicketFilter = supportFilter;
+      renderVisuals({ legacy, metrics, support });
+      return;
+    }
     const moduleName = element.getAttribute("data-open-module");
     if (moduleName) {
       q(`#navModules [data-module="${CSS.escape(moduleName)}"]`)?.click();

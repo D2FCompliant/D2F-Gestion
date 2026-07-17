@@ -26,7 +26,7 @@ test("server-renders the D2F Gestion cockpit", async () => {
   assert.doesNotMatch(html, /codex-preview|Your site is taking shape|react-loading-skeleton/i);
 
   const shell = await readFile(new URL("../app/session-shell.tsx", import.meta.url), "utf8");
-  assert.match(shell, /src="\/erp\/index\.html\?v=20260717-deposit-mode-v215"/);
+  assert.match(shell, /src="\/erp\/index\.html\?v=20260717-support-filters-v215"/);
   assert.match(shell, /title="D2F Gestion"/);
 });
 
@@ -37,8 +37,8 @@ test("ships a touch-first smartphone layout", async () => {
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
     readFile(new URL("../public/erp/index.html", import.meta.url), "utf8"),
   ]);
-  assert.match(html, /styles\.css\?v=20260717-deposit-mode-v215/);
-  assert.match(html, /app\.js\?v=20260717-deposit-mode-v215/);
+  assert.match(html, /styles\.css\?v=20260717-support-filters-v215/);
+  assert.match(html, /app\.js\?v=20260717-support-filters-v215/);
   assert.match(styles, /@media \(max-width: 760px\)/);
   assert.match(styles, /position:fixed;\s*z-index:1000;\s*left:0;\s*right:0;\s*bottom:0/);
   assert.match(styles, /grid-template-columns:minmax\(0,1fr\) minmax\(0,1fr\) !important/);
@@ -642,14 +642,17 @@ test("provides a decision-ready dashboard, monthly revenue and ticket actions", 
   assert.match(dashboard, /recognizedSeries/);
   assert.match(dashboard, /fetchSupportDashboard/);
   assert.match(dashboard, /data-support-ticket/);
-  assert.match(dashboard, /ticket\.ticketScope \|\| "customer"/);
+  assert.match(dashboard, /const openTickets = supportTickets\.filter/);
   assert.match(dashboard, /support\?\.isAdmin \? mt\("viewQueue"\)/);
   assert.match(dashboard, /dashSupportSummary/);
-  assert.match(dashboard, /support\?\.isAdmin \? adminQueue : customerQueue/);
+  assert.match(dashboard, /data-support-filter/);
+  assert.match(dashboard, /_supportTicketFilter === "closed"/);
+  assert.match(dashboard, /const closedTickets = supportTickets\.filter/);
   assert.match(dashboard, /data-open-module="payments"/);
   assert.match(styles, /Management cockpit/);
   assert.match(styles, /\.dashManagementGrid/);
   assert.match(styles, /\.dashSupportSummary/);
+  assert.match(styles, /\.dashSupportFilters/);
   assert.match(shell, /d2f-open-support/);
   assert.match(shell, /initialTicketId=\{supportTicketId\}/);
   assert.match(identifiers, /function frenchSiretValid/);
@@ -699,6 +702,7 @@ test("provides tenant-scoped support tickets with guided level-1 triage and trac
   assert.match(route, /addSupportMessage/);
   assert.match(route, /updateSupportStatus/);
   assert.match(center, /className="support-center"/);
+  assert.match(center, /D2F COMPLIANT · VERSION 2\.1\.5/);
   assert.match(center, /copy\.adminTitle/);
   assert.match(center, /copy\.newInternalTicket/);
   assert.match(center, /supportApi\("PATCH"/);
