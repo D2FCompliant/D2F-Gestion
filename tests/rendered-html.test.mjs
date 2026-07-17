@@ -26,7 +26,7 @@ test("server-renders the D2F Gestion cockpit", async () => {
   assert.doesNotMatch(html, /codex-preview|Your site is taking shape|react-loading-skeleton/i);
 
   const shell = await readFile(new URL("../app/session-shell.tsx", import.meta.url), "utf8");
-  assert.match(shell, /src="\/erp\/index\.html\?v=20260716-company-v14"/);
+  assert.match(shell, /src="\/erp\/index\.html\?v=20260717-reporting-v16"/);
   assert.match(shell, /title="D2F Gestion"/);
 });
 
@@ -37,8 +37,8 @@ test("ships a touch-first smartphone layout", async () => {
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
     readFile(new URL("../public/erp/index.html", import.meta.url), "utf8"),
   ]);
-  assert.match(html, /styles\.css\?v=20260716-company-v14/);
-  assert.match(html, /app\.js\?v=20260716-company-v14/);
+  assert.match(html, /styles\.css\?v=20260717-reporting-v16/);
+  assert.match(html, /app\.js\?v=20260717-reporting-v16/);
   assert.match(styles, /@media \(max-width: 760px\)/);
   assert.match(styles, /position:fixed;\s*z-index:1000;\s*left:0;\s*right:0;\s*bottom:0/);
   assert.match(styles, /grid-template-columns:minmax\(0,1fr\) minmax\(0,1fr\) !important/);
@@ -87,6 +87,7 @@ test("uses independent company columns and compact disclosure sections", async (
   assert.match(html, /class="companySecondaryStack"/);
   assert.match(html, /<details class="card companyTermsCard companyDisclosureCard">/);
   assert.match(html, /<details class="card integrationCard companyDisclosureCard" id="company-einvoice-card">/);
+  assert.match(html, /id="company-reporting-card"/);
   assert.match(html, /<details class="card integrationCard companyArchiveCard companyDisclosureCard">/);
   assert.match(html, /id="co-meta-json" rows="3"/);
   assert.match(html, /id="co-cgv-text" rows="4"/);
@@ -96,6 +97,40 @@ test("uses independent company columns and compact disclosure sections", async (
   assert.match(styles, /\.companyDisclosureCard\[open\] > \.companySectionSummary::after\{ content:"−"; \}/);
   assert.match(styles, /\.companyPrimaryStack,[\s\S]*?display:contents/);
   assert.match(styles, /page\[data-page="company"\] \.companyBrandingCard \.upload\{[\s\S]*?flex-direction:row/);
+});
+
+test("uses country-aware regulatory workspaces and fails closed without a qualified adapter", async () => {
+  const [html, app, route, integrations, styles, ...dictionarySources] = await Promise.all([
+    readFile(new URL("../public/erp/index.html", import.meta.url), "utf8"),
+    readFile(new URL("../public/erp/app.js", import.meta.url), "utf8"),
+    readFile(new URL("../app/rpc/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../lib/integrations.ts", import.meta.url), "utf8"),
+    readFile(new URL("../public/erp/styles.css", import.meta.url), "utf8"),
+    ...["fr", "en", "sr", "it", "es"].map((locale) => readFile(new URL(`../renderer/i18n/${locale}.json`, import.meta.url), "utf8")),
+  ]);
+  assert.match(html, /id="company-reporting-card"/);
+  assert.match(html, /id="cf-obligations"/);
+  assert.match(html, /id="cf-transmissions"/);
+  assert.match(html, /id="cf-pa-reporting-submit-path"/);
+  assert.doesNotMatch(html, /id="cf-scope"|id="cf-kpi-flux8"|id="cf-ai-chat"/);
+  assert.match(app, /REPORTING_PROFILE_UI/);
+  assert.match(app, /cfLoadOperationalReport/);
+  assert.match(route, /fr_structured_invoice_data_8_9/);
+  assert.match(route, /fr_b2c_payments_10_4/);
+  assert.match(route, /rs_foreign_vat_records/);
+  assert.match(route, /it_cross_border/);
+  assert.match(route, /es_verifactu_records/);
+  assert.match(route, /D2F_REGULATORY_BATCH_V1/);
+  assert.match(route, /Transmission bloquée : la recette métier/);
+  assert.doesNotMatch(route, /const flux8 = issued\.filter|const flux9 = issued\.filter|type: "e-reporting"/);
+  assert.match(integrations, /reporting_adapter_qualified/);
+  assert.match(styles, /\.reportingKpis/);
+  for (const source of dictionarySources) {
+    const dictionary = JSON.parse(source);
+    assert.ok(dictionary["reporting.profile.fr.title"]);
+    assert.ok(dictionary["reporting.profile.rs.title"]);
+    assert.ok(dictionary["reporting.obligation.rs_foreign_vat_records.description"]);
+  }
 });
 
 test("keeps Supabase access tenant-scoped and server-side", async () => {
@@ -306,11 +341,38 @@ test("wires every visible command and enforces the quote lifecycle", async () =>
   assert.match(app, /list__item--rejected/);
   assert.match(app, /\["draft", "sent"\]\.includes\(canonicalQuoteStatus/);
   assert.match(app, /if \(state\.currentModule === "quotes"\) renderToolbar\("quotes"\)/);
-  assert.match(app, /setButtonDisabled\(acceptBtn, !canDecide\)/);
-  assert.match(app, /setButtonDisabled\(rejectBtn, !canDecide\)/);
+  assert.match(app, /\["quotes:accept", "quotes:reject"\]\.includes\(actionId\)/);
+  assert.match(app, /return \["quotes:accept", "quotes:reject"\]/);
   assert.match(route, /draft: \["sent", "accepted", "rejected"\]/);
   assert.match(route, /sent: \["accepted", "rejected"\]/);
   assert.match(route, /Transition de devis interdite/);
+});
+
+test("keeps every command once in an adaptive desktop and mobile action bar", async () => {
+  const [html, app, styles, portalStyles] = await Promise.all([
+    readFile(new URL("../public/erp/index.html", import.meta.url), "utf8"),
+    readFile(new URL("../public/erp/app.js", import.meta.url), "utf8"),
+    readFile(new URL("../public/erp/styles.css", import.meta.url), "utf8"),
+    readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
+  ]);
+
+  for (const action of ["clients:new", "clients:importCsv", "items:new", "quotes:new", "invoices:new", "inbound:refresh", "inbound:import"]) {
+    assert.equal(Array.from(html.matchAll(new RegExp(`data-action="${action}"`, "g"))).length, 0, `${action} is duplicated outside the toolbar`);
+  }
+  for (const action of ["payments:record", "company:chooseLogo", "company:clearLogo"]) {
+    assert.equal(Array.from(html.matchAll(new RegExp(`data-action="${action}"`, "g"))).length, 1, `${action} must have one contextual entry point`);
+  }
+
+  assert.match(app, /function toolbarDirectActionIds\(moduleKey\)/);
+  assert.match(app, /className = "toolbarMore"/);
+  assert.match(app, /className = "toolbarMore__menu"/);
+  assert.match(styles, /D2F 2026 light interface/);
+  assert.match(styles, /\.toolbarMore__menu\s*\{/);
+  assert.match(styles, /@media \(max-width:760px\)[\s\S]*\.toolbarMore__text\{ display:none; \}/);
+  assert.match(portalStyles, /D2F 2026 light portal/);
+  assert.match(portalStyles, /\.account-bar\{[\s\S]*background:#fff;/);
+  const navigation = html.match(/<nav class="nav" id="navModules">([\s\S]*?)<\/nav>/)?.[1] || "";
+  assert.doesNotMatch(navigation, /[🏢📊👥🧩📝🧾💳📥🚀✅📜]/u);
 });
 
 test("country-aware structured export fails closed and client PEPPOL lookup is available", async () => {

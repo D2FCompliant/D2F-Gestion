@@ -193,8 +193,6 @@ const MODULES = {
     desc: "Paramètres de l’entreprise émettrice + branding PDF.",
     actions: [
       { id: "company:save", i18n: "Enregistrer", variant: "primary" },
-      { id: "company:chooseLogo", i18n: "Logo…", variant: "secondary" },
-      { id: "company:clearLogo", i18n: "Retirer logo", variant: "ghost" },
     ],
   },
 
@@ -211,7 +209,6 @@ const MODULES = {
     desc: "Enregistrer un paiement sur une facture sélectionnée (total ou partiel).",
     actions: [
       { id: "payments:refresh", i18n: "Rafraîchir", variant: "secondary" },
-      { id: "payments:record", i18n: "Enregistrer paiement", variant: "primary" },
     ],
   },
 
@@ -285,14 +282,14 @@ const MODULES = {
 },
 
   conformity: {
-  title: "Conformité",
-  desc: "E-reporting : préparation, envoi, statuts, erreurs.",
+  title: "Déclarations",
+  desc: "Obligations réglementaires, transmissions et accusés de réception selon le pays.",
   actions: [
     { id: "conformity:refresh", i18n: "Rafraîchir", variant: "secondary" },
-    { id: "conformity:sendNow", i18n: "Envoyer maintenant", variant: "primary" },
+    { id: "conformity:sendNow", i18n: "Transmettre les dossiers prêts", variant: "primary" },
     { id: "conformity:openQueue", i18n: "File d’envoi", variant: "ghost" },
-    { id: "conformity:rebuildPeriod", i18n: "Recalculer la période", variant: "ghost" },
-    { id: "conformity:settings", i18n: "Paramètres réforme", variant: "secondary" },
+    { id: "conformity:rebuildPeriod", i18n: "Préparer la période", variant: "secondary" },
+    { id: "conformity:settings", i18n: "Paramètres entreprise", variant: "secondary" },
   ],
 },
 
@@ -612,25 +609,15 @@ function renderToolbar(moduleKey) {
 
   /* ----------------- Language selector ----------------- */
   const langWrap = document.createElement("div");
-  langWrap.style.display = "inline-flex";
-  langWrap.style.alignItems = "center";
-  langWrap.style.gap = "8px";
-  langWrap.style.marginRight = "12px";
+  langWrap.className = "toolbarLanguage";
 
   const langLabel = document.createElement("span");
   langLabel.className = "toolbar__langLabel";
   langLabel.textContent = t("toolbar.language", t("toolbar.lang", "Langue"));
-  langLabel.style.opacity = "0.75";
-  langLabel.style.fontSize = "12px";
 
   const langSel = document.createElement("select");
   langSel.id = "toolbarLangSelect";
-  langSel.style.height = "32px";
-  langSel.style.borderRadius = "10px";
-  langSel.style.padding = "0 10px";
-  langSel.style.border = "1px solid rgba(255,255,255,0.15)";
-  langSel.style.background = "transparent";
-  langSel.style.color = "inherit";
+  langSel.className = "toolbarLanguage__select";
 
   const curLang = state.lang || getLang();
   for (const l of LANGS) {
@@ -676,114 +663,141 @@ function renderToolbar(moduleKey) {
   const cfg = MODULES[moduleKey];
   if (!cfg) return;
 
+  const actions = [...(cfg.actions || [])];
+  if (moduleKey === "quotes") {
+    actions.unshift(
+      { id: "quotes:accept", i18n: "action.accept", fallback: "Accepter", variant: "primary" },
+      { id: "quotes:reject", i18n: "action.reject", fallback: "Refuser", variant: "danger" },
+    );
+  }
+
+  const directIds = toolbarDirectActionIds(moduleKey);
+  const directActions = actions.filter((action) => directIds.includes(action.id));
+  const overflowActions = actions.filter((action) => !directIds.includes(action.id));
+
+  for (const action of directActions) {
+    elToolbar.appendChild(createToolbarActionButton(action, moduleKey));
+  }
+
+  if (overflowActions.length) {
+    const overflow = document.createElement("details");
+    overflow.className = "toolbarMore";
+
+    const trigger = document.createElement("summary");
+    trigger.className = "btn btn--secondary toolbarMore__trigger";
+    trigger.setAttribute("aria-label", t("toolbar.more_actions", "Plus d’actions"));
+    const triggerIcon = document.createElement("span");
+    triggerIcon.className = "toolbarMore__icon";
+    triggerIcon.setAttribute("aria-hidden", "true");
+    triggerIcon.textContent = "⋯";
+    const triggerText = document.createElement("span");
+    triggerText.className = "toolbarMore__text";
+    triggerText.textContent = t("toolbar.more_actions", "Plus d’actions");
+    trigger.appendChild(triggerIcon);
+    trigger.appendChild(triggerText);
+    overflow.appendChild(trigger);
+
+    const menu = document.createElement("div");
+    menu.className = "toolbarMore__menu";
+    menu.setAttribute("role", "menu");
+
+    for (const action of overflowActions) {
+      const button = createToolbarActionButton(action, moduleKey, true);
+      button.setAttribute("role", "menuitem");
+      button.addEventListener("click", () => overflow.removeAttribute("open"));
+      menu.appendChild(button);
+    }
+
+    overflow.appendChild(menu);
+    elToolbar.appendChild(overflow);
+  }
+}
+
+function toolbarDirectActionIds(moduleKey) {
+  if (moduleKey === "quotes") {
+    const hasId = !!state.quoteDraft?.id;
+    const status = canonicalQuoteStatus(state.quoteDraft);
+    if (hasId && status === "sent") return ["quotes:accept", "quotes:reject"];
+    if (hasId && status === "accepted") return ["quotes:toFinalInvoice", "quotes:toInvoice"];
+    if (hasId && status === "draft") return ["quotes:save", "quotes:issue"];
+    return ["quotes:save", "quotes:new"];
+  }
+
+  if (moduleKey === "invoices") {
+    if (state.invoiceDraft?.id && isDraftInvoice()) return ["invoices:save", "invoices:issue"];
+    if (state.invoiceDraft?.id) return ["invoices:toCreditNote", "invoices:recordPayment"];
+    return ["invoices:save", "invoices:new"];
+  }
+
+  if (moduleKey === "inbound" && state.selectedInboundId && canDecideInbound(state.inboundDoc)) {
+    return ["inbound:accept", "inbound:reject"];
+  }
+
+  return {
+    company: ["company:save"],
+    dashboard: ["dashboard:refresh"],
+    payments: ["payments:refresh"],
+    clients: ["clients:save", "clients:new"],
+    items: ["items:save", "items:new"],
+    inbound: ["inbound:refresh", "inbound:import"],
+    conformity: ["conformity:rebuildPeriod", "conformity:sendNow"],
+  }[moduleKey] || [];
+}
+
+function createToolbarActionButton(action, moduleKey, inOverflow = false) {
+  const button = document.createElement("button");
+  button.className = inOverflow
+    ? `toolbarMore__item${action.variant === "danger" ? " toolbarMore__item--danger" : ""}`
+    : buttonClass(action.variant);
+  button.type = "button";
+  button.textContent = resolveActionLabel(action);
+  button.dataset.action = action.id;
+  setButtonDisabled(button, isToolbarActionDisabled(action.id, moduleKey));
+  return button;
+}
+
+function isToolbarActionDisabled(actionId, moduleKey) {
   if (moduleKey === "quotes") {
     const hasId = !!state.quoteDraft?.id;
     const quoteState = canonicalQuoteStatus(state.quoteDraft);
     const isDraft = quoteState === "draft";
-    const isSent = hasId && quoteState === "sent";
-    const canDecide = hasId && (isDraft || isSent);
+    const canDecide = hasId && (isDraft || quoteState === "sent");
     const isAccepted = hasId && quoteState === "accepted";
-
-    const acceptBtn = document.createElement("button");
-    acceptBtn.className = "btn";
-    acceptBtn.type = "button";
-    acceptBtn.textContent = t("action.accept", "Accepter");
-    acceptBtn.dataset.action = "quotes:accept";
-    setButtonDisabled(acceptBtn, !canDecide);
-    elToolbar.appendChild(acceptBtn);
-
-    const rejectBtn = document.createElement("button");
-    rejectBtn.className = "btn btn--ghost";
-    rejectBtn.type = "button";
-    rejectBtn.textContent = t("action.reject", "Refuser");
-    rejectBtn.dataset.action = "quotes:reject";
-    setButtonDisabled(rejectBtn, !canDecide);
-    elToolbar.appendChild(rejectBtn);
-
-    for (const a of cfg.actions || []) {
-      // évite doublon si tu as déjà ces actions dans MODULES
-      if (a.id === "quotes:accept" || a.id === "quotes:reject") continue;
-
-      const b = document.createElement("button");
-      b.className = buttonClass(a.variant);
-      b.type = "button";
-      b.textContent = resolveActionLabel(a);
-      b.dataset.action = a.id;
-
-      if (a.id === "quotes:delete" || a.id === "quotes:remove") {
-        setButtonDisabled(b, !hasId || !isDraft);
-      }
-      if (a.id === "quotes:save" || a.id === "quotes:update") {
-        setButtonDisabled(b, hasId && !isDraft);
-      }
-      if (a.id === "quotes:issue") {
-        setButtonDisabled(b, hasId && !isDraft);
-      }
-      if (["quotes:toDepositInvoice", "quotes:toFinalInvoice", "quotes:toInvoice"].includes(a.id)) {
-        setButtonDisabled(b, !isAccepted);
-      }
-
-      elToolbar.appendChild(b);
-    }
-    return;
+    if (["quotes:accept", "quotes:reject"].includes(actionId)) return !canDecide;
+    if (["quotes:delete", "quotes:remove"].includes(actionId)) return !hasId || !isDraft;
+    if (["quotes:save", "quotes:update"].includes(actionId)) return hasId && !isDraft;
+    if (actionId === "quotes:issue") return hasId && !isDraft;
+    if (["quotes:toDepositInvoice", "quotes:toFinalInvoice", "quotes:toInvoice"].includes(actionId)) return !isAccepted;
   }
 
-  for (const a of cfg.actions || []) {
-    const b = document.createElement("button");
-    b.className = buttonClass(a.variant);
-    b.type = "button";
-    b.textContent = resolveActionLabel(a);
-    b.dataset.action = a.id;
-
-    // invoices
-    if (a.id === "invoices:delete") {
-      const disabled = !(state.invoiceDraft?.id && isDraftInvoice());
-      setButtonDisabled(b, disabled);
-    }
-    if (a.id === "invoices:save") {
-      const disabled = state.invoiceDraft?.id && !isDraftInvoice();
-      setButtonDisabled(b, disabled);
-    }
-    if (a.id === "invoices:issue") {
-      const disabled = !(state.invoiceDraft?.id && isDraftInvoice());
-      setButtonDisabled(b, disabled);
-    }
-    if (a.id === "invoices:toCreditNote") {
+  if (moduleKey === "invoices") {
+    if (actionId === "invoices:delete") return !(state.invoiceDraft?.id && isDraftInvoice());
+    if (actionId === "invoices:save") return !!state.invoiceDraft?.id && !isDraftInvoice();
+    if (actionId === "invoices:issue") return !(state.invoiceDraft?.id && isDraftInvoice());
+    if (actionId === "invoices:toCreditNote") {
       const has = !!state.invoiceDraft?.id;
-      const st = String(state.invoiceDraft?.status || "draft").toLowerCase();
-      const disabled = !has || st === "draft";
-      setButtonDisabled(b, disabled);
+      return !has || String(state.invoiceDraft?.status || "draft").toLowerCase() === "draft";
     }
-    if (a.id === "invoices:recordPayment") {
-      const disabled = !state.invoiceDraft?.id;
-      setButtonDisabled(b, disabled);
-    }
-
-    // inbound
-    if (a.id === "inbound:accept" || a.id === "inbound:reject") {
-      const disabled = !state.selectedInboundId || !canDecideInbound(state.inboundDoc);
-      setButtonDisabled(b, disabled);
-    }
-    if (a.id === "inbound:dispute") {
-      const disabled = !state.selectedInboundId || !canDecideInbound(state.inboundDoc);
-      setButtonDisabled(b, disabled);
-    }
-    if (a.id === "inbound:delete") {
-      const d = state.inboundDoc ? normalizeInbound(state.inboundDoc) : null;
-      const canDelete = !!state.selectedInboundId && d && INBOUND_DELETABLE_STATUSES.has(d.status);
-      setButtonDisabled(b, !canDelete);
-    }
-    if (a.id === "inbound:exportXml") {
-      const disabled = !state.selectedInboundId || !window.api?.inbound?.exportXml;
-      setButtonDisabled(b, disabled);
-    }
-    if (a.id === "inbound:exportPdf") {
-      const disabled = !state.selectedInboundId || !window.api?.inbound?.exportPdf;
-      setButtonDisabled(b, disabled);
-    }
-
-    elToolbar.appendChild(b);
+    if (actionId === "invoices:recordPayment") return !state.invoiceDraft?.id;
   }
+
+  if (moduleKey === "inbound") {
+    if (["inbound:accept", "inbound:reject", "inbound:dispute"].includes(actionId)) {
+      return !state.selectedInboundId || !canDecideInbound(state.inboundDoc);
+    }
+    if (actionId === "inbound:delete") {
+      const document = state.inboundDoc ? normalizeInbound(state.inboundDoc) : null;
+      return !(state.selectedInboundId && document && INBOUND_DELETABLE_STATUSES.has(document.status));
+    }
+    if (actionId === "inbound:exportXml") return !state.selectedInboundId || !window.api?.inbound?.exportXml;
+    if (actionId === "inbound:exportPdf") return !state.selectedInboundId || !window.api?.inbound?.exportPdf;
+  }
+
+  if (moduleKey === "conformity" && actionId === "conformity:sendNow") {
+    return !state.regulatoryReport?.configuration?.ready || Number(state.regulatoryReport?.summary?.ready || 0) < 1;
+  }
+
+  return false;
 }
 
 function showPage(key) {
@@ -840,15 +854,15 @@ const state = {
 
   // PATCH E-INVOICING / E-REPORTING (STATE)
   conformity: {
-    scope: "FR",
-    periodicity: "M", // D | M | B (plus Q/A)
-    archiving: "ON",
-    platform: "",
-    next_due: "",
+    reporting_periodicity: "M",
     emits_b2c: 0,
     has_international: 0,
-    kpis: { flux8: 0, flux9: 0, flux10: 0 }, 
+    vat_on_collections: 0,
+    retail_fiscalization: 0,
+    spain_sii: 0,
+    spain_mode: "VERIFACTU",
   },
+  regulatoryReport: null,
   
   clients: [],
   selectedClientId: null,
@@ -2362,61 +2376,32 @@ function cfSetHint(id, txt) {
   if (el) el.textContent = txt || "—";
 }
 
-function cfPushChat(role, text) {
-  const box = $("cf-ai-chat");
-  if (!box) return;
-  const wrap = document.createElement("div");
-  wrap.style.margin = "8px 0";
-  wrap.style.opacity = role === "user" ? "0.95" : "1";
-  wrap.innerHTML = `
-    <div style="font-size:12px;opacity:.7;margin-bottom:2px;">${role === "user" ? t("conformity.chat.you", "Vous") : t("conformity.chat.agent", "Agent")}</div>
-    <div style="line-height:1.35;white-space:pre-wrap;">${text}</div>
-  `;
-  box.appendChild(wrap);
-  box.scrollTop = box.scrollHeight;
-}
-
 function cfNormalizeConfig(cfg = {}) {
-  // Valeurs par défaut (adaptées à ton UI)
   return {
-    scope: cfg.scope ?? "FR",               // FR | INTL
-    periodicity: cfg.periodicity ?? "M",    // D | M | B
-    archiving: cfg.archiving ?? "ON",       // ON | OFF
-    platform: cfg.platform ?? "",           // PA | OTHER
-    next_due: cfg.next_due ?? "",           // yyyy-mm-dd
-    emits_b2c: String(cfg.emits_b2c ?? cfg.emitsB2c ?? 0),            // "0"|"1"
-    has_international: String(cfg.has_international ?? cfg.hasInternational ?? 0) // "0"|"1"
+    ...cfg,
+    reporting_periodicity: ["M", "Q"].includes(String(cfg.reporting_periodicity || cfg.periodicity || "M").toUpperCase())
+      ? String(cfg.reporting_periodicity || cfg.periodicity || "M").toUpperCase()
+      : "M",
+    emits_b2c: String(cfg.emits_b2c ?? cfg.emitsB2c ?? 0) === "1" ? 1 : 0,
+    has_international: String(cfg.has_international ?? cfg.hasInternational ?? 0) === "1" ? 1 : 0,
+    vat_on_collections: String(cfg.vat_on_collections ?? cfg.cash_vat ?? 0) === "1" ? 1 : 0,
+    retail_fiscalization: String(cfg.retail_fiscalization ?? cfg.fiscal_device ?? 0) === "1" ? 1 : 0,
+    spain_sii: String(cfg.spain_sii ?? 0) === "1" ? 1 : 0,
+    spain_mode: String(cfg.spain_mode || "VERIFACTU").toUpperCase() === "NO_VERIFACTU" ? "NO_VERIFACTU" : "VERIFACTU",
   };
 }
 
-function cfComputeEligibility(cfg) {
-  // Règles simples (tu peux enrichir)
-  // En général : concerné si opérations B2C et/ou international (et B2B non domestique selon cas),
-  // ici on donne un diagnostic pédagogique.
-  const emitsB2c = cfg.emits_b2c === "1";
-  const intl = cfg.has_international === "1" || cfg.scope === "INTL";
-  const platformOk = !!cfg.platform;
+const REPORTING_PROFILE_UI = {
+  FR: { code: "FR-PA", title: "France — Facturation électronique et e-reporting", titleKey: "reporting.profile.fr.title", summaryKey: "reporting.profile.fr.summary", summary: "Flux de facturation structurée et données de transactions ou d’encaissements remis à une Plateforme Agréée." },
+  RS: { code: "RS-SEF", title: "Serbie — SEF, TVA électronique et fiscalisation", titleKey: "reporting.profile.rs.title", summaryKey: "reporting.profile.rs.summary", summary: "Factures SEF, écritures TVA électroniques et tickets transmis par un dispositif fiscal agréé distinct." },
+  IT: { code: "IT-SDI", title: "Italie — SdI et transmissions fiscales", titleKey: "reporting.profile.it.title", summaryKey: "reporting.profile.it.summary", summary: "Factures via SdI, corrispettivi telematici et opérations transfrontalières selon le profil italien." },
+  ES: { code: "ES-AEAT", title: "Espagne — AEAT, VERI*FACTU et SII", titleKey: "reporting.profile.es.title", summaryKey: "reporting.profile.es.summary", summary: "Registres de facturation VERI*FACTU ou sécurisés, et livres SII lorsque l’entreprise y est soumise." },
+  DEFAULT: { code: "EN16931", title: "Déclarations nationales à qualifier", titleKey: "reporting.profile.default.title", summaryKey: "reporting.profile.default.summary", summary: "Aucun profil de déclaration validé n’est disponible pour le pays déclaré." },
+};
 
-  const concerned = emitsB2c || intl; // simplifié
-  const reasons = [];
-  if (emitsB2c) reasons.push(t("conformity.reason.b2c", "Vous émettez du B2C (flux e-reporting requis)."));
-  if (intl) reasons.push(t("conformity.reason.intl", "Vous avez des opérations internationales (flux e-reporting requis)."));
-  if (!emitsB2c && !intl) reasons.push(t("conformity.reason.none", "A priori moins concerné par le e-reporting (cas B2B domestique pur)."));
-
-  const warnings = [];
-  if (!platformOk) warnings.push(t("conformity.warning.platform", "Plateforme non choisie (PA, OTHER)."));
-  if (!cfg.periodicity) warnings.push(t("conformity.warning.periodicity", "Périodicité manquante."));
-
-  return { concerned, reasons, warnings };
-}
-
-function cfMissingFields(cfg) {
-  const missing = [];
-  if (!cfg.scope) missing.push(t("conformity.scope.label", "Périmètre"));
-  if (!cfg.periodicity) missing.push(t("conformity.periodicity.label", "Périodicité"));
-  if (!cfg.archiving) missing.push(t("conformity.archiving.label", "Archivage"));
-  if (!cfg.platform) missing.push(t("conformity.platform.label", "Plateforme"));
-  return missing;
+function reportingProfileUi(countryValue) {
+  const country = companyCountryCode(countryValue);
+  return { country, ...(REPORTING_PROFILE_UI[country] || REPORTING_PROFILE_UI.DEFAULT) };
 }
 
 const integrationFields = {
@@ -2424,7 +2409,9 @@ const integrationFields = {
     provider: "cf-pa-provider-name", base: "cf-pa-base-url", auth: "cf-pa-auth-type", secret: "cf-pa-secret",
     authHeader: "cf-pa-auth-header",
     health: "cf-pa-health-path", submit: "cf-pa-submit-path", environment: "cf-pa-environment", publicId: "cf-pa-public-id",
-    routingId: "cf-pa-routing-id", routingEmail: "cf-pa-routing-email", enabled: "cf-pa-enabled", status: "cf-pa-status", save: "cf-pa-save", test: "cf-pa-test",
+    routingId: "cf-pa-routing-id", routingEmail: "cf-pa-routing-email", reportingSubmit: "cf-pa-reporting-submit-path",
+    reportingEnabled: "cf-pa-reporting-enabled", reportingQualified: "cf-pa-reporting-qualified",
+    enabled: "cf-pa-enabled", status: "cf-pa-status", save: "cf-pa-save", test: "cf-pa-test",
   },
   archive: {
     provider: "cf-archive-provider-name", base: "cf-archive-base-url", auth: "cf-archive-auth-type", secret: "cf-archive-secret",
@@ -2458,6 +2445,10 @@ function integrationPayload(type) {
     public_identifier: ids.publicId ? ($(ids.publicId)?.value?.trim() || "") : undefined,
     routing_id: ids.routingId ? ($(ids.routingId)?.value?.trim() || "") : undefined,
     routing_email: ids.routingEmail ? ($(ids.routingEmail)?.value?.trim() || "") : undefined,
+    reporting_submit_path: ids.reportingSubmit ? ($(ids.reportingSubmit)?.value?.trim() || "") : undefined,
+    reporting_enabled: ids.reportingEnabled ? !!$(ids.reportingEnabled)?.checked : undefined,
+    reporting_adapter_qualified: ids.reportingQualified ? !!$(ids.reportingQualified)?.checked : undefined,
+    reporting_adapter_contract: ids.reportingEnabled ? "D2F_REGULATORY_BATCH_V1" : undefined,
     enabled: !!$(ids.enabled)?.checked,
   };
 }
@@ -2478,6 +2469,9 @@ async function loadIntegrationForm(type) {
     if ($(ids.publicId)) $(ids.publicId).value = cfg?.public_identifier || "";
     if ($(ids.routingId)) $(ids.routingId).value = cfg?.routing_id || "";
     if ($(ids.routingEmail)) $(ids.routingEmail).value = cfg?.routing_email || "";
+    if ($(ids.reportingSubmit)) $(ids.reportingSubmit).value = cfg?.reporting_submit_path || "";
+    if ($(ids.reportingEnabled)) $(ids.reportingEnabled).checked = !!cfg?.reporting_enabled;
+    if ($(ids.reportingQualified)) $(ids.reportingQualified).checked = !!cfg?.reporting_adapter_qualified;
     if ($(ids.enabled)) $(ids.enabled).checked = !!cfg?.enabled;
     if ($(ids.secret)) $(ids.secret).value = "";
     state.integrationConfigs = { ...(state.integrationConfigs || {}), [type]: cfg || {} };
@@ -2523,102 +2517,134 @@ function bindIntegrationForms() {
     $(ids.save)?.addEventListener("click", () => saveIntegrationForm(type).catch((error) => integrationStatus(type, error.message, true)));
     $(ids.test)?.addEventListener("click", () => testIntegrationForm(type));
   }
+  $("co-reporting-save")?.addEventListener("click", () => cfSaveCompanyReportingConfig().catch((error) => {
+    if ($("co-reporting-status")) $("co-reporting-status").textContent = error.message;
+  }));
 }
 
 async function cfLoadToForm() {
   bindIntegrationForms();
+  if (!state.company && window.api?.company?.get) state.company = await window.api.company.get();
   await Promise.all([loadIntegrationForm("pa"), loadIntegrationForm("archive")]);
-  const raw = await window.api.conformity.getConfig();
+  return cfLoadCompanyReportingConfig();
+}
+
+async function cfLoadCompanyReportingConfig() {
+  const raw = window.api?.conformity?.getConfig ? await window.api.conformity.getConfig() : {};
   const cfg = cfNormalizeConfig(raw || {});
+  state.conformity = cfg;
+  const profile = reportingProfileUi(state.company?.country);
+  if ($("co-reporting-profile")) $("co-reporting-profile").textContent = profile.code;
+  if ($("co-reporting-hint")) $("co-reporting-hint").textContent = t(`reporting.settings.${profile.country.toLowerCase()}.hint`, t("reporting.settings.hint", "Ces choix déterminent les obligations affichées."));
+  if ($("co-reporting-periodicity")) $("co-reporting-periodicity").value = cfg.reporting_periodicity;
+  if ($("co-reporting-cash-vat")) $("co-reporting-cash-vat").value = String(cfg.vat_on_collections);
+  if ($("co-reporting-b2c")) $("co-reporting-b2c").value = String(cfg.emits_b2c);
+  if ($("co-reporting-international")) $("co-reporting-international").value = String(cfg.has_international);
+  if ($("co-reporting-fiscal-device")) $("co-reporting-fiscal-device").checked = !!cfg.retail_fiscalization;
+  if ($("co-reporting-es-sii")) $("co-reporting-es-sii").value = String(cfg.spain_sii);
+  if ($("co-reporting-es-mode")) $("co-reporting-es-mode").value = cfg.spain_mode;
+  $("co-reporting-rs-fields")?.classList.toggle("is-visible", profile.country === "RS");
+  $("co-reporting-es-fields")?.classList.toggle("is-visible", profile.country === "ES");
+  return cfg;
+}
 
-  // --- Backward compat / terminologie ---
-  // pa_name = nom de la Plateforme Agréée (PA)
-  // platform (legacy) : ancien champ
-  const paName = (cfg.pa_name ?? cfg.platform ?? "").toString();
+function cfCompanyReportingPayload() {
+  return cfNormalizeConfig({
+    ...state.conformity,
+    reporting_periodicity: $("co-reporting-periodicity")?.value || "M",
+    vat_on_collections: $("co-reporting-cash-vat")?.value || "0",
+    emits_b2c: $("co-reporting-b2c")?.value || "0",
+    has_international: $("co-reporting-international")?.value || "0",
+    retail_fiscalization: $("co-reporting-fiscal-device")?.checked ? 1 : 0,
+    spain_sii: $("co-reporting-es-sii")?.value || "0",
+    spain_mode: $("co-reporting-es-mode")?.value || "VERIFACTU",
+  });
+}
 
-  // platform_kind: "PA" | "SC" | "OTHER"
-  const kind = String(cfg.platform_kind || "PA").toUpperCase();
-  const safeKind = ["PA", "SC", "OTHER"].includes(kind) ? kind : "PA";
+async function cfSaveCompanyReportingConfig() {
+  if (!window.api?.conformity?.saveConfig) throw new Error(t("reporting.settings.unavailable", "Enregistrement indisponible"));
+  const payload = cfCompanyReportingPayload();
+  await window.api.conformity.saveConfig(payload);
+  state.conformity = payload;
+  if ($("co-reporting-status")) $("co-reporting-status").textContent = t("reporting.settings.saved", "Paramètres réglementaires enregistrés");
+  return payload;
+}
 
-  // jurisdiction (multi-pays) : "FR" | "DEFAULT" | "BE" | ...
-  const jurisdiction =
-    (cfg.jurisdiction || (cfg.scope === "FR" ? "FR" : "DEFAULT")).toString().toUpperCase();
+function cfDefaultReportingPeriod() {
+  const now = new Date();
+  const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  const iso = (date) => date.toISOString().slice(0, 10);
+  return { start: iso(new Date(now.getFullYear(), now.getMonth(), 1)), end: iso(end) };
+}
 
-  // --- Fill form ---
-  $("cf-scope").value = cfg.scope;
-  $("cf-periodicity").value = cfg.periodicity;
-  $("cf-archiving").value = cfg.archiving;
-  $("cf-platform").value = paName;
-  $("cf-next-due").value = cfg.next_due || "";
-  $("cf-emits-b2c").value = cfg.emits_b2c;
-  $("cf-has-international").value = cfg.has_international;
+function cfReportingPeriod() {
+  const fallback = cfDefaultReportingPeriod();
+  if ($("cf-period-start") && !$("cf-period-start").value) $("cf-period-start").value = fallback.start;
+  if ($("cf-period-end") && !$("cf-period-end").value) $("cf-period-end").value = fallback.end;
+  return { periodStart: $("cf-period-start")?.value || fallback.start, periodEnd: $("cf-period-end")?.value || fallback.end };
+}
 
-  // --- Contextual hints ---
-  cfSetHint(
-    "cf-help-scope",
-    cfg.scope === "FR"
-      ? t("conformity.help.scope_fr", "FR : activité principalement en France. INTL : vous avez des opérations hors France.")
-      : t("conformity.help.scope_intl", "INTL : vous avez des opérations hors France (UE/hors UE).")
-  );
+function cfReportingStateLabel(value) {
+  const stateValue = String(value || "review").toLowerCase();
+  return t(`reporting.state.${stateValue}`, ({ ready: "Prêt", review: "À contrôler", external: "Système externe", sent: "Transmis", error: "Erreur", not_applicable: "Non applicable" })[stateValue] || stateValue);
+}
 
-  // Periodicity: si FR, rappeler que c’est piloté par TVA
-  cfSetHint(
-    "cf-help-periodicity",
-    jurisdiction === "FR"
-      ? t("conformity.help.periodicity_fr", "France : la fréquence de transmission e-reporting dépend du régime de TVA.")
-      : t("conformity.help.periodicity_intl", "Choisissez la fréquence de constitution et de contrôle interne.")
-  );
+function cfRenderOperationalReport(payload = {}) {
+  const profile = payload.profile || reportingProfileUi(state.company?.country);
+  const summary = payload.summary || {};
+  const obligations = Array.isArray(payload.obligations) ? payload.obligations : [];
+  const transmissions = Array.isArray(payload.transmissions) ? payload.transmissions : [];
+  const country = String(profile.country || state.company?.country || "—").toUpperCase();
+  if ($("cf-country-badge")) $("cf-country-badge").textContent = country;
+  if ($("cf-profile-name")) $("cf-profile-name").textContent = t(profile.titleKey || `reporting.profile.${country.toLowerCase()}.title`, profile.title || "—");
+  if ($("cf-profile-summary")) $("cf-profile-summary").textContent = t(profile.summaryKey || `reporting.profile.${country.toLowerCase()}.summary`, profile.summary || "—");
+  if ($("cf-kpi-ready")) $("cf-kpi-ready").textContent = String(summary.ready || 0);
+  if ($("cf-kpi-review")) $("cf-kpi-review").textContent = String(summary.review || 0);
+  if ($("cf-kpi-sent")) $("cf-kpi-sent").textContent = String(summary.sent || 0);
+  if ($("cf-kpi-error")) $("cf-kpi-error").textContent = String(summary.error || 0);
 
-  cfSetHint("cf-help-archiving", t("conformity.help.archiving", "ON recommandé : conserve les preuves et exports."));
-
-  const kindLabel =
-    safeKind === "PA"
-        ? "PA (Plateforme Agréée)"
-        : safeKind === "SC"
-          ? "SC (Solution connectée à une PA)"
-          : "Autre";
-
-  cfSetHint(
-  "cf-help-platform",
-  cfg.scope === "FR"
-    ? t("conformity.help.platform_fr", "France : PA = Plateforme Agréée. Indiquez la plateforme utilisée.")
-    : t("conformity.help.platform_intl", "International : indiquez le portail ou la plateforme utilisé pour le e-reporting.")
-);
-
-  cfSetHint("cf-help-nextdue", t("conformity.help.next_due", "Prochaine échéance interne, distincte d'un envoi automatique."));
-  cfSetHint("cf-help-b2c", t("conformity.help.b2c", "Oui si vous facturez des particuliers."));
-  cfSetHint("cf-help-intl", t("conformity.help.intl", "Oui si vous vendez ou achetez hors France."));
-
-  // --- Eligibility hint ---
-  const elig = cfComputeEligibility(cfg);
-  const hint = [
-    elig.concerned
-      ? t("conformity.eligibility.concerned", "✅ Vous êtes probablement concerné par du e-reporting.")
-      : t("conformity.eligibility.less", "🟡 Vous êtes probablement moins concerné (à confirmer)."),
-    ...elig.reasons,
-    elig.warnings.length ? "⚠️ " + elig.warnings.join(" ") : ""
-  ]
-    .filter(Boolean)
-    .join(" ");
-  cfSetHint("cf-eligibility-hint", hint);
-
-  // --- Missing fields box ---
-  const missing = cfMissingFields(cfg);
-  const box = $("cf-missing-box");
-  const list = $("cf-missing-list");
-  if (box && list) {
-    if (missing.length) {
-      box.style.display = "";
-      list.textContent = "• " + missing.join("\n• ");
-    } else {
-      box.style.display = "none";
-      list.textContent = "";
-    }
+  const configuration = payload.configuration || {};
+  const configurationEl = $("cf-configuration-status");
+  if (configurationEl) {
+    configurationEl.classList.toggle("is-ready", !!configuration.ready);
+    configurationEl.classList.toggle("is-blocked", !configuration.ready);
+    configurationEl.textContent = configuration.ready
+      ? t("reporting.configuration.ready", "Connecteur et adaptateur métier validés : les dossiers prêts peuvent être transmis.")
+      : t("reporting.configuration.blocked", "Préparation disponible. Transmission bloquée tant que le connecteur national et son adaptateur métier ne sont pas validés.");
   }
 
-  await cfLoadEvidence().catch((error) => cfEvidenceStatus(error.message, true));
+  const obligationsEl = $("cf-obligations");
+  if (obligationsEl) {
+    obligationsEl.innerHTML = obligations.length ? obligations.map((item) => {
+      const id = String(item.id || "generic");
+      const status = String(item.state || "review").toLowerCase();
+      return `<article class="reportingObligation">
+        <div><div class="reportingObligation__title">${cfEscape(t(`reporting.obligation.${id}.title`, item.title || id))}</div><div class="reportingObligation__description">${cfEscape(t(`reporting.obligation.${id}.description`, item.description || ""))}</div></div>
+        <div class="reportingObligation__count">${Number(item.count || 0)}</div>
+        <div class="reportingObligation__footer"><span class="reportingState is-${cfEscape(status)}">${cfEscape(cfReportingStateLabel(status))}</span><span class="hint">${cfEscape(t("reporting.candidates", "{count} dossier(s) candidat(s)", { count: Number(item.count || 0) }))}</span></div>
+      </article>`;
+    }).join("") : `<div class="reportingEmpty">${cfEscape(t("reporting.obligations.empty", "Aucune obligation calculée pour cette période."))}</div>`;
+  }
 
-  return cfg;
+  const transmissionsEl = $("cf-transmissions");
+  if (transmissionsEl) {
+    transmissionsEl.innerHTML = transmissions.length ? transmissions.slice(0, 30).map((item) => {
+      const status = String(item.status || "submitted").toLowerCase();
+      const date = String(item.created_at || "").slice(0, 16).replace("T", " ") || "—";
+      const reference = item.document_number || item.remote_id || item.id || "—";
+      return `<article class="reportingTransmission"><div><div class="reportingTransmission__title">${cfEscape(reference)}</div><div class="reportingTransmission__meta">${cfEscape(date)} · ${cfEscape(item.channel || profile.code || country)}</div></div><span class="reportingState is-${cfEscape(["error", "rejected"].includes(status) ? "error" : "sent")}">${cfEscape(cfReportingStateLabel(["error", "rejected"].includes(status) ? "error" : "sent"))}</span></article>`;
+    }).join("") : `<div class="reportingEmpty">${cfEscape(t("reporting.transmissions.empty", "Aucun envoi réglementaire."))}</div>`;
+  }
+  if (state.currentModule === "conformity") renderToolbar("conformity");
+}
+
+async function cfLoadOperationalReport() {
+  if (!state.company && window.api?.company?.get) state.company = await window.api.company.get();
+  const period = cfReportingPeriod();
+  const payload = await window.api.conformity.rebuildPeriod(period);
+  state.regulatoryReport = payload;
+  cfRenderOperationalReport(payload);
+  return payload;
 }
 
 const CF_EVIDENCE_LABELS = {
@@ -2789,32 +2815,9 @@ function bindComplianceEvidence() {
 let __cf_saveTimer = null;
 function cfScheduleSave() {
   clearTimeout(__cf_saveTimer);
-  __cf_saveTimer = setTimeout(async () => {
-    const payload = {
-      scope: $("cf-scope").value,
-      periodicity: $("cf-periodicity").value,
-      archiving: $("cf-archiving").value,
-      platform: $("cf-platform").value,
-      next_due: $("cf-next-due").value,
-      emits_b2c: $("cf-emits-b2c").value,
-      has_international: $("cf-has-international").value
-    };
-    try {
-      await window.api.conformity.saveConfig(payload);
-      const cfg = cfNormalizeConfig(payload);
-      const elig = cfComputeEligibility(cfg);
-      cfSetHint("cf-eligibility-hint", [
-        elig.concerned ? t("conformity.eligibility.concerned", "✅ Vous êtes probablement concerné par du e-reporting.") : t("conformity.eligibility.less", "🟡 Vous êtes probablement moins concerné (à confirmer)."),
-        ...elig.reasons,
-        elig.warnings.length ? ("⚠️ " + elig.warnings.join(" ")) : ""
-      ].filter(Boolean).join(" "));
-      $("appStatus") && ($("appStatus").textContent = t("status.saved", "Enregistré"));
-      setTimeout(() => $("appStatus") && ($("appStatus").textContent = t("status.ready", "Prêt")), 800);
-    } catch (e) {
-      console.error(e);
-      $("appStatus") && ($("appStatus").textContent = t("dashboard.error", "Erreur"));
-    }
-  }, 250);
+  __cf_saveTimer = setTimeout(() => cfSaveCompanyReportingConfig().catch((error) => {
+    if ($("co-reporting-status")) $("co-reporting-status").textContent = error.message;
+  }), 250);
 }
 
 // -------------------------
@@ -2892,67 +2895,9 @@ const cfAgent = {
 };
 
 async function initConformityPage() {
-  bindComplianceEvidence();
-  if (__cf_inited) {
-    // déjà bindé : juste reload
-    await cfLoadToForm();
-    return;
-  }
+  if (__cf_inited) return;
   __cf_inited = true;
-
-  // bind changements => save
-  ["cf-scope","cf-periodicity","cf-archiving","cf-platform","cf-next-due","cf-emits-b2c","cf-has-international"]
-    .forEach(id => {
-      const el = $(id);
-      if (!el) return;
-      el.addEventListener("change", () => {
-        cfScheduleSave();
-        cfLoadToForm().catch(console.error);
-      });
-      el.addEventListener("input", () => {
-        if (id === "cf-next-due") cfScheduleSave();
-      });
-    });
-
-  // boutons IA
-  $("cf-ai-start")?.addEventListener("click", () => cfAgent.reset());
-  $("cf-ai-send")?.addEventListener("click", async () => {
-    const inp = $("cf-ai-input");
-    if (!inp) return;
-    const t = inp.value.trim();
-    if (!t) return;
-    inp.value = "";
-    cfPushChat("user", t);
-    await cfAgent.answer(t);
-  });
-  $("cf-ai-input")?.addEventListener("keydown", async (e) => {
-    if (e.key === "Enter") $("cf-ai-send")?.click();
-  });
-
-  $("cf-ai-recommend")?.addEventListener("click", async () => {
-    const cfg = await cfLoadToForm();
-    const elig = cfComputeEligibility(cfg);
-    cfPushChat("agent", "Recommandations :\n" + [
-      `- Plateforme: ${cfg.platform || "à choisir"}`,
-      `- Scope: ${cfg.scope}`,
-      `- Périodicité: ${cfg.periodicity}`,
-      `- Archivage: ${cfg.archiving} (ON recommandé)`,
-      elig.concerned ? "- Vous êtes concerné : préparez les contrôles + preuves (journal/audit)." : "- Cas simple : vérifiez si vous avez du B2C/INTL."
-    ].join("\n"));
-  });
-
-  $("cf-ai-check")?.addEventListener("click", async () => {
-    const cfg = await cfLoadToForm();
-    const missing = cfMissingFields(cfg);
-    if (!missing.length) {
-      cfPushChat("agent", "✅ Tous les champs “bloquants” sont remplis.");
-    } else {
-      cfPushChat("agent", "⚠️ Champs à compléter : " + missing.join(", "));
-    }
-  });
-
-  // premier load
-  await cfLoadToForm();
+  ["cf-period-start", "cf-period-end"].forEach((id) => $(id)?.addEventListener("change", () => refreshModule("conformity").catch(console.error)));
 }
 
 /* ----------------- Inbound UI helpers ----------------- */
@@ -4210,7 +4155,8 @@ async function refreshModule(moduleKey) {
     state.company = await window.api.company.get();
     if (state.company) fillCompanyForm(state.company);
     bindIntegrationForms();
-    await Promise.all([loadIntegrationForm("pa"), loadIntegrationForm("archive")]);
+    bindComplianceEvidence();
+    await Promise.all([loadIntegrationForm("pa"), loadIntegrationForm("archive"), cfLoadCompanyReportingConfig(), cfLoadEvidence()]);
     return;
   }
 
@@ -4221,85 +4167,8 @@ async function refreshModule(moduleKey) {
 
   // ===================== BEGIN PATCH E-INVOICING / E-REPORTING (REFRESH MODULE) =====================
 if (moduleKey === "conformity") {
-  // 1) Lire la config depuis la fiche Société (DB)
-  let cfg = null;
-
-  if (window.api?.conformity?.getConfig) {
-    cfg = await window.api.conformity.getConfig();
-  } else if (window.api?.company?.getConformityConfig) {
-    cfg = await window.api.company.getConformityConfig();
-  }
-
-  if (cfg && typeof cfg === "object") {
-    state.conformity = {
-      ...state.conformity,
-      ...cfg,
-      kpis: { ...(state.conformity?.kpis || {}), ...(cfg.kpis || {}) },
-    };
-  }
-
-  const s = state.conformity || {};
-
-  // 2) Hint éligibilité
-  const hintEl = document.getElementById("cf-eligibility-hint");
-if (hintEl) {
-  const emitsB2C = Number(s.emits_b2c || 0) === 1;
-  const hasIntl = Number(s.has_international || 0) === 1;
-
-  if (!emitsB2C && !hasIntl) {
-    hintEl.textContent = t(
-      "conformity.eligibility.none",
-      "E-reporting not required: no B2C and no international. (France B2B = e-invoicing, not e-reporting)"
-    );
-    hintEl.style.opacity = "0.85";
-  } else if (emitsB2C && !hasIntl) {
-    hintEl.textContent = t(
-      "conformity.eligibility.b2c_only",
-      "E-reporting required for B2C (Flows 9/10)."
-    );
-    hintEl.style.opacity = "0.95";
-  } else if (!emitsB2C && hasIntl) {
-    hintEl.textContent = t(
-      "conformity.eligibility.intl_only",
-      "E-reporting required for international (Flow 8 + payments)."
-    );
-    hintEl.style.opacity = "0.95";
-  } else {
-    hintEl.textContent = t(
-      "conformity.eligibility.b2c_and_intl",
-      "E-reporting required: B2C + international."
-    );
-    hintEl.style.opacity = "0.95";
-  }
-}
-
-  // 3) Appliquer vers UI
-  const elScope = document.getElementById("cf-scope");
-  const elPer = document.getElementById("cf-periodicity");
-  const elArch = document.getElementById("cf-archiving");
-  const elPlat = document.getElementById("cf-platform");
-  const elDue = document.getElementById("cf-next-due");
-  const elB2C = document.getElementById("cf-emits-b2c");
-  const elIntl = document.getElementById("cf-has-international");
-
-  if (elScope) elScope.value = s.scope || "FR";
-  if (elPer) elPer.value = s.periodicity || "M";
-  if (elArch) elArch.value = s.archiving || "ON";
-  if (elPlat) elPlat.value = s.platform || "";
-  if (elDue) elDue.value = s.next_due || "";
-
-  if (elB2C) elB2C.value = String(s.emits_b2c ?? 0);
-  if (elIntl) elIntl.value = String(s.has_international ?? 0);
-
-  // 4) KPIs
-  const kpis = s.kpis || {};
-  const k8 = document.getElementById("cf-kpi-flux8");
-  const k9 = document.getElementById("cf-kpi-flux9");
-  const k10 = document.getElementById("cf-kpi-flux10");
-  if (k8) k8.textContent = String(kpis.flux8 ?? 0);
-  if (k9) k9.textContent = String(kpis.flux9 ?? 0);
-  if (k10) k10.textContent = String(kpis.flux10 ?? 0);
-
+  await initConformityPage();
+  await cfLoadOperationalReport();
   return;
 }
 
@@ -4985,29 +4854,9 @@ case "conformity:sendNow": {
     break;
   }
 
-  // le backend peut calculer quoi envoyer maintenant (Flux 8/9/10)
-  // selon scope/périodicité + données en DB.
-  const res = await window.api.conformity.sendNow({
-    scope: state.conformity?.scope || "FR",
-    periodicity: state.conformity?.periodicity || "M",
-  });
-
-  if (res?.queued) {
-    // version "merge" (tu l'avais)
-    state.conformity.kpis = { ...state.conformity.kpis, ...res.queued };
-
-    // version "numérique / robuste" (tu l'avais aussi)
-    state.conformity.kpis = {
-      flux8: Number(res.queued.flux8 ?? state.conformity.kpis.flux8 ?? 0),
-      flux9: Number(res.queued.flux9 ?? state.conformity.kpis.flux9 ?? 0),
-      flux10: Number(res.queued.flux10 ?? state.conformity.kpis.flux10 ?? 0),
-    };
-  }
-
-  if (res?.next_due) state.conformity.next_due = String(res.next_due || "");
-
+  const res = await window.api.conformity.sendNow(cfReportingPeriod());
   await refreshModule("conformity");
-  setStatus(res?.message || "Envoi déclenché (file d’envoi).");
+  setStatus(res?.message || t("reporting.send.started", "Transmission réglementaire remise au connecteur."));
   break;
 }
 
@@ -5017,23 +4866,19 @@ case "conformity:rebuildPeriod": {
     break;
   }
 
-  const res = await window.api.conformity.rebuildPeriod({
-    scope: state.conformity?.scope || "FR",
-    periodicity: state.conformity?.periodicity || "M",
-  });
-
-  if (res?.next_due) state.conformity.next_due = String(res.next_due || "");
-  if (res?.kpis) state.conformity.kpis = { ...state.conformity.kpis, ...res.kpis };
-
-  await refreshModule("conformity");
-  setStatus(res?.message || "Période recalculée");
+  const res = await window.api.conformity.rebuildPeriod(cfReportingPeriod());
+  state.regulatoryReport = res;
+  cfRenderOperationalReport(res);
+  setStatus(res?.message || t("reporting.period.prepared", "Période préparée"));
   break;
 }
 
 case "conformity:settings": {
-  showPage("conformity"); 
-  setStatus(t("conformity.settings.opened", "Paramètres conformité"));
-  setTimeout(() => document.getElementById("cf-scope")?.focus(), 0);
+  showPage("company");
+  const card = document.getElementById("company-reporting-card");
+  if (card) card.open = true;
+  setStatus(t("reporting.settings.opened", "Paramètres réglementaires ouverts dans Entreprise"));
+  setTimeout(() => document.getElementById("co-reporting-periodicity")?.focus(), 0);
   break;
 }
 
@@ -5042,8 +4887,10 @@ case "conformity:openQueue": {
     setStatus("File d’envoi non branchée (IPC conformity:openQueue manquant).");
     break;
   }
-  await window.api.conformity.openQueue();
-  setStatus("File d’envoi ouverte.");
+  const transmissions = await window.api.conformity.openQueue();
+  state.regulatoryReport = { ...(state.regulatoryReport || {}), transmissions: Array.isArray(transmissions) ? transmissions : [] };
+  cfRenderOperationalReport(state.regulatoryReport || {});
+  setStatus(t("reporting.transmissions.refreshed", "Accusés de réception actualisés."));
   break;
 }
 
@@ -6801,6 +6648,7 @@ function init() {
       state.company = state.company || {};
       state.company.country = $("co-country")?.value?.trim().toUpperCase();
       updateCountryEInvoicingProfile(state.company);
+      cfLoadCompanyReportingConfig().catch(() => {});
       applyVatForQuote({ silent: true }).catch(() => {});
       applyVatForInvoice({ silent: true }).catch(() => {});
     });

@@ -208,3 +208,82 @@ button { cursor:pointer; }
   .bank-box p { align-items:flex-start; flex-direction:column; gap:3px; }
   .bank-box strong { text-align:left; }
 }
+
+/* D2F 2026 light portal: readable for long sessions, restrained and professional */
+.auth-page{ background:#f4f7fa; }
+.auth-brand{
+  color:#102234;
+  background:
+    radial-gradient(circle at 76% 18%,rgba(25,151,199,.16),transparent 27%),
+    linear-gradient(150deg,#eef5fb,#e5f1f8 62%,#dbeaf3);
+}
+.auth-brand::after{
+  border-color:rgba(9,105,218,.12);
+  box-shadow:0 0 0 70px rgba(9,105,218,.035),0 0 0 140px rgba(9,105,218,.02);
+}
+.auth-logo-wrap{ border-radius:18px; background:#fff; box-shadow:0 12px 30px rgba(16,52,82,.13); }
+.auth-brand .eyebrow{ color:#0868a7; }
+.auth-brand h1{ color:#102234; }
+.auth-lead,.auth-benefits p{ color:#536b80; }
+.auth-benefits>div{ border-color:rgba(30,75,108,.16); }
+.auth-benefits span{ color:#087da4; }
+.auth-benefits strong{ color:#173047; }
+.auth-panel{ background:#f8fafc; }
+.auth-tabs{ border-radius:10px; background:#e8eef4; }
+.auth-tabs button{ border-radius:7px; }
+.auth-tabs button.is-active{ box-shadow:0 1px 3px rgba(32,55,81,.1); }
+.pricing-card{ border-radius:11px; box-shadow:none; }
+.primary-action,.secondary-action{
+  border-radius:8px;
+  background:#0969da;
+  box-shadow:none;
+}
+.primary-action:hover,.secondary-action:hover{ background:#0759bd; }
+.single-auth .auth-card{ border-radius:12px; box-shadow:0 12px 32px rgba(28,47,69,.1); }
+
+.app-session-shell{ grid-template-rows:64px minmax(0,1fr); }
+.account-bar{
+  padding:7px 14px;
+  color:#102234;
+  background:#fff;
+  border-bottom:1px solid #dbe4ee;
+}
+.account-brand{ gap:11px; }
+.account-brand img{
+  width:48px;
+  height:48px;
+  border-radius:10px;
+  box-shadow:none;
+}
+.account-brand strong{ color:#102234; font-size:16px; }
+.account-brand>span{ border-color:#d5dee7; color:#65778a; }
+.account-button{
+  border-color:#cfd9e3;
+  border-radius:9px;
+  color:#102234;
+  background:#f5f8fa;
+}
+.account-button>span:first-child{ border-radius:7px; background:#0969da; }
+.account-button small{ color:#718094; }
+.logout-button{ color:#415a72; }
+.logout-button:hover{ color:#0759bd; }
+.idle-warning{ color:#8a5b00; }
+.web-app-frame{ background:#f4f7fa; }
+.drawer-backdrop{ background:rgba(20,38,55,.32); }
+.account-drawer{ background:#f4f7fa; box-shadow:-18px 0 50px rgba(16,34,52,.16); }
+.account-section{ border-radius:11px; box-shadow:none; }
+
+@media (max-width:900px){
+  .app-session-shell{ grid-template-rows:58px minmax(0,1fr); }
+  .account-bar{ padding:5px 9px; }
+  .account-brand img{ width:44px; height:44px; border-radius:9px; }
+}
+
+@media (max-width:620px){
+  .auth-brand{ background:linear-gradient(135deg,#eaf3fa,#dfeef6); }
+  .app-session-shell{ grid-template-rows:56px minmax(0,1fr); }
+  .account-brand img{ width:42px; height:42px; border-radius:8px; }
+  .account-brand strong{ font-size:14px; }
+  .account-button{ min-width:40px; min-height:40px; border-radius:8px; }
+  .account-button>span:first-child{ width:30px; height:30px; }
+}

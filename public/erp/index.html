@@ -15,7 +15,7 @@
                  object-src 'none';
                  base-uri 'none'">
 
-  <link rel="stylesheet" href="./styles.css?v=20260716-company-v14" />
+  <link rel="stylesheet" href="./styles.css?v=20260717-reporting-v16" />
 </head>
 
 <body>
@@ -34,17 +34,17 @@
       <div class="sidebar__section">
         <div class="sidebar__label" data-i18n="sidebar.modules">Modules</div>
         <nav class="nav" id="navModules">
-          <button class="nav__item" data-module="company"><span class="nav__icon">🏢</span><span data-i18n="app.title.company">Société</span></button>
-          <button class="nav__item" data-module="dashboard"><span class="nav__icon">📊</span><span data-i18n="app.title.dashboard">Dashboard</span></button>
-          <button class="nav__item" data-module="clients"><span class="nav__icon">👥</span><span data-i18n="app.title.clients">Clients</span></button>
-          <button class="nav__item" data-module="items"><span class="nav__icon">🧩</span><span data-i18n="app.title.items">Articles</span></button>
-          <button class="nav__item is-active" data-module="quotes"><span class="nav__icon">📝</span><span data-i18n="app.title.quotes">Devis</span></button>
-          <button class="nav__item" data-module="invoices"><span class="nav__icon">🧾</span><span data-i18n="app.title.invoices">Factures</span></button>
-          <button class="nav__item" data-module="payments"><span class="nav__icon">💳</span><span data-i18n="app.title.payments">Encaissements</span></button>
-          <button class="nav__item" data-module="inbound"><span class="nav__icon">📥</span><span data-i18n="app.title.inbound">Fournisseurs</span></button>
-          <button class="nav__item" data-module="exports"><span class="nav__icon">🚀</span><span data-i18n="app.title.exports">Exports</span></button>
-          <button class="nav__item" data-module="conformity"><span class="nav__icon">✅</span><span data-i18n="app.title.conformity">e-Reporting</span></button>
-          <button class="nav__item" data-module="audit"><span class="nav__icon">📜</span><span data-i18n="app.title.audit">PAF / Trace</span></button>
+          <button class="nav__item" data-module="company"><span class="nav__icon" aria-hidden="true">⌂</span><span data-i18n="app.title.company">Société</span></button>
+          <button class="nav__item" data-module="dashboard"><span class="nav__icon" aria-hidden="true">▦</span><span data-i18n="app.title.dashboard">Dashboard</span></button>
+          <button class="nav__item" data-module="clients"><span class="nav__icon" aria-hidden="true">◉</span><span data-i18n="app.title.clients">Clients</span></button>
+          <button class="nav__item" data-module="items"><span class="nav__icon" aria-hidden="true">◇</span><span data-i18n="app.title.items">Articles</span></button>
+          <button class="nav__item is-active" data-module="quotes"><span class="nav__icon" aria-hidden="true">▤</span><span data-i18n="app.title.quotes">Devis</span></button>
+          <button class="nav__item" data-module="invoices"><span class="nav__icon" aria-hidden="true">▥</span><span data-i18n="app.title.invoices">Factures</span></button>
+          <button class="nav__item" data-module="payments"><span class="nav__icon" aria-hidden="true">€</span><span data-i18n="app.title.payments">Encaissements</span></button>
+          <button class="nav__item" data-module="inbound"><span class="nav__icon" aria-hidden="true">⇩</span><span data-i18n="app.title.inbound">Fournisseurs</span></button>
+          <button class="nav__item" data-module="exports"><span class="nav__icon" aria-hidden="true">↗</span><span data-i18n="app.title.exports">Exports</span></button>
+          <button class="nav__item" data-module="conformity"><span class="nav__icon" aria-hidden="true">✓</span><span data-i18n="app.title.conformity">e-Reporting</span></button>
+          <button class="nav__item" data-module="audit"><span class="nav__icon" aria-hidden="true">≡</span><span data-i18n="app.title.audit">PAF / Trace</span></button>
         </nav>
       </div>
 
@@ -274,6 +274,36 @@
             </div>
           </details>
 
+          <details class="card companyDisclosureCard" id="company-reporting-card">
+            <summary class="companySectionSummary">
+              <span data-i18n="reporting.settings.title">Déclarations réglementaires</span>
+              <span class="companyConnectionBadge" id="co-reporting-profile">—</span>
+            </summary>
+            <div class="companyDisclosureBody">
+              <div class="hint" id="co-reporting-hint" data-i18n="reporting.settings.hint">Ces choix déterminent les obligations affichées. Les opérations et accusés de réception restent dans l’onglet Déclarations.</div>
+              <div class="form u-mt reportingSettingsForm">
+                <div class="row2">
+                  <label><span data-i18n="reporting.settings.periodicity">Période fiscale habituelle</span><select id="co-reporting-periodicity"><option value="M" data-i18n="reporting.period.monthly">Mensuelle</option><option value="Q" data-i18n="reporting.period.quarterly">Trimestrielle</option></select></label>
+                  <label><span data-i18n="reporting.settings.cash_vat">TVA exigible à l’encaissement</span><select id="co-reporting-cash-vat"><option value="0" data-i18n="common.no">Non</option><option value="1" data-i18n="common.yes">Oui</option></select></label>
+                </div>
+                <div class="row2">
+                  <label><span data-i18n="reporting.settings.b2c">Ventes B2C / au détail</span><select id="co-reporting-b2c"><option value="0" data-i18n="common.no">Non</option><option value="1" data-i18n="common.yes">Oui</option></select></label>
+                  <label><span data-i18n="reporting.settings.international">Opérations internationales</span><select id="co-reporting-international"><option value="0" data-i18n="common.no">Non</option><option value="1" data-i18n="common.yes">Oui</option></select></label>
+                </div>
+                <div id="co-reporting-rs-fields" class="reportingCountryFields">
+                  <label class="check"><input id="co-reporting-fiscal-device" type="checkbox" /><span data-i18n="reporting.settings.rs_fiscal_device">Les tickets de caisse passent par un dispositif fiscal agréé distinct</span></label>
+                </div>
+                <div id="co-reporting-es-fields" class="reportingCountryFields">
+                  <div class="row2">
+                    <label><span data-i18n="reporting.settings.es_sii">Entreprise soumise au SII</span><select id="co-reporting-es-sii"><option value="0" data-i18n="common.no">Non</option><option value="1" data-i18n="common.yes">Oui</option></select></label>
+                    <label><span data-i18n="reporting.settings.es_mode">Mode du logiciel de facturation</span><select id="co-reporting-es-mode"><option value="VERIFACTU">VERI*FACTU</option><option value="NO_VERIFACTU">NO VERI*FACTU</option></select></label>
+                  </div>
+                </div>
+                <div class="actions"><button class="btn" id="co-reporting-save" type="button" data-i18n="action.save">Enregistrer</button><span class="hint" id="co-reporting-status"></span></div>
+              </div>
+            </div>
+          </details>
+
           <details class="card integrationCard companyDisclosureCard" id="company-einvoice-card">
             <summary class="companySectionSummary">
               <span id="cf-pa-title" data-i18n="integrations.country.title">Connexion nationale de facturation électronique</span>
@@ -306,6 +336,13 @@
               <div class="row2">
                 <label><span data-i18n="integrations.health_path">Chemin de test</span><input id="cf-pa-health-path" type="text" value="/health" /></label>
                 <label><span id="cf-pa-submit-label" data-i18n="integrations.submit_path">Chemin d’envoi</span><input id="cf-pa-submit-path" type="text" value="/invoices" /></label>
+              </div>
+              <div class="reportingAdapterBox">
+                <div class="field__label" data-i18n="reporting.adapter.title">Adaptateur des déclarations réglementaires</div>
+                <div class="hint" data-i18n="reporting.adapter.hint">À activer uniquement après validation des formats et tests métier avec le prestataire national.</div>
+                <label class="u-mt--sm"><span data-i18n="reporting.adapter.path">Chemin API des déclarations</span><input id="cf-pa-reporting-submit-path" type="text" placeholder="/regulatory-reports" /></label>
+                <label class="check"><input id="cf-pa-reporting-enabled" type="checkbox" /><span data-i18n="reporting.adapter.enabled">Utiliser l’adaptateur réglementaire</span></label>
+                <label class="check"><input id="cf-pa-reporting-qualified" type="checkbox" /><span data-i18n="reporting.adapter.qualified">La recette métier du prestataire est validée pour ce pays</span></label>
               </div>
               <label class="check"><input id="cf-pa-enabled" type="checkbox" /><span data-i18n="integrations.enabled">Connecteur activé</span></label>
               <div class="actions"><button class="btn" id="cf-pa-save" type="button" data-i18n="action.save">Enregistrer</button><button class="btn btn--secondary" id="cf-pa-test" type="button" data-i18n="integrations.test">Tester la connexion</button></div>
@@ -407,8 +444,6 @@
             </div>
             <div class="searchRow clientSearchRow">
               <input id="clientsSearch" class="search" type="search" data-i18n-attr="placeholder:clients.search_ph" placeholder="Rechercher un client…" />
-              <button class="btn btn--secondary" type="button" data-action="clients:new" data-i18n="action.new">Nouveau</button>
-              <button class="btn btn--secondary" type="button" data-action="clients:importCsv" data-i18n="clients.import.open_btn">Importer CSV…</button>
             </div>
             <div id="clientsList" class="list clientList"></div>
           </div>
@@ -561,7 +596,6 @@
             <div class="card__title" data-i18n="items.list_title">Liste articles</div>
             <div class="searchRow">
               <input id="itemsSearch" class="search" type="search" data-i18n-attr="placeholder:items.search_ph" placeholder="Rechercher un article…" />
-              <button class="btn btn--secondary" type="button" data-action="items:new" data-i18n="action.new">Nouveau</button>
             </div>
             <div id="itemsList" class="list"></div>
           </div>
@@ -623,7 +657,6 @@
             </div>
             <div class="searchRow">
               <input id="quotesSearch" class="search" type="search" data-i18n-attr="placeholder:quotes.search_ph" placeholder="Rechercher un devis…" />
-              <button class="btn btn--secondary" type="button" data-action="quotes:new" data-i18n="action.new">Nouveau</button>
             </div>
             <div id="quotesList" class="list documentList"></div>
           </div>
@@ -759,7 +792,6 @@
             </div>
             <div class="searchRow">
               <input id="invoicesSearch" class="search" type="search" data-i18n-attr="placeholder:invoices.search_ph" placeholder="Rechercher une facture…" />
-              <button class="btn btn--secondary" type="button" data-action="invoices:new" data-i18n="invoices.new">Nouvelle</button>
             </div>
             <div id="invoicesList" class="list documentList"></div>
           </div>
@@ -1014,8 +1046,6 @@
             <div class="card__title" data-i18n="inbound.list.title">Factures reçues</div>
             <div class="searchRow">
               <input id="inboundSearch" class="search" type="search" data-i18n-attr="placeholder:inbound.search_ph" placeholder="Rechercher (n° / fournisseur / statut)…" />
-              <button class="btn btn--secondary" type="button" data-action="inbound:refresh" data-i18n="action.refresh">Rafraîchir</button>
-              <button class="btn btn--secondary" type="button" data-action="inbound:import" data-i18n="action.import">Importer…</button>
             </div>
 
             <div id="inboundList" class="list"></div>
@@ -1194,140 +1224,34 @@
 
       <!-- Conformity -->
       <section class="page" data-page="conformity">
-        <div class="grid2">
-          <div class="card">
-            <div class="card__title" data-i18n="conformity.settings.title">Paramètres réforme</div>
-            <div class="hint" id="cf-eligibility-hint">—</div>
-
-            <div class="u-mt grid2">
-              <label class="field">
-                <div class="field__label">
-                  <span data-i18n="conformity.scope.label">Scope</span>
-                  <span class="hint" style="margin-left:8px;opacity:.75">FR / INTL</span>
-                </div>
-                <select id="cf-scope">
-                  <option value="FR">FR</option>
-                  <option value="INTL">INTL</option>
-                </select>
-                <div class="hint" id="cf-help-scope"></div>
-              </label>
-
-              <label class="field">
-                <div class="field__label">
-                  <span data-i18n="conformity.periodicity.label">Périodicité</span>
-                  <span class="hint" style="margin-left:8px;opacity:.75">D / M / B</span>
-                </div>
-                <select id="cf-periodicity">
-                  <option value="D" data-i18n="conformity.periodicity.daily">D — Quotidien</option>
-                  <option value="M" data-i18n="conformity.periodicity.monthly">M — Mensuel</option>
-                  <option value="B" data-i18n="conformity.periodicity.bimonthly">B — Bimestriel</option>
-                </select>
-                <div class="hint" id="cf-help-periodicity"></div>
-              </label>
+        <div class="reportingWorkspace">
+          <div class="card reportingHero">
+            <div class="reportingHero__identity">
+              <span class="reportingCountryBadge" id="cf-country-badge">—</span>
+              <div><div class="card__title" id="cf-profile-name">—</div><div class="hint" id="cf-profile-summary">—</div></div>
             </div>
-
-            <div class="u-mt grid2">
-              <label class="field">
-                <div class="field__label">
-                  <span data-i18n="conformity.archiving.label">Archivage</span>
-                </div>
-                <select id="cf-archiving">
-                  <option value="ON">ON</option>
-                  <option value="OFF">OFF</option>
-                </select>
-                <div class="hint" id="cf-help-archiving"></div>
-              </label>
-
-              <label class="field">
-                <div class="field__label">
-                  <span data-i18n="conformity.platform.label">Plateforme</span>
-                  <span class="hint" style="margin-left:8px;opacity:.75">PA / OTHER</span>
-                </div>
-                <select id="cf-platform">
-                  <option value="" data-i18n="ui.choose">— choisir —</option>
-                  <option value="PA" data-i18n="conformity.platform.pa">PA (Plateforme agréée)</option>
-                  <option value="OTHER" data-i18n="conformity.platform.other">Autre (solution connectée)</option>
-                </select>
-                <div class="hint" id="cf-help-platform"></div>
-              </label>
+            <div class="reportingHero__period">
+              <label><span data-i18n="reporting.period.start">Début</span><input id="cf-period-start" type="date" /></label>
+              <label><span data-i18n="reporting.period.end">Fin</span><input id="cf-period-end" type="date" /></label>
             </div>
-
-            <div class="u-mt grid2">
-              <label class="field">
-                <div class="field__label">
-                  <span data-i18n="conformity.b2c.label">Émet des factures B2C ?</span>
-                </div>
-                <select id="cf-emits-b2c">
-                  <option value="0" data-i18n="common.no">Non</option>
-                  <option value="1" data-i18n="common.yes">Oui</option>
-                </select>
-                <div class="hint" id="cf-help-b2c"></div>
-              </label>
-
-              <label class="field">
-                <div class="field__label">
-                  <span data-i18n="conformity.intl.label">International (hors France) ?</span>
-                </div>
-                <select id="cf-has-international">
-                  <option value="0" data-i18n="common.no">Non</option>
-                  <option value="1" data-i18n="common.yes">Oui</option>
-                </select>
-                <div class="hint" id="cf-help-intl"></div>
-              </label>
-            </div>
-
-            <div class="u-mt">
-              <label class="field">
-                <div class="field__label">
-                  <span data-i18n="conformity.next_due.label">Prochaine échéance (info)</span>
-                </div>
-                <input id="cf-next-due" type="date" />
-                <div class="hint" id="cf-help-nextdue"></div>
-              </label>
-            </div>
-
-            <div class="u-mt">
-              <div class="card__title" data-i18n="conformity.kpis.title">KPIs (file / flux)</div>
-              <div class="totals">
-                <div class="totals__row"><span data-i18n="conformity.kpis.flow8">Flux 8</span><strong id="cf-kpi-flux8">0</strong></div>
-                <div class="totals__row"><span data-i18n="conformity.kpis.flow9">Flux 9</span><strong id="cf-kpi-flux9">0</strong></div>
-                <div class="totals__row"><span data-i18n="conformity.kpis.flow10">Flux 10</span><strong id="cf-kpi-flux10">0</strong></div>
-              </div>
-              <div class="hint" data-i18n="conformity.kpis.hint">Ces compteurs doivent venir de calculs réels.</div>
-            </div>
-
-            <div class="u-mt" id="cf-missing-box" style="display:none;">
-              <div class="card__title" style="color: rgba(239,68,68,.95)" data-i18n="conformity.missing.title">Champs à compléter</div>
-              <div class="hint" id="cf-missing-list" style="color: rgba(239,68,68,.9)"></div>
-            </div>
+            <div class="reportingConfigurationState" id="cf-configuration-status">—</div>
           </div>
 
-          <div class="card">
-            <div class="card__title" data-i18n="conformity.ai.title">Agent IA — assistant réforme</div>
-            <div class="hint" data-i18n="conformity.ai.description">
-              Je te pose quelques questions et je te dis si tu es concerné, et quoi remplir.
-            </div>
+          <div class="reportingKpis" aria-live="polite">
+            <div class="reportingKpi is-ready"><span data-i18n="reporting.kpi.ready">Prêts</span><strong id="cf-kpi-ready">0</strong></div>
+            <div class="reportingKpi is-review"><span data-i18n="reporting.kpi.review">À contrôler</span><strong id="cf-kpi-review">0</strong></div>
+            <div class="reportingKpi is-sent"><span data-i18n="reporting.kpi.sent">Transmis</span><strong id="cf-kpi-sent">0</strong></div>
+            <div class="reportingKpi is-error"><span data-i18n="reporting.kpi.error">Rejets / erreurs</span><strong id="cf-kpi-error">0</strong></div>
+          </div>
 
-            <div class="u-mt" style="display:flex;gap:8px;flex-wrap:wrap;">
-              <button class="btn" id="cf-ai-start" data-i18n="conformity.ai.start">Démarrer diagnostic</button>
-              <button class="btn btn--secondary" id="cf-ai-recommend" data-i18n="conformity.ai.recommend">Recommandations</button>
-              <button class="btn btn--ghost" id="cf-ai-check" data-i18n="conformity.ai.check">Vérifier complétude</button>
+          <div class="reportingColumns">
+            <div class="card">
+              <div class="reportingSectionHeader"><div><div class="card__title" data-i18n="reporting.obligations.title">Obligations de la période</div><div class="hint" data-i18n="reporting.obligations.hint">Les volumes sont des dossiers candidats calculés depuis les données de l’entreprise.</div></div></div>
+              <div class="reportingObligations" id="cf-obligations"><div class="hint" data-i18n="ui.loading">Chargement…</div></div>
             </div>
-
-            <div class="u-mt" id="cf-ai-chat"
-                 style="height:360px;overflow:auto;border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:12px;">
-            </div>
-
-            <div class="u-mt" style="display:flex;gap:8px;">
-              <input id="cf-ai-input" type="text" placeholder="Réponds (ex: oui / non / je ne sais pas)…"
-                     data-i18n-attr="placeholder:conformity.ai.placeholder"
-                     style="flex:1;border-radius:12px;border:1px solid rgba(255,255,255,.15);background:transparent;color:inherit;padding:10px;" />
-              <button class="btn btn--secondary" id="cf-ai-send" data-i18n="common.send">Envoyer</button>
-            </div>
-
-            <div class="u-mt">
-              <div class="card__title" data-i18n="conformity.ai.summary_title">Résumé</div>
-              <div class="hint" id="cf-ai-summary">—</div>
+            <div class="card">
+              <div class="reportingSectionHeader"><div><div class="card__title" data-i18n="reporting.transmissions.title">Envois et accusés de réception</div><div class="hint" data-i18n="reporting.transmissions.hint">Historique du connecteur national, avec les statuts retournés par le prestataire.</div></div></div>
+              <div class="reportingTransmissions" id="cf-transmissions"><div class="hint" data-i18n="reporting.transmissions.empty">Aucun envoi réglementaire.</div></div>
             </div>
           </div>
         </div>
@@ -1555,7 +1479,7 @@
   <script src="./renderer/web-electron-shim.js?v=20260716-web-pdf-pa-v1"></script>
   <script src="./renderer/web-api-shim.js?v=20260716-web-pdf-pa-v1"></script>
   <script src="./dashboard-ui.js?v=20260716-web-pdf-pa-v1"></script>
-  <script src="./app.js?v=20260716-company-v14"></script>
+  <script src="./app.js?v=20260717-reporting-v16"></script>
 
   <div id="clientsImportModal" class="modal" aria-hidden="true">
     <div class="modal__backdrop" data-modal-close></div>

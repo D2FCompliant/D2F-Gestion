@@ -918,13 +918,149 @@ async function lookupPeppolDirectory(input: JsonRecord) {
   }
 }
 
-async function conformitySummary(ownerEmail: string) {
-  const [invoices, payments] = await Promise.all([listRecords(ownerEmail, "invoices"), listRecords(ownerEmail, "payments")]);
-  const issued = invoices.filter((invoice) => invoiceStatus(invoice) === "issued");
-  const flux8 = issued.filter((invoice) => String(invoice.country || invoice.buyer_country || "FR").toUpperCase() !== "FR").length;
-  const flux9 = issued.filter((invoice) => String(invoice.customer_type || "").toUpperCase() === "B2C").length;
-  const flux10 = payments.filter((payment) => String(payment.status || "posted").toLowerCase() !== "cancelled").length;
-  return { flux8, flux9, flux10 };
+function reportingBoolean(value: unknown) {
+  return value === true || value === 1 || String(value || "").toLowerCase() === "true" || String(value || "") === "1";
+}
+
+function reportingPeriod(input: JsonRecord) {
+  const now = new Date();
+  const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString().slice(0, 10);
+  const monthEnd = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 0)).toISOString().slice(0, 10);
+  const start = String(input.periodStart || input.period_start || monthStart).slice(0, 10);
+  const end = String(input.periodEnd || input.period_end || monthEnd).slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(start) || !/^\d{4}-\d{2}-\d{2}$/.test(end) || start > end) throw new Error("Période réglementaire invalide");
+  return { start, end };
+}
+
+function regulatoryProfile(country: string) {
+  const profiles: Record<string, JsonRecord> = {
+    FR: { country: "FR", code: "FR_PA", titleKey: "reporting.profile.fr.title", summaryKey: "reporting.profile.fr.summary", title: "France — Facturation électronique et e-reporting" },
+    RS: { country: "RS", code: "RS_SEF", titleKey: "reporting.profile.rs.title", summaryKey: "reporting.profile.rs.summary", title: "Serbie — SEF, TVA électronique et fiscalisation" },
+    IT: { country: "IT", code: "IT_SDI", titleKey: "reporting.profile.it.title", summaryKey: "reporting.profile.it.summary", title: "Italie — SdI et transmissions fiscales" },
+    ES: { country: "ES", code: "ES_AEAT", titleKey: "reporting.profile.es.title", summaryKey: "reporting.profile.es.summary", title: "Espagne — AEAT, VERI*FACTU et SII" },
+  };
+  return profiles[country] || { country, code: "GENERIC", titleKey: "reporting.profile.default.title", summaryKey: "reporting.profile.default.summary", title: "Déclarations nationales à qualifier" };
+}
+
+function transmissionIsRegulatory(item: JsonRecord) {
+  const receipt = object(item.receipt);
+  const metadata = object(receipt.metadata);
+  return String(metadata.kind || "") === "regulatory_reporting";
+}
+
+async function conformitySummary(ownerEmail: string, periodInput: JsonRecord = {}) {
+  const [company, invoices, payments, clients, inbound, connector, allTransmissions] = await Promise.all([
+    getCompany(ownerEmail),
+    listRecords(ownerEmail, "invoices"),
+    listRecords(ownerEmail, "payments"),
+    listRecords(ownerEmail, "clients"),
+    listRecords(ownerEmail, "inbound"),
+    getIntegration(getSupabaseAdmin(), ownerEmail, "pa").catch(() => ({})),
+    listTransmissions(getSupabaseAdmin(), ownerEmail).catch(() => []),
+  ]);
+  const companyData = object(company);
+  const connectorData = object(connector);
+  const invoiceRecords = invoices.map(object);
+  const paymentRecords = payments.map(object);
+  const clientRecords = clients.map(object);
+  const inboundRecords = inbound.map(object);
+  const country = String(companyData.country || "").trim().toUpperCase().slice(0, 2) || "FR";
+  const profile = regulatoryProfile(country);
+  const config = object(companyData.conformity);
+  const period = reportingPeriod(periodInput);
+  const inPeriod = (record: JsonRecord) => {
+    const date = String(record.date || record.document_date || record.created_at || "").slice(0, 10);
+    return Boolean(date && date >= period.start && date <= period.end);
+  };
+  const clientById = new Map<string, JsonRecord>(clientRecords.map((client) => [String(client.id || ""), client]));
+  const customer = (invoice: JsonRecord): JsonRecord => clientById.get(String(invoice.client_id || "")) || {};
+  const customerCountry = (invoice: JsonRecord) => String(customer(invoice).country || invoice.buyer_country || country).toUpperCase().slice(0, 2);
+  const customerType = (invoice: JsonRecord) => String(customer(invoice).customer_type || invoice.customer_type || "B2B").toUpperCase();
+  const issued = invoiceRecords.filter((invoice) => invoiceStatus(invoice) === "issued" && inPeriod(invoice));
+  const postedPayments = paymentRecords.filter((payment) => !["cancelled", "voided"].includes(String(payment.status || "posted").toLowerCase()) && inPeriod(payment));
+  const domestic = issued.filter((invoice) => customerCountry(invoice) === country);
+  const international = issued.filter((invoice) => customerCountry(invoice) !== country);
+  const b2c = issued.filter((invoice) => customerType(invoice) === "B2C");
+  const domesticB2b = domestic.filter((invoice) => customerType(invoice) !== "B2C");
+  const creditNotes = issued.filter((invoice) => invoiceType(invoice) === "credit_note");
+  const foreignInbound = inboundRecords.filter((record) => inPeriod(record) && String(record.supplier_country || record.country || country).toUpperCase().slice(0, 2) !== country);
+  const regulatoryTransmissions = (Array.isArray(allTransmissions) ? allTransmissions.map(object) : []).filter(transmissionIsRegulatory);
+  const adapterReady = Boolean(
+    connectorData.enabled && connectorData.configured && connectorData.last_test_status === "ok" &&
+    connectorData.reporting_enabled && connectorData.reporting_adapter_qualified && connectorData.reporting_submit_path &&
+    connectorData.reporting_adapter_contract === "D2F_REGULATORY_BATCH_V1" &&
+    String(connectorData.country || "").toUpperCase() === country
+  );
+  const readyState = adapterReady ? "ready" : "review";
+  const obligation = (id: string, count: number, state = readyState, candidates: JsonRecord[] = []) => ({
+    id, count, state, candidate_ids: candidates.map((item) => String(item.id || "")).filter(Boolean),
+  });
+  let obligations: JsonRecord[] = [];
+  if (country === "FR") {
+    const cashVat = reportingBoolean(config.vat_on_collections);
+    const b2cPayments = postedPayments.filter((payment) => b2c.some((invoice) => String(invoice.id) === String(payment.invoice_id || payment.invoiceId)));
+    const otherCashPayments = postedPayments.filter((payment) => !b2c.some((invoice) => String(invoice.id) === String(payment.invoice_id || payment.invoiceId)));
+    obligations = [
+      obligation("fr_structured_invoice_data_8_9", domesticB2b.length, readyState, domesticB2b),
+      obligation("fr_transaction_data_10_1", international.length, readyState, international),
+      obligation("fr_payment_data_10_2", cashVat ? otherCashPayments.length : 0, cashVat ? readyState : "not_applicable", otherCashPayments),
+      obligation("fr_b2c_transactions_10_3", b2c.length, reportingBoolean(config.emits_b2c) ? readyState : "not_applicable", b2c),
+      obligation("fr_b2c_payments_10_4", cashVat ? b2cPayments.length : 0, cashVat && reportingBoolean(config.emits_b2c) ? readyState : "not_applicable", b2cPayments),
+    ];
+  } else if (country === "RS") {
+    obligations = [
+      obligation("rs_sef_sales", domesticB2b.length, readyState, domesticB2b),
+      obligation("rs_fiscal_receipts", b2c.length, reportingBoolean(config.retail_fiscalization) ? "external" : "review", b2c),
+      obligation("rs_foreign_vat_records", international.length + foreignInbound.length, readyState, [...international, ...foreignInbound]),
+      obligation("rs_aggregate_vat", issued.length + foreignInbound.length, readyState, [...issued, ...foreignInbound]),
+    ];
+  } else if (country === "IT") {
+    obligations = [
+      obligation("it_sdi_invoices", domestic.length, readyState, domestic),
+      obligation("it_corrispettivi", b2c.length, "external", b2c),
+      obligation("it_cross_border", international.length + foreignInbound.length, readyState, [...international, ...foreignInbound]),
+    ];
+  } else if (country === "ES") {
+    const verifactu = String(config.spain_mode || "VERIFACTU").toUpperCase() === "VERIFACTU";
+    const sii = reportingBoolean(config.spain_sii);
+    obligations = [
+      obligation("es_verifactu_records", issued.length, verifactu ? readyState : "external", issued),
+      obligation("es_sii_books", sii ? issued.length + inboundRecords.filter(inPeriod).length : 0, sii ? readyState : "not_applicable", [...issued, ...inboundRecords.filter(inPeriod)]),
+      obligation("es_cancellation_records", creditNotes.length, verifactu ? readyState : "external", creditNotes),
+    ];
+  } else {
+    obligations = [obligation("generic_country_profile", issued.length, "review", issued)];
+  }
+  const sent = regulatoryTransmissions.filter((item) => !["error", "rejected", "failed"].includes(String(item.status || "").toLowerCase())).length;
+  const error = regulatoryTransmissions.filter((item) => ["error", "rejected", "failed"].includes(String(item.status || "").toLowerCase())).length;
+  const summary = {
+    ready: obligations.filter((item) => item.state === "ready").reduce((sum, item) => sum + numberValue(item.count), 0),
+    review: obligations.filter((item) => ["review", "external"].includes(String(item.state))).reduce((sum, item) => sum + numberValue(item.count), 0),
+    sent,
+    error,
+  };
+  return {
+    ok: true,
+    profile,
+    period,
+    configuration: { ready: adapterReady, connector_tested: connectorData.last_test_status === "ok", adapter_enabled: Boolean(connectorData.reporting_enabled), adapter_qualified: Boolean(connectorData.reporting_adapter_qualified) },
+    obligations,
+    summary,
+    transmissions: regulatoryTransmissions,
+    package: {
+      schema: "D2F_REGULATORY_BATCH_V1",
+      generated_at: new Date().toISOString(),
+      company: { legal_name: companyData.legal_name || companyData.name, legal_id: companyData.legal_id, vat_id: companyData.vat_id, country },
+      period,
+      profile: String(profile.code || "GENERIC"),
+      obligations,
+      records: {
+        invoices: issued.map((invoice) => ({ id: invoice.id, number: invoice.invoice_number || invoice.number, date: invoice.date, type: invoiceType(invoice), customer_country: customerCountry(invoice), customer_type: customerType(invoice), total_ht: invoice.total_ht, total_tva: invoice.total_tva, total_ttc: invoice.total_ttc })),
+        payments: postedPayments.map((payment) => ({ id: payment.id, invoice_id: payment.invoice_id || payment.invoiceId, date: payment.date, amount: payment.amount, method: payment.method })),
+        inbound: foreignInbound.map((record) => ({ id: record.id, number: record.doc_number || record.invoice_number, date: record.date || record.document_date, supplier_country: record.supplier_country || record.country })),
+      },
+    },
+  };
 }
 
 async function saveTransmissionIntegration(ownerEmail: string, args: unknown[]) {
@@ -1023,7 +1159,11 @@ async function dispatch(ownerEmail: string, method: string, args: unknown[], ten
     if (!["pa", "archive", "email"].includes(type)) throw new Error("Type de connecteur invalide");
     return testIntegration(getSupabaseAdmin(), ownerEmail, type);
   }
-  if (method === "connections:listTransmissions" || method === "conformity:openQueue") return listTransmissions(getSupabaseAdmin(), ownerEmail);
+  if (method === "connections:listTransmissions") return listTransmissions(getSupabaseAdmin(), ownerEmail);
+  if (method === "conformity:openQueue") {
+    const transmissions = await listTransmissions(getSupabaseAdmin(), ownerEmail);
+    return (Array.isArray(transmissions) ? transmissions.map(object) : []).filter(transmissionIsRegulatory);
+  }
   if (method === "connections:sendInvoice") {
     const payload = object(first(args));
     const connector = await validatedNationalConnector(ownerEmail);
@@ -1040,16 +1180,27 @@ async function dispatch(ownerEmail: string, method: string, args: unknown[], ten
     return transmitIntegration(getSupabaseAdmin(), ownerEmail, "pa", { documentId: String(bundle.document.id || ""), documentNumber: String(bundle.document.invoice_number || ""), content: xml, contentType: "application/xml", metadata: { format: "UBL-2.1", standard: "EN16931", channel_profile: connector.expectedProfile, country: connector.country } });
   }
   if (method === "conformity:rebuildPeriod") {
-    const queued = await conformitySummary(ownerEmail);
-    return { ok: true, queued, kpis: queued, next_due: object(first(args)).periodEnd || object(first(args)).period_end || today() };
+    const prepared = await conformitySummary(ownerEmail, object(first(args)));
+    return { ...prepared, message: "Période réglementaire préparée à partir des données de l’entreprise" };
   }
   if (method === "conformity:sendNow") {
-    const queued = await conformitySummary(ownerEmail);
     const connector = await validatedNationalConnector(ownerEmail);
-    if (connector.country !== "FR") throw new Error("Cet écran e-reporting correspond au dispositif français. Pour ce pays, utilisez le flux national indiqué dans la fiche Entreprise.");
-    const report = JSON.stringify({ type: "e-reporting", generated_at: new Date().toISOString(), period: object(first(args)), flows: queued });
-    const sent = await transmitIntegration(getSupabaseAdmin(), ownerEmail, "pa", { documentNumber: `EREPORT-${today()}`, content: report, contentType: "application/json", metadata: { flows: queued } });
-    return { ...sent, queued, next_due: today(), message: "Transmission e-reporting remise à la Plateforme Agréée" };
+    if (!connector.config.reporting_enabled || !connector.config.reporting_submit_path) throw new Error("Configurez le chemin API de l’adaptateur réglementaire dans la fiche Entreprise");
+    if (!connector.config.reporting_adapter_qualified || connector.config.reporting_adapter_contract !== "D2F_REGULATORY_BATCH_V1") {
+      throw new Error("Transmission bloquée : la recette métier de l’adaptateur réglementaire n’est pas validée pour ce pays");
+    }
+    const prepared = await conformitySummary(ownerEmail, object(first(args)));
+    if (!prepared.configuration.ready) throw new Error("Transmission bloquée : le connecteur réglementaire n’est pas prêt");
+    if (prepared.summary.ready < 1) throw new Error("Aucun dossier prêt à transmettre pour cette période");
+    const batchNumber = `REG-${connector.country}-${prepared.period.start}-${prepared.period.end}`;
+    const sent = await transmitIntegration(getSupabaseAdmin(), ownerEmail, "pa", {
+      documentNumber: batchNumber,
+      content: JSON.stringify(prepared.package),
+      contentType: "application/json",
+      path: String(connector.config.reporting_submit_path),
+      metadata: { kind: "regulatory_reporting", profile: connector.expectedProfile, period: prepared.period, schema: "D2F_REGULATORY_BATCH_V1", summary: prepared.summary },
+    });
+    return { ...sent, profile: prepared.profile, summary: prepared.summary, message: `Lot ${batchNumber} remis à l’adaptateur réglementaire ${connector.config.provider_name || connector.expectedProfile}` };
   }
   if (method === "email:send") {
     const payload = object(first(args));
