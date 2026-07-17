@@ -26,7 +26,7 @@ test("server-renders the D2F Gestion cockpit", async () => {
   assert.doesNotMatch(html, /codex-preview|Your site is taking shape|react-loading-skeleton/i);
 
   const shell = await readFile(new URL("../app/session-shell.tsx", import.meta.url), "utf8");
-  assert.match(shell, /src="\/erp\/index\.html\?v=20260717-csv-history-v215"/);
+  assert.match(shell, /src="\/erp\/index\.html\?v=20260717-deposit-mode-v215"/);
   assert.match(shell, /title="D2F Gestion"/);
 });
 
@@ -37,8 +37,8 @@ test("ships a touch-first smartphone layout", async () => {
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
     readFile(new URL("../public/erp/index.html", import.meta.url), "utf8"),
   ]);
-  assert.match(html, /styles\.css\?v=20260717-csv-history-v215/);
-  assert.match(html, /app\.js\?v=20260717-csv-history-v215/);
+  assert.match(html, /styles\.css\?v=20260717-deposit-mode-v215/);
+  assert.match(html, /app\.js\?v=20260717-deposit-mode-v215/);
   assert.match(styles, /@media \(max-width: 760px\)/);
   assert.match(styles, /position:fixed;\s*z-index:1000;\s*left:0;\s*right:0;\s*bottom:0/);
   assert.match(styles, /grid-template-columns:minmax\(0,1fr\) minmax\(0,1fr\) !important/);
@@ -48,6 +48,24 @@ test("ships a touch-first smartphone layout", async () => {
   assert.match(app, /data-label="\$\{esc\(t\("payments\.col\.invoice"/);
   assert.match(shellStyles, /\.app-session-shell \{ grid-template-rows:64px minmax\(0,1fr\); \}/);
   assert.match(shellStyles, /\.auth-brand h1 \{ font-size:27px/);
+});
+
+test("makes the quote deposit unit explicit with no preset value", async () => {
+  const [html, app, styles, shell, pkg] = await Promise.all([
+    readFile(new URL("../public/erp/index.html", import.meta.url), "utf8"),
+    readFile(new URL("../public/erp/app.js", import.meta.url), "utf8"),
+    readFile(new URL("../public/erp/styles.css", import.meta.url), "utf8"),
+    readFile(new URL("../app/session-shell.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../package.json", import.meta.url), "utf8"),
+  ]);
+  assert.match(html, /class="depositModeOption"[\s\S]*?quotes\.deposit_percent[\s\S]*?quotes\.deposit_amount_ttc/);
+  assert.match(html, /id="q-deposit-value"[^>]*min="0\.01"[^>]*max="100"/);
+  assert.doesNotMatch(html, /id="q-deposit-value"[^>]*value=/);
+  assert.match(app, /function syncQuoteDepositModeUi/);
+  assert.match(app, /syncQuoteDepositModeUi\(\{ clearValue: true \}\)/);
+  assert.match(styles, /\.depositModeOption input:checked \+ span/);
+  assert.match(shell, /app-build-badge">v2\.1\.5/);
+  assert.equal(JSON.parse(pkg).version, "2.1.5");
 });
 
 test("renders human-readable document lists on desktop and smartphone", async () => {

@@ -1154,5 +1154,12 @@
   "import.csv_success": "Uvezeno redova: {count}; preskočeno duplikata: {skipped}.",
   "import.csv_no_rows": "CSV datoteka nema upotrebljivih redova.",
   "import.csv_missing_columns": "Nedostaju obavezne CSV kolone: {columns}",
-  "import.csv_confirm_history": "Uvesti {count} dokumenata kao istoriju samo za čitanje, bez uticaja na kontrolnu tablu?"
+  "import.csv_confirm_history": "Uvesti {count} dokumenata kao istoriju samo za čitanje, bez uticaja na kontrolnu tablu?",
+  "quotes.deposit_percent": "Procenat",
+  "quotes.deposit_percent_help": "% ukupnog iznosa sa PDV-om",
+  "quotes.deposit_amount_help": "Vrednost u evrima (€)",
+  "quotes.deposit_percent_value": "Procenat avansa",
+  "quotes.deposit_amount_value": "Iznos avansa sa PDV-om",
+  "quotes.deposit_percent_placeholder": "Unesite procenat",
+  "quotes.deposit_amount_placeholder": "Unesite iznos"
 }

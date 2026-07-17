@@ -651,5 +651,12 @@
   "import.csv_success": "{count} row(s) imported; {skipped} duplicate(s) skipped.",
   "import.csv_no_rows": "The CSV file contains no usable rows.",
   "import.csv_missing_columns": "Required CSV columns are missing: {columns}",
-  "import.csv_confirm_history": "Import {count} document(s) as read-only history without affecting the dashboard?"
+  "import.csv_confirm_history": "Import {count} document(s) as read-only history without affecting the dashboard?",
+  "quotes.deposit_percent": "Percentage",
+  "quotes.deposit_percent_help": "% of total incl. VAT",
+  "quotes.deposit_amount_help": "Value in euros (€)",
+  "quotes.deposit_percent_value": "Deposit percentage",
+  "quotes.deposit_amount_value": "Deposit amount incl. VAT",
+  "quotes.deposit_percent_placeholder": "Enter a percentage",
+  "quotes.deposit_amount_placeholder": "Enter an amount"
 }

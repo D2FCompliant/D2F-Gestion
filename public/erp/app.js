@@ -725,6 +725,7 @@ function renderToolbar(moduleKey) {
 
     await Promise.all([loadI18n(newLang), loadI18n(DEFAULT_LANG)]);
     applyStaticI18n(document);
+    syncQuoteDepositModeUi();
     renderNavI18n();
     updateCountryEInvoicingProfile(state.company || {});
 
@@ -5122,6 +5123,29 @@ async function recordPaymentAutoIssue(paymentPayload) {
 }
 
 /* ----------------- Actions ----------------- */
+function syncQuoteDepositModeUi({ clearValue = false } = {}) {
+  const isAmount = Boolean($("q-deposit-mode-amount")?.checked);
+  const value = $("q-deposit-value");
+  const label = $("q-deposit-value-label");
+  const unit = $("q-deposit-value-unit");
+  if (!value) return;
+
+  if (clearValue) value.value = "";
+  if (isAmount) {
+    value.removeAttribute("max");
+    value.placeholder = t("quotes.deposit_amount_placeholder", "Saisir un montant");
+    value.setAttribute("aria-label", t("quotes.deposit_amount_value", "Montant TTC de l’acompte"));
+    if (label) label.textContent = t("quotes.deposit_amount_value", "Montant TTC de l’acompte");
+    if (unit) unit.textContent = "€ TTC";
+  } else {
+    value.setAttribute("max", "100");
+    value.placeholder = t("quotes.deposit_percent_placeholder", "Saisir un pourcentage");
+    value.setAttribute("aria-label", t("quotes.deposit_percent_value", "Pourcentage de l’acompte"));
+    if (label) label.textContent = t("quotes.deposit_percent_value", "Pourcentage de l’acompte");
+    if (unit) unit.textContent = "%";
+  }
+}
+
 async function handleAction(actionId, payload) {
   try {
     switch (actionId) {
@@ -7161,6 +7185,12 @@ function init() {
     ["cl-peppol-scheme", "cl-peppol-endpoint"].forEach((id) => {
       $(id)?.addEventListener("input", () => setClientPeppolStatus("not_checked", t("clients.peppol.changed", "Identifiant modifié : relancez la recherche avant un envoi structuré.")));
     });
+
+    // Deposit invoice mode: make the selected unit explicit and never reuse a value across modes.
+    ["q-deposit-mode-percent", "q-deposit-mode-amount"].forEach((id) => {
+      $(id)?.addEventListener("change", () => syncQuoteDepositModeUi({ clearValue: true }));
+    });
+    syncQuoteDepositModeUi();
 
     // VAT watchers
     $("q-client")?.addEventListener("change", () => applyVatForQuote().catch(console.error));

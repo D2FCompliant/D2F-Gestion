@@ -525,5 +525,12 @@
   "import.csv_success": "{count} fila(s) importada(s); {skipped} duplicado(s) omitido(s).",
   "import.csv_no_rows": "El archivo CSV no contiene filas utilizables.",
   "import.csv_missing_columns": "Faltan columnas CSV obligatorias: {columns}",
-  "import.csv_confirm_history": "¿Importar {count} documento(s) como histórico de solo lectura sin afectar al panel?"
+  "import.csv_confirm_history": "¿Importar {count} documento(s) como histórico de solo lectura sin afectar al panel?",
+  "quotes.deposit_percent": "Porcentaje",
+  "quotes.deposit_percent_help": "% del total IVA incluido",
+  "quotes.deposit_amount_help": "Valor en euros (€)",
+  "quotes.deposit_percent_value": "Porcentaje del anticipo",
+  "quotes.deposit_amount_value": "Importe del anticipo IVA incluido",
+  "quotes.deposit_percent_placeholder": "Introducir un porcentaje",
+  "quotes.deposit_amount_placeholder": "Introducir un importe"
 }

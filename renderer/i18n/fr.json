@@ -1164,5 +1164,12 @@
   "import.csv_success": "{count} ligne(s) importée(s) ; {skipped} doublon(s) ignoré(s).",
   "import.csv_no_rows": "Le fichier CSV ne contient aucune ligne exploitable.",
   "import.csv_missing_columns": "Colonnes CSV obligatoires manquantes : {columns}",
-  "import.csv_confirm_history": "Importer {count} document(s) en historique, en lecture seule et sans impact sur le tableau de bord ?"
+  "import.csv_confirm_history": "Importer {count} document(s) en historique, en lecture seule et sans impact sur le tableau de bord ?",
+  "quotes.deposit_percent": "Pourcentage",
+  "quotes.deposit_percent_help": "% du total TTC",
+  "quotes.deposit_amount_help": "Valeur en euros (€)",
+  "quotes.deposit_percent_value": "Pourcentage de l’acompte",
+  "quotes.deposit_amount_value": "Montant TTC de l’acompte",
+  "quotes.deposit_percent_placeholder": "Saisir un pourcentage",
+  "quotes.deposit_amount_placeholder": "Saisir un montant"
 }

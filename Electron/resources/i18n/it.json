@@ -525,5 +525,12 @@
   "import.csv_success": "{count} riga/righe importate; {skipped} duplicati ignorati.",
   "import.csv_no_rows": "Il file CSV non contiene righe utilizzabili.",
   "import.csv_missing_columns": "Mancano colonne CSV obbligatorie: {columns}",
-  "import.csv_confirm_history": "Importare {count} documenti come storico in sola lettura senza influire sul cruscotto?"
+  "import.csv_confirm_history": "Importare {count} documenti come storico in sola lettura senza influire sul cruscotto?",
+  "quotes.deposit_percent": "Percentuale",
+  "quotes.deposit_percent_help": "% del totale IVA inclusa",
+  "quotes.deposit_amount_help": "Valore in euro (€)",
+  "quotes.deposit_percent_value": "Percentuale dell’acconto",
+  "quotes.deposit_amount_value": "Importo dell’acconto IVA inclusa",
+  "quotes.deposit_percent_placeholder": "Inserisci una percentuale",
+  "quotes.deposit_amount_placeholder": "Inserisci un importo"
 }

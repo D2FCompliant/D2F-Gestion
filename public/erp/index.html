@@ -15,7 +15,7 @@
                  object-src 'none';
                  base-uri 'none'">
 
-  <link rel="stylesheet" href="./styles.css?v=20260717-csv-history-v215" />
+  <link rel="stylesheet" href="./styles.css?v=20260717-deposit-mode-v215" />
 </head>
 
 <body>
@@ -717,24 +717,27 @@
               <div class="u-mt">
                 <div class="hint" data-i18n="quotes.deposit_hint">Facture d’acompte : choisir % ou montant TTC.</div>
 
-                <div class="row2">
-                  <label>
-                    <span data-i18n="quotes.deposit_mode">Mode acompte</span>
-                    <div class="inlineRadios">
-                      <label class="inlineRadio">
+                <div class="row2 depositEditor">
+                  <fieldset class="depositModeField">
+                    <legend data-i18n="quotes.deposit_mode">Mode acompte</legend>
+                    <div class="depositModeSwitch">
+                      <label class="depositModeOption">
                         <input type="radio" name="deposit-mode" id="q-deposit-mode-percent" value="percent" checked />
-                        <span>%</span>
+                        <span><strong data-i18n="quotes.deposit_percent">Pourcentage</strong><small data-i18n="quotes.deposit_percent_help">% du total TTC</small></span>
                       </label>
-                      <label class="inlineRadio">
+                      <label class="depositModeOption">
                         <input type="radio" name="deposit-mode" id="q-deposit-mode-amount" value="amount" />
-                        <span data-i18n="quotes.deposit_amount_ttc">Montant TTC</span>
+                        <span><strong data-i18n="quotes.deposit_amount_ttc">Montant TTC</strong><small data-i18n="quotes.deposit_amount_help">Valeur en euros (€)</small></span>
                       </label>
                     </div>
-                  </label>
+                  </fieldset>
 
-                  <label>
-                    <span data-i18n="quotes.deposit_value">Valeur acompte</span>
-                    <input id="q-deposit-value" type="number" step="0.01" value="30" />
+                  <label class="depositValueField">
+                    <span id="q-deposit-value-label" data-i18n="quotes.deposit_percent_value">Pourcentage de l’acompte</span>
+                    <span class="depositValueInput">
+                      <input id="q-deposit-value" type="number" step="0.01" min="0.01" max="100" data-i18n-attr="placeholder:quotes.deposit_percent_placeholder" placeholder="Saisir un pourcentage" />
+                      <strong id="q-deposit-value-unit" aria-hidden="true">%</strong>
+                    </span>
                   </label>
                 </div>
               </div>
@@ -1535,12 +1538,12 @@
   </aside>
 
   <script src="./xp-z12-012.js"></script>
-  <script src="./receivables.js?v=20260717-csv-history-v215"></script>
-  <script src="./audit-ui.js?v=20260717-csv-history-v215"></script>
-  <script src="./renderer/web-electron-shim.js?v=20260717-csv-history-v215"></script>
-  <script src="./renderer/web-api-shim.js?v=20260717-csv-history-v215"></script>
-  <script src="./dashboard-ui.js?v=20260717-csv-history-v215"></script>
-  <script src="./app.js?v=20260717-csv-history-v215"></script>
+  <script src="./receivables.js?v=20260717-deposit-mode-v215"></script>
+  <script src="./audit-ui.js?v=20260717-deposit-mode-v215"></script>
+  <script src="./renderer/web-electron-shim.js?v=20260717-deposit-mode-v215"></script>
+  <script src="./renderer/web-api-shim.js?v=20260717-deposit-mode-v215"></script>
+  <script src="./dashboard-ui.js?v=20260717-deposit-mode-v215"></script>
+  <script src="./app.js?v=20260717-deposit-mode-v215"></script>
 
   <div id="clientsImportModal" class="modal" aria-hidden="true">
     <div class="modal__backdrop" data-modal-close></div>

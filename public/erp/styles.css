@@ -448,6 +448,25 @@ textarea{ resize: vertical; }
 /* Inline radios */
 .inlineRadios{ display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
 .inlineRadio{ display:flex; gap:6px; align-items:center; }
+.depositModeField{ margin:0; padding:0; border:0; min-width:0; }
+.depositModeField legend{ margin-bottom:7px; color:var(--muted); }
+.depositModeSwitch{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.depositModeOption{ position:relative; cursor:pointer; }
+.depositModeOption input{ position:absolute; opacity:0; pointer-events:none; }
+.depositModeOption > span{
+  display:flex; flex-direction:column; gap:2px; min-height:62px; padding:10px 12px;
+  border:2px solid rgba(11,18,32,.12); border-radius:14px; background:rgba(255,255,255,.95);
+  transition:border-color .16s var(--ease), background .16s var(--ease), box-shadow .16s var(--ease);
+}
+.depositModeOption strong{ font-size:14px; }
+.depositModeOption small{ color:var(--muted); font-size:12px; }
+.depositModeOption input:checked + span{ border-color:var(--primary); background:rgba(99,102,241,.09); box-shadow:0 0 0 3px rgba(99,102,241,.10); }
+.depositModeOption input:focus-visible + span{ outline:3px solid rgba(99,102,241,.22); outline-offset:2px; }
+.depositValueField{ min-width:0; }
+.depositValueInput{ position:relative; display:block; }
+.depositValueInput input{ padding-right:72px; }
+.depositValueInput > strong{ position:absolute; right:14px; top:50%; transform:translateY(-50%); color:var(--primary); font-size:14px; pointer-events:none; }
+
 
 /* Lists */
 .list{ display:flex; flex-direction: column; gap: 8px; }
