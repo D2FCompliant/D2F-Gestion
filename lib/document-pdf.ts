@@ -11,11 +11,11 @@ const LINE = rgb(0.86, 0.89, 0.93);
 const SOFT = rgb(0.95, 0.97, 1);
 
 const COPY: Record<string, Record<string, string>> = {
-  fr: { quote: "DEVIS", invoice: "FACTURE", credit: "AVOIR", seller: "Émetteur", buyer: "Client", number: "Numéro", date: "Date", dueDate: "Échéance", description: "Désignation", quantity: "Qté", unitPrice: "Prix unitaire HT", vat: "TVA", total: "Total HT", subtotal: "Total HT", vatTotal: "Total TVA", grandTotal: "Total TTC", prepaid: "Acomptes", amountDue: "Net à payer", payment: "Paiement", terms: "Conditions", bank: "Coordonnées bancaires", legal: "Mentions", thanks: "Merci pour votre confiance.", page: "Page" },
-  en: { quote: "QUOTATION", invoice: "INVOICE", credit: "CREDIT NOTE", seller: "Seller", buyer: "Customer", number: "Number", date: "Date", dueDate: "Due date", description: "Description", quantity: "Qty", unitPrice: "Unit price excl. VAT", vat: "VAT", total: "Total excl. VAT", subtotal: "Subtotal", vatTotal: "VAT total", grandTotal: "Total", prepaid: "Prepayments", amountDue: "Amount due", payment: "Payment", terms: "Terms", bank: "Bank details", legal: "Legal information", thanks: "Thank you for your business.", page: "Page" },
-  es: { quote: "PRESUPUESTO", invoice: "FACTURA", credit: "NOTA DE CRÉDITO", seller: "Emisor", buyer: "Cliente", number: "Número", date: "Fecha", dueDate: "Vencimiento", description: "Descripción", quantity: "Cant.", unitPrice: "Precio sin IVA", vat: "IVA", total: "Total sin IVA", subtotal: "Base imponible", vatTotal: "Total IVA", grandTotal: "Total", prepaid: "Anticipos", amountDue: "Importe a pagar", payment: "Pago", terms: "Condiciones", bank: "Datos bancarios", legal: "Información legal", thanks: "Gracias por su confianza.", page: "Página" },
-  it: { quote: "PREVENTIVO", invoice: "FATTURA", credit: "NOTA DI CREDITO", seller: "Emittente", buyer: "Cliente", number: "Numero", date: "Data", dueDate: "Scadenza", description: "Descrizione", quantity: "Q.tà", unitPrice: "Prezzo IVA escl.", vat: "IVA", total: "Totale IVA escl.", subtotal: "Imponibile", vatTotal: "Totale IVA", grandTotal: "Totale", prepaid: "Acconti", amountDue: "Da pagare", payment: "Pagamento", terms: "Condizioni", bank: "Coordinate bancarie", legal: "Informazioni legali", thanks: "Grazie per la fiducia.", page: "Pagina" },
-  sr: { quote: "PONUDA", invoice: "FAKTURA", credit: "KNJIZNO ODOBRENJE", seller: "Izdavalac", buyer: "Kupac", number: "Broj", date: "Datum", dueDate: "Rok placanja", description: "Opis", quantity: "Kol.", unitPrice: "Cena bez PDV", vat: "PDV", total: "Iznos bez PDV", subtotal: "Osnovica", vatTotal: "Ukupan PDV", grandTotal: "Ukupno", prepaid: "Avansi", amountDue: "Za uplatu", payment: "Placanje", terms: "Uslovi", bank: "Podaci banke", legal: "Pravni podaci", thanks: "Hvala na poverenju.", page: "Strana" },
+  fr: { quote: "DEVIS", invoice: "FACTURE", credit: "AVOIR", seller: "Émetteur", buyer: "Client", number: "Numéro", date: "Date", dueDate: "Échéance", description: "Désignation", quantity: "Qté", unitPrice: "Prix unitaire HT", vat: "TVA", total: "Total HT", subtotal: "Total HT", vatTotal: "Total TVA", grandTotal: "Total TTC", prepaid: "Acomptes", amountDue: "Net à payer", payment: "Paiement", terms: "Conditions", bank: "Coordonnées bancaires", legal: "Mentions", discount: "Remise", discountTotal: "Remise globale HT", thanks: "Merci pour votre confiance.", page: "Page" },
+  en: { quote: "QUOTATION", invoice: "INVOICE", credit: "CREDIT NOTE", seller: "Seller", buyer: "Customer", number: "Number", date: "Date", dueDate: "Due date", description: "Description", quantity: "Qty", unitPrice: "Unit price excl. VAT", vat: "VAT", total: "Total excl. VAT", subtotal: "Subtotal", vatTotal: "VAT total", grandTotal: "Total", prepaid: "Prepayments", amountDue: "Amount due", payment: "Payment", terms: "Terms", bank: "Bank details", legal: "Legal information", discount: "Discount", discountTotal: "Document discount", thanks: "Thank you for your business.", page: "Page" },
+  es: { quote: "PRESUPUESTO", invoice: "FACTURA", credit: "NOTA DE CRÉDITO", seller: "Emisor", buyer: "Cliente", number: "Número", date: "Fecha", dueDate: "Vencimiento", description: "Descripción", quantity: "Cant.", unitPrice: "Precio sin IVA", vat: "IVA", total: "Total sin IVA", subtotal: "Base imponible", vatTotal: "Total IVA", grandTotal: "Total", prepaid: "Anticipos", amountDue: "Importe a pagar", payment: "Pago", terms: "Condiciones", bank: "Datos bancarios", legal: "Información legal", discount: "Descuento", discountTotal: "Descuento global", thanks: "Gracias por su confianza.", page: "Página" },
+  it: { quote: "PREVENTIVO", invoice: "FATTURA", credit: "NOTA DI CREDITO", seller: "Emittente", buyer: "Cliente", number: "Numero", date: "Data", dueDate: "Scadenza", description: "Descrizione", quantity: "Q.tà", unitPrice: "Prezzo IVA escl.", vat: "IVA", total: "Totale IVA escl.", subtotal: "Imponibile", vatTotal: "Totale IVA", grandTotal: "Totale", prepaid: "Acconti", amountDue: "Da pagare", payment: "Pagamento", terms: "Condizioni", bank: "Coordinate bancarie", legal: "Informazioni legali", discount: "Sconto", discountTotal: "Sconto globale", thanks: "Grazie per la fiducia.", page: "Pagina" },
+  sr: { quote: "PONUDA", invoice: "FAKTURA", credit: "KNJIZNO ODOBRENJE", seller: "Izdavalac", buyer: "Kupac", number: "Broj", date: "Datum", dueDate: "Rok placanja", description: "Opis", quantity: "Kol.", unitPrice: "Cena bez PDV", vat: "PDV", total: "Iznos bez PDV", subtotal: "Osnovica", vatTotal: "Ukupan PDV", grandTotal: "Ukupno", prepaid: "Avansi", amountDue: "Za uplatu", payment: "Placanje", terms: "Uslovi", bank: "Podaci banke", legal: "Pravni podaci", discount: "Popust", discountTotal: "Ukupan popust", thanks: "Hvala na poverenju.", page: "Strana" },
 };
 
 function value(input: unknown) {
@@ -97,18 +97,24 @@ function partyLines(party: JsonRecord, locale: string) {
   return address.map((line) => safeText(line, locale));
 }
 
-function lineTotals(lines: JsonRecord[]) {
-  let totalHt = 0;
-  let totalVat = 0;
+function lineTotals(lines: JsonRecord[], allowancePercentInput: unknown = 0) {
+  let subtotalHt = 0;
+  let subtotalVat = 0;
   for (const line of lines) {
     const quantity = numberValue(line.quantity || 1);
     const unitPrice = numberValue(line.unit_price_ht);
-    const discount = numberValue(line.remise_percent);
+    const discount = Math.min(100, Math.max(0, numberValue(line.remise_percent)));
     const ht = Math.round(quantity * unitPrice * (1 - discount / 100) * 100) / 100;
-    totalHt += ht;
-    totalVat += ht * numberValue(line.tva_percent) / 100;
+    subtotalHt += ht;
+    subtotalVat += ht * numberValue(line.tva_percent) / 100;
   }
-  return { totalHt: Math.round(totalHt * 100) / 100, totalVat: Math.round(totalVat * 100) / 100, totalTtc: Math.round((totalHt + totalVat) * 100) / 100 };
+  subtotalHt = Math.round(subtotalHt * 100) / 100;
+  const allowancePercent = Math.min(100, Math.max(0, numberValue(allowancePercentInput)));
+  const factor = 1 - allowancePercent / 100;
+  const allowanceAmount = Math.round(subtotalHt * allowancePercent) / 100;
+  const totalHt = Math.round((subtotalHt - allowanceAmount) * 100) / 100;
+  const totalVat = Math.round(subtotalVat * factor * 100) / 100;
+  return { subtotalHt, allowancePercent, allowanceAmount, totalHt, totalVat, totalTtc: Math.round((totalHt + totalVat) * 100) / 100 };
 }
 
 export async function createDocumentPdf(input: {
@@ -175,17 +181,17 @@ export async function createDocumentPdf(input: {
   drawLines(page, buyerLines, MARGIN + boxWidth + gap + 10, y - 35, { font: regular, size: 8.5, lineHeight: 12 });
   y -= partyHeight + 25;
 
-  const columns = { desc: MARGIN, qty: 323, price: 370, vat: 465, total: 510 };
+  const columns = { desc: MARGIN, qty: 292, price: 333, discount: 418, vat: 466, total: 510 };
   const tableHeader = () => {
     page.drawRectangle({ x: MARGIN, y: y - 22, width: A4.width - MARGIN * 2, height: 22, color: BLUE });
-    const headers: Array<[string, number]> = [[c.description, columns.desc + 7], [c.quantity, columns.qty], [c.unitPrice, columns.price], [c.vat, columns.vat], [c.total, columns.total]];
+    const headers: Array<[string, number]> = [[c.description, columns.desc + 7], [c.quantity, columns.qty], [c.unitPrice, columns.price], [c.discount, columns.discount], [c.vat, columns.vat], [c.total, columns.total]];
     headers.forEach(([label, x]) => page.drawText(safeText(label, locale), { x, y: y - 15, size: x === columns.desc + 7 ? 8 : 7, font: bold, color: rgb(1, 1, 1) }));
     y -= 26;
   };
   tableHeader();
   for (const line of lines) {
     const description = safeText(line.description || line.name || line.label || "-", locale);
-    const descriptionLines = wrap(description, regular, 8.5, 268);
+    const descriptionLines = wrap(description, regular, 8.5, 238);
     const rowHeight = Math.max(24, descriptionLines.length * 11 + 10);
     if (y - rowHeight < 118) {
       addPage();
@@ -199,19 +205,24 @@ export async function createDocumentPdf(input: {
     drawLines(page, descriptionLines, columns.desc + 7, y - 14, { font: regular, size: 8.5, lineHeight: 11 });
     page.drawText(quantity.toFixed(2).replace(/\.00$/, ""), { x: columns.qty, y: y - 15, size: 8, font: regular });
     page.drawText(safeText(money(price, currency, locale), locale), { x: columns.price, y: y - 15, size: 7.5, font: regular });
+    page.drawText(discount ? `${discount.toFixed(2).replace(/\.00$/, "")}%` : "-", { x: columns.discount, y: y - 15, size: 8, font: regular });
     page.drawText(`${numberValue(line.tva_percent).toFixed(2).replace(/\.00$/, "")}%`, { x: columns.vat, y: y - 15, size: 8, font: regular });
     page.drawText(safeText(money(total, currency, locale), locale), { x: columns.total, y: y - 15, size: 7.5, font: regular });
     y -= rowHeight;
   }
 
-  const calculated = lineTotals(lines);
+  const calculated = lineTotals(lines, document.allowance_percent);
   const sign = isCredit ? -1 : 1;
   const totalHt = document.total_ht == null ? calculated.totalHt * sign : numberValue(document.total_ht);
   const totalVat = document.total_tva == null ? calculated.totalVat * sign : numberValue(document.total_tva);
   const totalTtc = document.total_ttc == null ? calculated.totalTtc * sign : numberValue(document.total_ttc);
   const prepaid = Math.max(0, numberValue(document.prepaid_amount));
   const amountDue = document.amount_due == null ? totalTtc - prepaid : numberValue(document.amount_due);
-  const totalsRows: Array<[string, number]> = [[c.subtotal, totalHt], [c.vatTotal, totalVat], [c.grandTotal, totalTtc]];
+  const subtotalHt = document.subtotal_ht == null ? calculated.subtotalHt * sign : numberValue(document.subtotal_ht);
+  const allowanceAmount = document.allowance_amount == null ? calculated.allowanceAmount : Math.abs(numberValue(document.allowance_amount));
+  const totalsRows: Array<[string, number]> = [[c.subtotal, allowanceAmount ? subtotalHt : totalHt]];
+  if (allowanceAmount) totalsRows.push([c.discountTotal, -Math.abs(allowanceAmount)]);
+  totalsRows.push([c.vatTotal, totalVat], [c.grandTotal, totalTtc]);
   if (prepaid) totalsRows.push([c.prepaid, -prepaid]);
   totalsRows.push([c.amountDue, amountDue]);
   ensure(totalsRows.length * 18 + 40);

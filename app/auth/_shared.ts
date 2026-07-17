@@ -1,11 +1,11 @@
 import type { User } from "@supabase/supabase-js";
 import { isPlatformAdminEmail, publicBillingConfig, renewedSession, sessionCookie, type AppSession } from "../../lib/auth/server";
-import { accountAllowsApplication, memberFor, type TenantAccount } from "../../lib/saas/accounts";
+import { accountAllowsApplication, accountBillingTerm, accountIsTrial, accountTrialEndsAt, accountTrialRequested, memberFor, type TenantAccount } from "../../lib/saas/accounts";
 
 export function json(result: unknown, status = 200, headers?: HeadersInit) {
   return Response.json(status < 400 ? { ok: true, result } : { ok: false, error: result }, {
     status,
-    headers: { "cache-control": "no-store", ...headers },
+    headers: { "cache-control": "no-store", "x-d2f-build": "2.1.4", ...headers },
   });
 }
 
@@ -20,9 +20,17 @@ export function publicAccount(account: TenantAccount, userId: string, email: str
     seatLimit: account.seatLimit,
     status: account.status,
     members: account.members,
-    subscription: account.subscription,
+    billingProfile: account.billingProfile,
+    subscription: {
+      ...account.subscription,
+      billingTerm: accountBillingTerm(account),
+      customerTransferReference: accountTrialRequested(account) ? "" : account.subscription.customerTransferReference,
+    },
     role: member?.role || "collaborator",
     canUseApplication: accountAllowsApplication(account),
+    isTrial: accountIsTrial(account),
+    trialEndsAt: accountTrialEndsAt(account),
+    trialRequested: accountTrialRequested(account),
     isPlatformAdmin: isPlatformAdminEmail(email),
     billing: publicBillingConfig(),
   };

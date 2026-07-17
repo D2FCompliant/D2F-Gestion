@@ -58,6 +58,40 @@
     return String(payment?.direction || "in").toLowerCase() === "out" ? -amount : amount;
   }
 
+  function isoDate(value) {
+    const match = String(value || "").match(/^(\d{4}-\d{2}-\d{2})/);
+    return match?.[1] || "";
+  }
+
+  function addDaysIso(value, days) {
+    const date = isoDate(value);
+    if (!date) return "";
+    const parsed = new Date(`${date}T00:00:00Z`);
+    if (Number.isNaN(parsed.getTime())) return "";
+    parsed.setUTCDate(parsed.getUTCDate() + Math.max(0, Math.floor(days)));
+    return parsed.toISOString().slice(0, 10);
+  }
+
+  function paymentDays(record) {
+    const explicit = record?.payment_days ?? record?.paymentDays;
+    if (explicit !== undefined && explicit !== null && String(explicit).trim() !== "") {
+      const numeric = Number(explicit);
+      if (Number.isFinite(numeric) && numeric >= 0) return Math.floor(numeric);
+    }
+    const term = String(record?.payment_term || record?.paymentTerm || "").trim().toUpperCase();
+    if (term === "DUE_ON_RECEIPT") return 0;
+    if (term === "NET_15") return 15;
+    if (term === "NET_30") return 30;
+    return null;
+  }
+
+  function effectiveDueDate(invoice, client = {}) {
+    const explicit = isoDate(invoice?.due_date || invoice?.dueDate);
+    if (explicit) return explicit;
+    const days = paymentDays(invoice) ?? paymentDays(client);
+    return days === null ? "" : addDaysIso(invoice?.date, days);
+  }
+
   function buildReceivableRows(invoices, payments) {
     const allInvoices = Array.isArray(invoices) ? invoices : [];
     const allPayments = Array.isArray(payments) ? payments : [];
@@ -127,6 +161,7 @@
     creditSourceId,
     invoiceGrossAmount,
     paymentSignedAmount,
+    effectiveDueDate,
     buildReceivableRows,
     summarize,
   });

@@ -1,5 +1,5 @@
 import { isPlatformAdminEmail, readAppSession } from "../../../../lib/auth/server";
-import { listTenantAccounts, setTenantSubscriptionStatus } from "../../../../lib/saas/accounts";
+import { accountBillingTerm, accountCanReactivate, accountIsTrial, accountTrialEndsAt, accountTrialRequested, listTenantAccounts, setTenantSubscriptionStatus } from "../../../../lib/saas/accounts";
 import { json, messageFromError } from "../../_shared";
 
 export const dynamic = "force-dynamic";
@@ -22,9 +22,15 @@ export async function GET(request: Request) {
     members: account.members.length,
     amountEur: account.subscription.amountEur,
     payerName: account.subscription.payerName,
-    transferReference: account.subscription.customerTransferReference,
+    transferReference: accountTrialRequested(account) ? "" : account.subscription.customerTransferReference,
+    billingTerm: accountBillingTerm(account),
+    trialRequested: accountTrialRequested(account),
     paidOn: account.subscription.paidOn,
     currentPeriodEnd: account.subscription.currentPeriodEnd,
+    isTrial: accountIsTrial(account),
+    trialEndsAt: accountTrialEndsAt(account),
+    canReactivate: accountCanReactivate(account),
+    reactivationKind: accountTrialEndsAt(account) ? "trial" : "paid",
     createdAt: account.createdAt,
   })));
 }
@@ -34,9 +40,9 @@ export async function PATCH(request: Request) {
     const session = await readAppSession(request);
     if (!session || !authorized(session.email)) return json("Accès administrateur requis", 403);
     const body = await request.json() as Record<string, unknown>;
-    const status = body.status === "suspended" ? "suspended" : "active";
-    const account = await setTenantSubscriptionStatus(String(body.tenantId || ""), status);
-    return json({ id: account.id, status: account.status });
+    const status = body.status === "suspended" ? "suspended" : body.status === "trial" ? "trial" : "active";
+    const result = await setTenantSubscriptionStatus(String(body.tenantId || ""), status, session.email);
+    return json({ id: result.account.id, status: result.account.status, invoice: result.invoice });
   } catch (error) {
     return json(messageFromError(error, "Mise à jour impossible"), 400);
   }

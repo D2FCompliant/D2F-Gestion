@@ -153,12 +153,17 @@ export async function userFromAccessToken(accessToken: string): Promise<User> {
 
 export function publicBillingConfig() {
   const amount = Number(process.env.D2F_MONTHLY_PRICE_EUR || "29");
+  const annualAmount = Number(process.env.D2F_ANNUAL_PRICE_EUR || "290");
   return {
     amountEur: Number.isFinite(amount) && amount > 0 ? amount : 29,
+    annualAmountEur: Number.isFinite(annualAmount) && annualAmount > 0 ? annualAmount : 290,
     currency: "EUR",
+    bankName: process.env.D2F_BILLING_BANK_NAME || "BANCA INTESA AD BEOGRAD",
     beneficiary: process.env.D2F_BILLING_BENEFICIARY || "D2F Compliant d.o.o.",
-    iban: process.env.D2F_BILLING_IBAN || "",
-    bic: process.env.D2F_BILLING_BIC || "",
+    iban: process.env.D2F_BILLING_IBAN || "RS35160600000229522419",
+    bic: process.env.D2F_BILLING_BIC || "DBDBRSBG",
+    bankInformation: process.env.D2F_BILLING_BANK_INFO || "BANCA INTESA AD BEOGRAD",
+    sepaCreditTransfer: true,
   };
 }
 

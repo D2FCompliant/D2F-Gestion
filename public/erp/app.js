@@ -193,8 +193,6 @@ const MODULES = {
     desc: "Paramètres de l’entreprise émettrice + branding PDF.",
     actions: [
       { id: "company:save", i18n: "Enregistrer", variant: "primary" },
-      { id: "company:chooseLogo", i18n: "Logo…", variant: "secondary" },
-      { id: "company:clearLogo", i18n: "Retirer logo", variant: "ghost" },
     ],
   },
 
@@ -211,7 +209,6 @@ const MODULES = {
     desc: "Enregistrer un paiement sur une facture sélectionnée (total ou partiel).",
     actions: [
       { id: "payments:refresh", i18n: "Rafraîchir", variant: "secondary" },
-      { id: "payments:record", i18n: "Enregistrer paiement", variant: "primary" },
     ],
   },
 
@@ -230,9 +227,10 @@ const MODULES = {
     title: "Articles",
     desc: "Catalogue articles (sources des lignes).",
     actions: [
-      { id: "items:save", i18n: "Enregistrer", variant: "primary" },
-      { id: "items:new", i18n: "Nouveau", variant: "secondary" },
-      { id: "items:delete", i18n: "Supprimer", variant: "danger" },
+      { id: "items:save", i18n: "action.save", fallback: "Enregistrer", variant: "primary" },
+      { id: "items:new", i18n: "action.new", fallback: "Nouveau", variant: "secondary" },
+      { id: "items:importCsv", i18n: "items.import_csv", fallback: "Importer CSV…", variant: "secondary" },
+      { id: "items:delete", i18n: "action.delete", fallback: "Supprimer", variant: "danger" },
     ],
   },
 
@@ -243,6 +241,7 @@ const MODULES = {
       { id: "quotes:save", i18n: "Enregistrer", variant: "primary" },
       { id: "quotes:new", i18n: "Nouveau", variant: "secondary" },
       { id: "quotes:delete", i18n: "Supprimer", variant: "danger" },
+      { id: "quotes:importCsv", i18n: "quotes.import_csv_history", fallback: "Importer historique CSV…", variant: "secondary" },
       { id: "quotes:issue", i18n: "Valider/Envoyer", variant: "ghost" },
       { id: "quotes:toDepositInvoice", i18n: "Facture d’acompte", variant: "ghost" },
       { id: "quotes:toFinalInvoice", i18n: "Facture finale (solde)", variant: "ghost" },
@@ -257,6 +256,7 @@ const MODULES = {
       { id: "invoices:save", i18n: "Enregistrer", variant: "primary" },
       { id: "invoices:new", i18n: "Nouvelle", variant: "secondary" },
       { id: "invoices:delete", i18n: "Supprimer", variant: "danger" },
+      { id: "invoices:importCsv", i18n: "invoices.import_csv_history", fallback: "Importer historique CSV…", variant: "secondary" },
       { id: "invoices:issue", i18n: "Valider/Émettre", variant: "ghost" },
       { id: "invoices:toCreditNote", i18n: "Créer un avoir", variant: "ghost" },
       { id: "invoices:recordPayment", i18n: "Enregistrer encaissement", variant: "secondary" },
@@ -285,18 +285,102 @@ const MODULES = {
 },
 
   conformity: {
-  title: "Conformité",
-  desc: "E-reporting : préparation, envoi, statuts, erreurs.",
+  title: "Déclarations",
+  desc: "Obligations réglementaires, transmissions et accusés de réception selon le pays.",
   actions: [
     { id: "conformity:refresh", i18n: "Rafraîchir", variant: "secondary" },
-    { id: "conformity:sendNow", i18n: "Envoyer maintenant", variant: "primary" },
+    { id: "conformity:sendNow", i18n: "Transmettre les dossiers prêts", variant: "primary" },
     { id: "conformity:openQueue", i18n: "File d’envoi", variant: "ghost" },
-    { id: "conformity:rebuildPeriod", i18n: "Recalculer la période", variant: "ghost" },
-    { id: "conformity:settings", i18n: "Paramètres réforme", variant: "secondary" },
+    { id: "conformity:rebuildPeriod", i18n: "Préparer la période", variant: "secondary" },
+    { id: "conformity:settings", i18n: "Paramètres entreprise", variant: "secondary" },
   ],
 },
 
+
+  audit: {
+    title: "PAF / Trace",
+    desc: "Journal sécurisé des opérations et preuves de contrôle.",
+    actions: [],
+  },
 };
+
+const WORKFLOW_GUIDES = {
+  company: { action: "company:save" },
+  dashboard: { action: "dashboard:refresh" },
+  clients: { action: "clients:new" },
+  items: { action: "items:new" },
+  quotes: { action: "quotes:new" },
+  invoices: { action: "invoices:new" },
+  payments: { action: "payments:refresh" },
+  inbound: { action: "inbound:import" },
+  exports: { focusId: "ex-invoice" },
+  conformity: { action: "conformity:rebuildPeriod" },
+  audit: { focusId: "auditBtnRead" },
+};
+
+function renderWorkflowCompanion(moduleKey) {
+  const guide = WORKFLOW_GUIDES[moduleKey] || WORKFLOW_GUIDES.dashboard;
+  const title = document.getElementById("workflowCompanionTitle");
+  const summary = document.getElementById("workflowCompanionSummary");
+  const steps = document.getElementById("workflowCompanionSteps");
+  const result = document.getElementById("workflowCompanionResult");
+  const action = document.getElementById("workflowCompanionAction");
+  const eyebrow = document.getElementById("workflowCompanionEyebrow");
+  const stepsTitle = document.getElementById("workflowCompanionStepsTitle");
+  const resultLabel = document.getElementById("workflowCompanionResultLabel");
+  if (!title || !summary || !steps || !result || !action) return;
+
+  const prefix = "companion." + moduleKey + ".";
+  title.textContent = t(prefix + "title", MODULES[moduleKey]?.title || moduleKey);
+  summary.textContent = t(prefix + "summary", MODULES[moduleKey]?.desc || "");
+  if (eyebrow) eyebrow.textContent = t("companion.eyebrow", "COMPAGNON D2F");
+  if (stepsTitle) stepsTitle.textContent = t("companion.steps", "Étapes conseillées");
+  if (resultLabel) resultLabel.textContent = t("companion.result", "Résultat attendu");
+  steps.innerHTML = "";
+  for (let index = 1; index <= 3; index += 1) {
+    const item = document.createElement("li");
+    item.textContent = t(prefix + "step" + index, "");
+    steps.appendChild(item);
+  }
+  result.textContent = t(prefix + "expected", "");
+  action.textContent = t(prefix + "action", t("companion.start", "Commencer"));
+  action.removeAttribute("data-action");
+  action.removeAttribute("data-focus-id");
+  if (guide.action) action.dataset.action = guide.action;
+  if (guide.focusId) action.dataset.focusId = guide.focusId;
+  action.hidden = !(guide.action || guide.focusId);
+}
+
+function setWorkflowCompanionOpen(open) {
+  const panel = document.getElementById("workflowCompanionPanel");
+  const toggle = document.getElementById("workflowCompanionToggle");
+  if (!panel || !toggle) return;
+  panel.hidden = !open;
+  toggle.setAttribute("aria-expanded", open ? "true" : "false");
+  document.body.classList.toggle("is-workflow-companion-open", open);
+  if (open) document.getElementById("workflowCompanionClose")?.focus();
+}
+
+function initWorkflowCompanion() {
+  const toggle = document.getElementById("workflowCompanionToggle");
+  const close = document.getElementById("workflowCompanionClose");
+  const action = document.getElementById("workflowCompanionAction");
+  toggle?.addEventListener("click", () => setWorkflowCompanionOpen(toggle.getAttribute("aria-expanded") !== "true"));
+  close?.addEventListener("click", () => setWorkflowCompanionOpen(false));
+  action?.addEventListener("click", () => {
+    const focusId = action.dataset.focusId;
+    if (focusId) {
+      const target = document.getElementById(focusId);
+      target?.scrollIntoView({ behavior: "smooth", block: "center" });
+      target?.focus();
+    }
+    setWorkflowCompanionOpen(false);
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") setWorkflowCompanionOpen(false);
+  });
+  renderWorkflowCompanion(state?.currentModule || "dashboard");
+}
 
 function renderNavI18n() {
   document.querySelectorAll(".nav__item[data-module]").forEach((btn) => {
@@ -478,6 +562,11 @@ function invoiceFullToDraft(full) {
     source_quote_id: inv.quote_id ?? inv.source_quote_id ?? null,
     vat_mode: inv.vat_mode ?? "AUTO",
     vat_effective: inv.vat_effective ?? "AUTO",
+    allowance_percent: Number(inv.allowance_percent || 0),
+    allowance_amount: Number(inv.allowance_amount || 0),
+    allowance_reason: inv.allowance_reason || "",
+    allowance_reason_code: inv.allowance_reason_code || "95",
+    historical_import: Boolean(inv.historical_import),
   };
 }
 
@@ -612,25 +701,15 @@ function renderToolbar(moduleKey) {
 
   /* ----------------- Language selector ----------------- */
   const langWrap = document.createElement("div");
-  langWrap.style.display = "inline-flex";
-  langWrap.style.alignItems = "center";
-  langWrap.style.gap = "8px";
-  langWrap.style.marginRight = "12px";
+  langWrap.className = "toolbarLanguage";
 
   const langLabel = document.createElement("span");
   langLabel.className = "toolbar__langLabel";
   langLabel.textContent = t("toolbar.language", t("toolbar.lang", "Langue"));
-  langLabel.style.opacity = "0.75";
-  langLabel.style.fontSize = "12px";
 
   const langSel = document.createElement("select");
   langSel.id = "toolbarLangSelect";
-  langSel.style.height = "32px";
-  langSel.style.borderRadius = "10px";
-  langSel.style.padding = "0 10px";
-  langSel.style.border = "1px solid rgba(255,255,255,0.15)";
-  langSel.style.background = "transparent";
-  langSel.style.color = "inherit";
+  langSel.className = "toolbarLanguage__select";
 
   const curLang = state.lang || getLang();
   for (const l of LANGS) {
@@ -661,6 +740,7 @@ function renderToolbar(moduleKey) {
     }
 
     renderToolbar(cur);
+    renderWorkflowCompanion(cur);
     await refreshModule(cur).catch(() => {});
     if (cur === "dashboard" && typeof window.d2fDashboardRefresh === "function") {
       await window.d2fDashboardRefresh();
@@ -676,114 +756,141 @@ function renderToolbar(moduleKey) {
   const cfg = MODULES[moduleKey];
   if (!cfg) return;
 
+  const actions = [...(cfg.actions || [])];
+  if (moduleKey === "quotes") {
+    actions.unshift(
+      { id: "quotes:accept", i18n: "action.accept", fallback: "Accepter", variant: "primary" },
+      { id: "quotes:reject", i18n: "action.reject", fallback: "Refuser", variant: "danger" },
+    );
+  }
+
+  const directIds = toolbarDirectActionIds(moduleKey);
+  const directActions = actions.filter((action) => directIds.includes(action.id));
+  const overflowActions = actions.filter((action) => !directIds.includes(action.id));
+
+  for (const action of directActions) {
+    elToolbar.appendChild(createToolbarActionButton(action, moduleKey));
+  }
+
+  if (overflowActions.length) {
+    const overflow = document.createElement("details");
+    overflow.className = "toolbarMore";
+
+    const trigger = document.createElement("summary");
+    trigger.className = "btn btn--secondary toolbarMore__trigger";
+    trigger.setAttribute("aria-label", t("toolbar.more_actions", "Plus d’actions"));
+    const triggerIcon = document.createElement("span");
+    triggerIcon.className = "toolbarMore__icon";
+    triggerIcon.setAttribute("aria-hidden", "true");
+    triggerIcon.textContent = "⋯";
+    const triggerText = document.createElement("span");
+    triggerText.className = "toolbarMore__text";
+    triggerText.textContent = t("toolbar.more_actions", "Plus d’actions");
+    trigger.appendChild(triggerIcon);
+    trigger.appendChild(triggerText);
+    overflow.appendChild(trigger);
+
+    const menu = document.createElement("div");
+    menu.className = "toolbarMore__menu";
+    menu.setAttribute("role", "menu");
+
+    for (const action of overflowActions) {
+      const button = createToolbarActionButton(action, moduleKey, true);
+      button.setAttribute("role", "menuitem");
+      button.addEventListener("click", () => overflow.removeAttribute("open"));
+      menu.appendChild(button);
+    }
+
+    overflow.appendChild(menu);
+    elToolbar.appendChild(overflow);
+  }
+}
+
+function toolbarDirectActionIds(moduleKey) {
+  if (moduleKey === "quotes") {
+    const hasId = !!state.quoteDraft?.id;
+    const status = canonicalQuoteStatus(state.quoteDraft);
+    if (hasId && status === "sent") return ["quotes:accept", "quotes:reject"];
+    if (hasId && status === "accepted") return ["quotes:toFinalInvoice", "quotes:toInvoice"];
+    if (hasId && status === "draft") return ["quotes:save", "quotes:issue"];
+    return ["quotes:save", "quotes:new"];
+  }
+
+  if (moduleKey === "invoices") {
+    if (state.invoiceDraft?.id && isDraftInvoice()) return ["invoices:save", "invoices:issue"];
+    if (state.invoiceDraft?.id) return ["invoices:toCreditNote", "invoices:recordPayment"];
+    return ["invoices:save", "invoices:new"];
+  }
+
+  if (moduleKey === "inbound" && state.selectedInboundId && canDecideInbound(state.inboundDoc)) {
+    return ["inbound:accept", "inbound:reject"];
+  }
+
+  return {
+    company: ["company:save"],
+    dashboard: ["dashboard:refresh"],
+    payments: ["payments:refresh"],
+    clients: ["clients:save", "clients:new"],
+    items: ["items:save", "items:new"],
+    inbound: ["inbound:refresh", "inbound:import"],
+    conformity: ["conformity:rebuildPeriod", "conformity:sendNow"],
+  }[moduleKey] || [];
+}
+
+function createToolbarActionButton(action, moduleKey, inOverflow = false) {
+  const button = document.createElement("button");
+  button.className = inOverflow
+    ? `toolbarMore__item${action.variant === "danger" ? " toolbarMore__item--danger" : ""}`
+    : buttonClass(action.variant);
+  button.type = "button";
+  button.textContent = resolveActionLabel(action);
+  button.dataset.action = action.id;
+  setButtonDisabled(button, isToolbarActionDisabled(action.id, moduleKey));
+  return button;
+}
+
+function isToolbarActionDisabled(actionId, moduleKey) {
   if (moduleKey === "quotes") {
     const hasId = !!state.quoteDraft?.id;
     const quoteState = canonicalQuoteStatus(state.quoteDraft);
     const isDraft = quoteState === "draft";
-    const isSent = hasId && quoteState === "sent";
-    const canDecide = hasId && (isDraft || isSent);
+    const canDecide = hasId && (isDraft || quoteState === "sent");
     const isAccepted = hasId && quoteState === "accepted";
-
-    const acceptBtn = document.createElement("button");
-    acceptBtn.className = "btn";
-    acceptBtn.type = "button";
-    acceptBtn.textContent = t("action.accept", "Accepter");
-    acceptBtn.dataset.action = "quotes:accept";
-    setButtonDisabled(acceptBtn, !canDecide);
-    elToolbar.appendChild(acceptBtn);
-
-    const rejectBtn = document.createElement("button");
-    rejectBtn.className = "btn btn--ghost";
-    rejectBtn.type = "button";
-    rejectBtn.textContent = t("action.reject", "Refuser");
-    rejectBtn.dataset.action = "quotes:reject";
-    setButtonDisabled(rejectBtn, !canDecide);
-    elToolbar.appendChild(rejectBtn);
-
-    for (const a of cfg.actions || []) {
-      // évite doublon si tu as déjà ces actions dans MODULES
-      if (a.id === "quotes:accept" || a.id === "quotes:reject") continue;
-
-      const b = document.createElement("button");
-      b.className = buttonClass(a.variant);
-      b.type = "button";
-      b.textContent = resolveActionLabel(a);
-      b.dataset.action = a.id;
-
-      if (a.id === "quotes:delete" || a.id === "quotes:remove") {
-        setButtonDisabled(b, !hasId || !isDraft);
-      }
-      if (a.id === "quotes:save" || a.id === "quotes:update") {
-        setButtonDisabled(b, hasId && !isDraft);
-      }
-      if (a.id === "quotes:issue") {
-        setButtonDisabled(b, hasId && !isDraft);
-      }
-      if (["quotes:toDepositInvoice", "quotes:toFinalInvoice", "quotes:toInvoice"].includes(a.id)) {
-        setButtonDisabled(b, !isAccepted);
-      }
-
-      elToolbar.appendChild(b);
-    }
-    return;
+    if (["quotes:accept", "quotes:reject"].includes(actionId)) return !canDecide;
+    if (["quotes:delete", "quotes:remove"].includes(actionId)) return !hasId || !isDraft;
+    if (["quotes:save", "quotes:update"].includes(actionId)) return hasId && !isDraft;
+    if (actionId === "quotes:issue") return hasId && !isDraft;
+    if (["quotes:toDepositInvoice", "quotes:toFinalInvoice", "quotes:toInvoice"].includes(actionId)) return !isAccepted;
   }
 
-  for (const a of cfg.actions || []) {
-    const b = document.createElement("button");
-    b.className = buttonClass(a.variant);
-    b.type = "button";
-    b.textContent = resolveActionLabel(a);
-    b.dataset.action = a.id;
-
-    // invoices
-    if (a.id === "invoices:delete") {
-      const disabled = !(state.invoiceDraft?.id && isDraftInvoice());
-      setButtonDisabled(b, disabled);
-    }
-    if (a.id === "invoices:save") {
-      const disabled = state.invoiceDraft?.id && !isDraftInvoice();
-      setButtonDisabled(b, disabled);
-    }
-    if (a.id === "invoices:issue") {
-      const disabled = !(state.invoiceDraft?.id && isDraftInvoice());
-      setButtonDisabled(b, disabled);
-    }
-    if (a.id === "invoices:toCreditNote") {
+  if (moduleKey === "invoices") {
+    if (actionId === "invoices:delete") return !(state.invoiceDraft?.id && isDraftInvoice());
+    if (actionId === "invoices:save") return !!state.invoiceDraft?.id && !isDraftInvoice();
+    if (actionId === "invoices:issue") return !(state.invoiceDraft?.id && isDraftInvoice());
+    if (actionId === "invoices:toCreditNote") {
       const has = !!state.invoiceDraft?.id;
-      const st = String(state.invoiceDraft?.status || "draft").toLowerCase();
-      const disabled = !has || st === "draft";
-      setButtonDisabled(b, disabled);
+      return !has || String(state.invoiceDraft?.status || "draft").toLowerCase() === "draft";
     }
-    if (a.id === "invoices:recordPayment") {
-      const disabled = !state.invoiceDraft?.id;
-      setButtonDisabled(b, disabled);
-    }
-
-    // inbound
-    if (a.id === "inbound:accept" || a.id === "inbound:reject") {
-      const disabled = !state.selectedInboundId || !canDecideInbound(state.inboundDoc);
-      setButtonDisabled(b, disabled);
-    }
-    if (a.id === "inbound:dispute") {
-      const disabled = !state.selectedInboundId || !canDecideInbound(state.inboundDoc);
-      setButtonDisabled(b, disabled);
-    }
-    if (a.id === "inbound:delete") {
-      const d = state.inboundDoc ? normalizeInbound(state.inboundDoc) : null;
-      const canDelete = !!state.selectedInboundId && d && INBOUND_DELETABLE_STATUSES.has(d.status);
-      setButtonDisabled(b, !canDelete);
-    }
-    if (a.id === "inbound:exportXml") {
-      const disabled = !state.selectedInboundId || !window.api?.inbound?.exportXml;
-      setButtonDisabled(b, disabled);
-    }
-    if (a.id === "inbound:exportPdf") {
-      const disabled = !state.selectedInboundId || !window.api?.inbound?.exportPdf;
-      setButtonDisabled(b, disabled);
-    }
-
-    elToolbar.appendChild(b);
+    if (actionId === "invoices:recordPayment") return !state.invoiceDraft?.id;
   }
+
+  if (moduleKey === "inbound") {
+    if (["inbound:accept", "inbound:reject", "inbound:dispute"].includes(actionId)) {
+      return !state.selectedInboundId || !canDecideInbound(state.inboundDoc);
+    }
+    if (actionId === "inbound:delete") {
+      const document = state.inboundDoc ? normalizeInbound(state.inboundDoc) : null;
+      return !(state.selectedInboundId && document && INBOUND_DELETABLE_STATUSES.has(document.status));
+    }
+    if (actionId === "inbound:exportXml") return !state.selectedInboundId || !window.api?.inbound?.exportXml;
+    if (actionId === "inbound:exportPdf") return !state.selectedInboundId || !window.api?.inbound?.exportPdf;
+  }
+
+  if (moduleKey === "conformity" && actionId === "conformity:sendNow") {
+    return !state.regulatoryReport?.configuration?.ready || Number(state.regulatoryReport?.summary?.ready || 0) < 1;
+  }
+
+  return false;
 }
 
 function showPage(key) {
@@ -805,6 +912,7 @@ function showPage(key) {
 
   renderToolbar(key);
   state.currentModule = key;
+  renderWorkflowCompanion(key);
   refreshModule(key).catch((e) => setStatus(`Erreur: ${e.message}`));
 }
 
@@ -840,15 +948,15 @@ const state = {
 
   // PATCH E-INVOICING / E-REPORTING (STATE)
   conformity: {
-    scope: "FR",
-    periodicity: "M", // D | M | B (plus Q/A)
-    archiving: "ON",
-    platform: "",
-    next_due: "",
+    reporting_periodicity: "M",
     emits_b2c: 0,
     has_international: 0,
-    kpis: { flux8: 0, flux9: 0, flux10: 0 }, 
+    vat_on_collections: 0,
+    retail_fiscalization: 0,
+    spain_sii: 0,
+    spain_mode: "VERIFACTU",
   },
+  regulatoryReport: null,
   
   clients: [],
   selectedClientId: null,
@@ -877,6 +985,9 @@ const state = {
     id: null,
     client_id: "",
     date: null,
+    due_date: "",
+    payment_term: "",
+    payment_text: "",
     lines: [],
     status: "draft",
     type_code: "380",
@@ -1005,7 +1116,14 @@ function validateLinesEN16931(lines) {
     requireFilled(`Ligne ${i + 1}: libellé obligatoire (BT-126)`, l.description);
     if (!(Number(l.quantity) > 0)) throw new Error(`Ligne ${i + 1}: quantité > 0 (BT-129)`);
     if (!(Number(l.unit_price_ht) >= 0)) throw new Error(`Ligne ${i + 1}: prix unitaire (BT-130)`);
+    const discount = Number(l.remise_percent || 0);
+    if (!Number.isFinite(discount) || discount < 0 || discount > 100) throw new Error(`Ligne ${i + 1}: la remise doit être comprise entre 0 et 100 %`);
   }
+}
+function validateDocumentDiscount(document) {
+  const discount = Number(document?.allowance_percent || 0);
+  if (!Number.isFinite(discount) || discount < 0 || discount > 100) throw new Error("La remise globale doit être comprise entre 0 et 100 %");
+  if (discount > 0 && !String(document?.allowance_reason || "").trim()) document.allowance_reason = t("discount.default_reason", "Remise commerciale");
 }
 
 function money(x) {
@@ -1053,6 +1171,31 @@ function paymentTermLabel(term) {
   if (t === "NET_30") return "Net 30 jours";
   if (t === "NEGOTIATED") return "Négocié / spécifique";
   return "";
+}
+
+function paymentDaysFromRecord(record) {
+  const raw = record?.payment_days ?? record?.paymentDays;
+  if (raw !== undefined && raw !== null && String(raw).trim() !== "") {
+    const days = Number(raw);
+    if (Number.isFinite(days) && days >= 0) return Math.floor(days);
+  }
+  return defaultPaymentDaysFromTerm(record?.payment_term || record?.paymentTerm);
+}
+
+function resolvedInvoiceDueDate(issueDate, invoice = {}, client = {}) {
+  const explicit = String(invoice?.due_date || invoice?.dueDate || "").slice(0, 10);
+  if (explicit) return explicit;
+  const days = paymentDaysFromRecord(invoice) ?? paymentDaysFromRecord(client);
+  return days == null ? "" : addDaysISO(issueDate, days);
+}
+
+function applyInvoiceClientPaymentDefaults(client, { force = false } = {}) {
+  const issueDate = $("i-date")?.value || state.invoiceDraft.date || new Date().toISOString().slice(0, 10);
+  const term = normalizePaymentTermCode(client?.payment_term || client?.paymentTerm || "");
+  const dueDate = resolvedInvoiceDueDate(issueDate, {}, client || {});
+  if (force || !state.invoiceDraft.payment_term) state.invoiceDraft.payment_term = term;
+  if (force || !state.invoiceDraft.payment_text) state.invoiceDraft.payment_text = client?.payment_text || client?.paymentText || "";
+  if (force || !state.invoiceDraft.due_date) state.invoiceDraft.due_date = dueDate;
 }
 
 function quoteStatus(q) {
@@ -1496,17 +1639,28 @@ function computeLine(line) {
   return { ht, tva: tvaAmt };
 }
 
-function computeTotals(lines) {
-  let ht = 0;
-  let tva = 0;
+function computeTotals(lines, allowancePercent = 0) {
+  let subtotalHt = 0;
+  let subtotalVat = 0;
   for (const l of lines) {
     const t = computeLine(l);
-    ht += t.ht;
-    tva += t.tva;
+    subtotalHt += t.ht;
+    subtotalVat += t.tva;
   }
-  ht = Math.round(ht * 100) / 100;
-  tva = Math.round(tva * 100) / 100;
-  return { total_ht: ht, total_tva: tva, total_ttc: Math.round((ht + tva) * 100) / 100 };
+  subtotalHt = Math.round(subtotalHt * 100) / 100;
+  const percent = Math.min(100, Math.max(0, Number(allowancePercent) || 0));
+  const factor = 1 - percent / 100;
+  const allowanceAmount = Math.round(subtotalHt * (percent / 100) * 100) / 100;
+  const ht = Math.round(subtotalHt * factor * 100) / 100;
+  const tva = Math.round(subtotalVat * factor * 100) / 100;
+  return {
+    subtotal_ht: subtotalHt,
+    allowance_percent: percent,
+    allowance_amount: allowanceAmount,
+    total_ht: ht,
+    total_tva: tva,
+    total_ttc: Math.round((ht + tva) * 100) / 100,
+  };
 }
 
 /* ----------------- AUTO TVA (devis/facture) ----------------- */
@@ -1567,7 +1721,7 @@ async function applyVatForInvoice({ silent = false } = {}) {
 
 /* ----------------- UI helpers ----------------- */
 function applyLinesGridLayout(pageKey) {
-  const tpl = "1fr 90px 110px 80px 120px 44px";
+  const tpl = "minmax(220px,1fr) 72px 102px 78px 72px 108px 42px";
   const page = document.querySelector(`[data-page="${pageKey}"]`);
   if (!page) return;
 
@@ -2362,61 +2516,32 @@ function cfSetHint(id, txt) {
   if (el) el.textContent = txt || "—";
 }
 
-function cfPushChat(role, text) {
-  const box = $("cf-ai-chat");
-  if (!box) return;
-  const wrap = document.createElement("div");
-  wrap.style.margin = "8px 0";
-  wrap.style.opacity = role === "user" ? "0.95" : "1";
-  wrap.innerHTML = `
-    <div style="font-size:12px;opacity:.7;margin-bottom:2px;">${role === "user" ? t("conformity.chat.you", "Vous") : t("conformity.chat.agent", "Agent")}</div>
-    <div style="line-height:1.35;white-space:pre-wrap;">${text}</div>
-  `;
-  box.appendChild(wrap);
-  box.scrollTop = box.scrollHeight;
-}
-
 function cfNormalizeConfig(cfg = {}) {
-  // Valeurs par défaut (adaptées à ton UI)
   return {
-    scope: cfg.scope ?? "FR",               // FR | INTL
-    periodicity: cfg.periodicity ?? "M",    // D | M | B
-    archiving: cfg.archiving ?? "ON",       // ON | OFF
-    platform: cfg.platform ?? "",           // PA | OTHER
-    next_due: cfg.next_due ?? "",           // yyyy-mm-dd
-    emits_b2c: String(cfg.emits_b2c ?? cfg.emitsB2c ?? 0),            // "0"|"1"
-    has_international: String(cfg.has_international ?? cfg.hasInternational ?? 0) // "0"|"1"
+    ...cfg,
+    reporting_periodicity: ["M", "Q"].includes(String(cfg.reporting_periodicity || cfg.periodicity || "M").toUpperCase())
+      ? String(cfg.reporting_periodicity || cfg.periodicity || "M").toUpperCase()
+      : "M",
+    emits_b2c: String(cfg.emits_b2c ?? cfg.emitsB2c ?? 0) === "1" ? 1 : 0,
+    has_international: String(cfg.has_international ?? cfg.hasInternational ?? 0) === "1" ? 1 : 0,
+    vat_on_collections: String(cfg.vat_on_collections ?? cfg.cash_vat ?? 0) === "1" ? 1 : 0,
+    retail_fiscalization: String(cfg.retail_fiscalization ?? cfg.fiscal_device ?? 0) === "1" ? 1 : 0,
+    spain_sii: String(cfg.spain_sii ?? 0) === "1" ? 1 : 0,
+    spain_mode: String(cfg.spain_mode || "VERIFACTU").toUpperCase() === "NO_VERIFACTU" ? "NO_VERIFACTU" : "VERIFACTU",
   };
 }
 
-function cfComputeEligibility(cfg) {
-  // Règles simples (tu peux enrichir)
-  // En général : concerné si opérations B2C et/ou international (et B2B non domestique selon cas),
-  // ici on donne un diagnostic pédagogique.
-  const emitsB2c = cfg.emits_b2c === "1";
-  const intl = cfg.has_international === "1" || cfg.scope === "INTL";
-  const platformOk = !!cfg.platform;
+const REPORTING_PROFILE_UI = {
+  FR: { code: "FR-PA", title: "France — Facturation électronique et e-reporting", titleKey: "reporting.profile.fr.title", summaryKey: "reporting.profile.fr.summary", summary: "Flux de facturation structurée et données de transactions ou d’encaissements remis à une Plateforme Agréée." },
+  RS: { code: "RS-SEF", title: "Serbie — SEF, TVA électronique et fiscalisation", titleKey: "reporting.profile.rs.title", summaryKey: "reporting.profile.rs.summary", summary: "Factures SEF, écritures TVA électroniques et tickets transmis par un dispositif fiscal agréé distinct." },
+  IT: { code: "IT-SDI", title: "Italie — SdI et transmissions fiscales", titleKey: "reporting.profile.it.title", summaryKey: "reporting.profile.it.summary", summary: "Factures via SdI, corrispettivi telematici et opérations transfrontalières selon le profil italien." },
+  ES: { code: "ES-AEAT", title: "Espagne — AEAT, VERI*FACTU et SII", titleKey: "reporting.profile.es.title", summaryKey: "reporting.profile.es.summary", summary: "Registres de facturation VERI*FACTU ou sécurisés, et livres SII lorsque l’entreprise y est soumise." },
+  DEFAULT: { code: "EN16931", title: "Déclarations nationales à qualifier", titleKey: "reporting.profile.default.title", summaryKey: "reporting.profile.default.summary", summary: "Aucun profil de déclaration validé n’est disponible pour le pays déclaré." },
+};
 
-  const concerned = emitsB2c || intl; // simplifié
-  const reasons = [];
-  if (emitsB2c) reasons.push(t("conformity.reason.b2c", "Vous émettez du B2C (flux e-reporting requis)."));
-  if (intl) reasons.push(t("conformity.reason.intl", "Vous avez des opérations internationales (flux e-reporting requis)."));
-  if (!emitsB2c && !intl) reasons.push(t("conformity.reason.none", "A priori moins concerné par le e-reporting (cas B2B domestique pur)."));
-
-  const warnings = [];
-  if (!platformOk) warnings.push(t("conformity.warning.platform", "Plateforme non choisie (PA, OTHER)."));
-  if (!cfg.periodicity) warnings.push(t("conformity.warning.periodicity", "Périodicité manquante."));
-
-  return { concerned, reasons, warnings };
-}
-
-function cfMissingFields(cfg) {
-  const missing = [];
-  if (!cfg.scope) missing.push(t("conformity.scope.label", "Périmètre"));
-  if (!cfg.periodicity) missing.push(t("conformity.periodicity.label", "Périodicité"));
-  if (!cfg.archiving) missing.push(t("conformity.archiving.label", "Archivage"));
-  if (!cfg.platform) missing.push(t("conformity.platform.label", "Plateforme"));
-  return missing;
+function reportingProfileUi(countryValue) {
+  const country = companyCountryCode(countryValue);
+  return { country, ...(REPORTING_PROFILE_UI[country] || REPORTING_PROFILE_UI.DEFAULT) };
 }
 
 const integrationFields = {
@@ -2424,7 +2549,9 @@ const integrationFields = {
     provider: "cf-pa-provider-name", base: "cf-pa-base-url", auth: "cf-pa-auth-type", secret: "cf-pa-secret",
     authHeader: "cf-pa-auth-header",
     health: "cf-pa-health-path", submit: "cf-pa-submit-path", environment: "cf-pa-environment", publicId: "cf-pa-public-id",
-    routingId: "cf-pa-routing-id", routingEmail: "cf-pa-routing-email", enabled: "cf-pa-enabled", status: "cf-pa-status", save: "cf-pa-save", test: "cf-pa-test",
+    routingId: "cf-pa-routing-id", routingEmail: "cf-pa-routing-email", reportingSubmit: "cf-pa-reporting-submit-path",
+    reportingEnabled: "cf-pa-reporting-enabled", reportingQualified: "cf-pa-reporting-qualified",
+    enabled: "cf-pa-enabled", status: "cf-pa-status", save: "cf-pa-save", test: "cf-pa-test",
   },
   archive: {
     provider: "cf-archive-provider-name", base: "cf-archive-base-url", auth: "cf-archive-auth-type", secret: "cf-archive-secret",
@@ -2458,6 +2585,10 @@ function integrationPayload(type) {
     public_identifier: ids.publicId ? ($(ids.publicId)?.value?.trim() || "") : undefined,
     routing_id: ids.routingId ? ($(ids.routingId)?.value?.trim() || "") : undefined,
     routing_email: ids.routingEmail ? ($(ids.routingEmail)?.value?.trim() || "") : undefined,
+    reporting_submit_path: ids.reportingSubmit ? ($(ids.reportingSubmit)?.value?.trim() || "") : undefined,
+    reporting_enabled: ids.reportingEnabled ? !!$(ids.reportingEnabled)?.checked : undefined,
+    reporting_adapter_qualified: ids.reportingQualified ? !!$(ids.reportingQualified)?.checked : undefined,
+    reporting_adapter_contract: ids.reportingEnabled ? "D2F_REGULATORY_BATCH_V1" : undefined,
     enabled: !!$(ids.enabled)?.checked,
   };
 }
@@ -2478,6 +2609,9 @@ async function loadIntegrationForm(type) {
     if ($(ids.publicId)) $(ids.publicId).value = cfg?.public_identifier || "";
     if ($(ids.routingId)) $(ids.routingId).value = cfg?.routing_id || "";
     if ($(ids.routingEmail)) $(ids.routingEmail).value = cfg?.routing_email || "";
+    if ($(ids.reportingSubmit)) $(ids.reportingSubmit).value = cfg?.reporting_submit_path || "";
+    if ($(ids.reportingEnabled)) $(ids.reportingEnabled).checked = !!cfg?.reporting_enabled;
+    if ($(ids.reportingQualified)) $(ids.reportingQualified).checked = !!cfg?.reporting_adapter_qualified;
     if ($(ids.enabled)) $(ids.enabled).checked = !!cfg?.enabled;
     if ($(ids.secret)) $(ids.secret).value = "";
     state.integrationConfigs = { ...(state.integrationConfigs || {}), [type]: cfg || {} };
@@ -2523,102 +2657,263 @@ function bindIntegrationForms() {
     $(ids.save)?.addEventListener("click", () => saveIntegrationForm(type).catch((error) => integrationStatus(type, error.message, true)));
     $(ids.test)?.addEventListener("click", () => testIntegrationForm(type));
   }
+  $("co-reporting-save")?.addEventListener("click", () => cfSaveCompanyReportingConfig().catch((error) => {
+    if ($("co-reporting-status")) $("co-reporting-status").textContent = error.message;
+  }));
 }
 
 async function cfLoadToForm() {
   bindIntegrationForms();
+  if (!state.company && window.api?.company?.get) state.company = await window.api.company.get();
   await Promise.all([loadIntegrationForm("pa"), loadIntegrationForm("archive")]);
-  const raw = await window.api.conformity.getConfig();
+  return cfLoadCompanyReportingConfig();
+}
+
+async function cfLoadCompanyReportingConfig() {
+  const raw = window.api?.conformity?.getConfig ? await window.api.conformity.getConfig() : {};
   const cfg = cfNormalizeConfig(raw || {});
+  state.conformity = cfg;
+  const profile = reportingProfileUi(state.company?.country);
+  if ($("co-reporting-profile")) $("co-reporting-profile").textContent = profile.code;
+  if ($("co-reporting-hint")) $("co-reporting-hint").textContent = t(`reporting.settings.${profile.country.toLowerCase()}.hint`, t("reporting.settings.hint", "Ces choix déterminent les obligations affichées."));
+  if ($("co-reporting-periodicity")) $("co-reporting-periodicity").value = cfg.reporting_periodicity;
+  if ($("co-reporting-cash-vat")) $("co-reporting-cash-vat").value = String(cfg.vat_on_collections);
+  if ($("co-reporting-b2c")) $("co-reporting-b2c").value = String(cfg.emits_b2c);
+  if ($("co-reporting-international")) $("co-reporting-international").value = String(cfg.has_international);
+  if ($("co-reporting-fiscal-device")) $("co-reporting-fiscal-device").checked = !!cfg.retail_fiscalization;
+  if ($("co-reporting-es-sii")) $("co-reporting-es-sii").value = String(cfg.spain_sii);
+  if ($("co-reporting-es-mode")) $("co-reporting-es-mode").value = cfg.spain_mode;
+  $("co-reporting-rs-fields")?.classList.toggle("is-visible", profile.country === "RS");
+  $("co-reporting-es-fields")?.classList.toggle("is-visible", profile.country === "ES");
+  return cfg;
+}
 
-  // --- Backward compat / terminologie ---
-  // pa_name = nom de la Plateforme Agréée (PA)
-  // platform (legacy) : ancien champ
-  const paName = (cfg.pa_name ?? cfg.platform ?? "").toString();
+function cfCompanyReportingPayload() {
+  return cfNormalizeConfig({
+    ...state.conformity,
+    reporting_periodicity: $("co-reporting-periodicity")?.value || "M",
+    vat_on_collections: $("co-reporting-cash-vat")?.value || "0",
+    emits_b2c: $("co-reporting-b2c")?.value || "0",
+    has_international: $("co-reporting-international")?.value || "0",
+    retail_fiscalization: $("co-reporting-fiscal-device")?.checked ? 1 : 0,
+    spain_sii: $("co-reporting-es-sii")?.value || "0",
+    spain_mode: $("co-reporting-es-mode")?.value || "VERIFACTU",
+  });
+}
 
-  // platform_kind: "PA" | "SC" | "OTHER"
-  const kind = String(cfg.platform_kind || "PA").toUpperCase();
-  const safeKind = ["PA", "SC", "OTHER"].includes(kind) ? kind : "PA";
+async function cfSaveCompanyReportingConfig() {
+  if (!window.api?.conformity?.saveConfig) throw new Error(t("reporting.settings.unavailable", "Enregistrement indisponible"));
+  const payload = cfCompanyReportingPayload();
+  await window.api.conformity.saveConfig(payload);
+  state.conformity = payload;
+  if ($("co-reporting-status")) $("co-reporting-status").textContent = t("reporting.settings.saved", "Paramètres réglementaires enregistrés");
+  return payload;
+}
 
-  // jurisdiction (multi-pays) : "FR" | "DEFAULT" | "BE" | ...
-  const jurisdiction =
-    (cfg.jurisdiction || (cfg.scope === "FR" ? "FR" : "DEFAULT")).toString().toUpperCase();
+function cfDefaultReportingPeriod() {
+  const now = new Date();
+  const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  const iso = (date) => date.toISOString().slice(0, 10);
+  return { start: iso(new Date(now.getFullYear(), now.getMonth(), 1)), end: iso(end) };
+}
 
-  // --- Fill form ---
-  $("cf-scope").value = cfg.scope;
-  $("cf-periodicity").value = cfg.periodicity;
-  $("cf-archiving").value = cfg.archiving;
-  $("cf-platform").value = paName;
-  $("cf-next-due").value = cfg.next_due || "";
-  $("cf-emits-b2c").value = cfg.emits_b2c;
-  $("cf-has-international").value = cfg.has_international;
+function cfReportingPeriod() {
+  const fallback = cfDefaultReportingPeriod();
+  if ($("cf-period-start") && !$("cf-period-start").value) $("cf-period-start").value = fallback.start;
+  if ($("cf-period-end") && !$("cf-period-end").value) $("cf-period-end").value = fallback.end;
+  return { periodStart: $("cf-period-start")?.value || fallback.start, periodEnd: $("cf-period-end")?.value || fallback.end };
+}
 
-  // --- Contextual hints ---
-  cfSetHint(
-    "cf-help-scope",
-    cfg.scope === "FR"
-      ? t("conformity.help.scope_fr", "FR : activité principalement en France. INTL : vous avez des opérations hors France.")
-      : t("conformity.help.scope_intl", "INTL : vous avez des opérations hors France (UE/hors UE).")
-  );
+function cfReportingStateLabel(value) {
+  const stateValue = String(value || "review").toLowerCase();
+  return t(`reporting.state.${stateValue}`, ({ ready: "Prêt", review: "À contrôler", external: "Système externe", sent: "Transmis", error: "Erreur", not_applicable: "Non applicable" })[stateValue] || stateValue);
+}
 
-  // Periodicity: si FR, rappeler que c’est piloté par TVA
-  cfSetHint(
-    "cf-help-periodicity",
-    jurisdiction === "FR"
-      ? t("conformity.help.periodicity_fr", "France : la fréquence de transmission e-reporting dépend du régime de TVA.")
-      : t("conformity.help.periodicity_intl", "Choisissez la fréquence de constitution et de contrôle interne.")
-  );
+function cfObligationActionLabel(value) {
+  const status = String(value || "review").toLowerCase();
+  const fallback = ({ review: "Contrôler →", ready: "Ouvrir →", external: "Voir la procédure →", not_applicable: "Comprendre →" })[status] || "Ouvrir →";
+  return t(`reporting.obligation.action.${status}`, fallback);
+}
 
-  cfSetHint("cf-help-archiving", t("conformity.help.archiving", "ON recommandé : conserve les preuves et exports."));
+function cfReportingCandidates(item = {}) {
+  if (Array.isArray(item.candidates)) return item.candidates;
+  return (Array.isArray(item.candidate_ids) ? item.candidate_ids : []).map((id) => ({ id, source_id: id, kind: "record", reference: id }));
+}
 
-  const kindLabel =
-    safeKind === "PA"
-        ? "PA (Plateforme Agréée)"
-        : safeKind === "SC"
-          ? "SC (Solution connectée à une PA)"
-          : "Autre";
+function cfCandidateKindLabel(kind) {
+  const value = String(kind || "record").toLowerCase();
+  return t(`reporting.review.kind.${value}`, ({ invoice: "Facture client", payment: "Paiement", inbound: "Facture fournisseur", record: "Dossier" })[value] || "Dossier");
+}
 
-  cfSetHint(
-  "cf-help-platform",
-  cfg.scope === "FR"
-    ? t("conformity.help.platform_fr", "France : PA = Plateforme Agréée. Indiquez la plateforme utilisée.")
-    : t("conformity.help.platform_intl", "International : indiquez le portail ou la plateforme utilisé pour le e-reporting.")
-);
+function cfCandidateOpenLabel(kind) {
+  const value = String(kind || "record").toLowerCase();
+  return t(`reporting.review.open_${value}`, ({ invoice: "Ouvrir la facture", payment: "Ouvrir le paiement", inbound: "Ouvrir la facture fournisseur", record: "Ouvrir le dossier" })[value] || "Ouvrir le dossier");
+}
 
-  cfSetHint("cf-help-nextdue", t("conformity.help.next_due", "Prochaine échéance interne, distincte d'un envoi automatique."));
-  cfSetHint("cf-help-b2c", t("conformity.help.b2c", "Oui si vous facturez des particuliers."));
-  cfSetHint("cf-help-intl", t("conformity.help.intl", "Oui si vous vendez ou achetez hors France."));
+function cfReportingGuidance(item = {}) {
+  const status = String(item.state || "review").toLowerCase();
+  if (status === "ready") return `<p>${cfEscape(t("reporting.review.ready", "Les dossiers et la connexion sont prêts. Ouvrez-les pour un dernier contrôle, puis transmettez les dossiers prêts."))}</p>`;
+  if (status === "external") return `<p>${cfEscape(t("reporting.review.external", "Cette obligation est traitée dans un système externe. Ouvrez les dossiers pour rapprochement, puis contrôlez l’accusé dans le portail concerné."))}</p>`;
+  if (status === "not_applicable") return `<p>${cfEscape(t("reporting.review.not_applicable", "Aucune action n’est attendue pour cette période avec les paramètres actuels."))}</p>`;
+  return `<h3>${cfEscape(t("reporting.review.what_to_do", "Ce que vous devez faire"))}</h3><ol>
+    <li>${cfEscape(t("reporting.review.step.open_documents", "Ouvrez chaque dossier ci-dessous et vérifiez le document source."))}</li>
+    <li>${cfEscape(t("reporting.review.step.configure", "Configurez puis testez le connecteur national et son adaptateur réglementaire."))}</li>
+    <li>${cfEscape(t("reporting.review.step.rebuild", "Revenez dans Déclarations et cliquez sur Préparer la période : les dossiers conformes passeront à Prêt."))}</li>
+  </ol>`;
+}
 
-  // --- Eligibility hint ---
-  const elig = cfComputeEligibility(cfg);
-  const hint = [
-    elig.concerned
-      ? t("conformity.eligibility.concerned", "✅ Vous êtes probablement concerné par du e-reporting.")
-      : t("conformity.eligibility.less", "🟡 Vous êtes probablement moins concerné (à confirmer)."),
-    ...elig.reasons,
-    elig.warnings.length ? "⚠️ " + elig.warnings.join(" ") : ""
-  ]
-    .filter(Boolean)
-    .join(" ");
-  cfSetHint("cf-eligibility-hint", hint);
+function cfCloseReportingDialog() {
+  const dialog = $("cf-review-dialog");
+  if (dialog?.open) dialog.close();
+}
 
-  // --- Missing fields box ---
-  const missing = cfMissingFields(cfg);
-  const box = $("cf-missing-box");
-  const list = $("cf-missing-list");
-  if (box && list) {
-    if (missing.length) {
-      box.style.display = "";
-      list.textContent = "• " + missing.join("\n• ");
-    } else {
-      box.style.display = "none";
-      list.textContent = "";
+function cfRenderReviewDialog(item = {}) {
+  const dialog = $("cf-review-dialog");
+  if (!dialog) return;
+  const id = String(item.id || "generic");
+  const status = String(item.state || "review").toLowerCase();
+  const candidates = cfReportingCandidates(item);
+  state.reportingSelectedObligationId = id;
+  const stateEl = $("cf-review-state");
+  if (stateEl) {
+    stateEl.className = `reportingState is-${status}`;
+    stateEl.textContent = cfReportingStateLabel(status);
+  }
+  if ($("cf-review-title")) $("cf-review-title").textContent = t(`reporting.obligation.${id}.title`, item.title || id);
+  if ($("cf-review-description")) $("cf-review-description").textContent = t(`reporting.obligation.${id}.description`, item.description || "");
+  if ($("cf-review-guidance")) $("cf-review-guidance").innerHTML = cfReportingGuidance(item);
+  if ($("cf-review-candidates")) {
+    $("cf-review-candidates").innerHTML = `<h3>${cfEscape(t("reporting.review.candidates_title", "Dossiers concernés"))} <span>${candidates.length}</span></h3>${candidates.length ? candidates.map((candidate, index) => {
+      const kind = String(candidate.kind || "record").toLowerCase();
+      const details = [candidate.date, candidate.counterparty, candidate.country, candidate.method].filter(Boolean).join(" · ");
+      const amount = candidate.amount === undefined || candidate.amount === null ? "" : `${money(candidate.amount)} ${candidate.currency || "EUR"}`;
+      const canOpen = ["invoice", "payment", "inbound"].includes(kind) && Boolean(candidate.source_id || candidate.invoice_id || candidate.id);
+      return `<article class="reportingReviewCandidate">
+        <div class="reportingReviewCandidate__body"><span>${cfEscape(cfCandidateKindLabel(kind))}</span><strong>${cfEscape(candidate.reference || candidate.id || "—")}</strong><small>${cfEscape(details || "—")}</small></div>
+        ${amount ? `<div class="reportingReviewCandidate__amount">${cfEscape(amount)}</div>` : ""}
+        <button type="button" class="btn btn--secondary" data-reporting-candidate-id="${cfEscape(candidate.id || candidate.source_id || String(index))}" data-reporting-candidate-index="${index}" ${canOpen ? "" : "disabled"}>${cfEscape(cfCandidateOpenLabel(kind))}</button>
+      </article>`;
+    }).join("") : `<div class="reportingEmpty">${cfEscape(t("reporting.review.empty", "Aucun dossier source n’est associé à cette obligation pour la période."))}</div>`}`;
+  }
+  if (!dialog.open) dialog.showModal();
+}
+
+function cfOpenCompanyReportingSettings() {
+  cfCloseReportingDialog();
+  showPage("company");
+  setTimeout(() => {
+    const reportingCard = $("company-reporting-card");
+    const connectorCard = $("company-einvoice-card");
+    if (reportingCard) reportingCard.open = true;
+    if (connectorCard) {
+      connectorCard.open = true;
+      connectorCard.scrollIntoView({ behavior: "smooth", block: "start" });
     }
+    setStatus(t("reporting.review.settings_opened", "Paramètres du connecteur réglementaire ouverts."));
+  }, 120);
+}
+
+function cfOpenReportingCandidate(candidate = {}) {
+  const kind = String(candidate.kind || "record").toLowerCase();
+  const sourceId = String(candidate.source_id || candidate.invoice_id || candidate.id || "");
+  if (!sourceId) {
+    setStatus(t("reporting.review.source_unavailable", "Le document source n’est pas disponible dans cet écran."));
+    return;
+  }
+  cfCloseReportingDialog();
+  if (kind === "invoice") {
+    state.selectedInvoiceId = sourceId;
+    showPage("invoices");
+    return;
+  }
+  if (kind === "payment") {
+    state.payments.selectedInvoiceId = sourceId;
+    state.selectedInvoiceId = sourceId;
+    showPage("payments");
+    return;
+  }
+  if (kind === "inbound") {
+    state.selectedInboundId = sourceId;
+    showPage("inbound");
+    return;
+  }
+  setStatus(t("reporting.review.source_unavailable", "Le document source n’est pas disponible dans cet écran."));
+}
+
+function cfApplyReportingFilter(filter) {
+  const selected = String(filter || "").toLowerCase();
+  state.reportingActiveFilter = selected;
+  document.querySelectorAll("[data-reporting-filter]").forEach((button) => button.setAttribute("aria-pressed", String(button.dataset.reportingFilter === selected)));
+  document.querySelectorAll("[data-reporting-obligation-state]").forEach((element) => {
+    const status = String(element.dataset.reportingObligationState || "review");
+    element.hidden = selected === "review" ? !["review", "external"].includes(status) : selected === "sent" || selected === "error" ? false : status !== selected;
+  });
+  document.querySelectorAll("[data-reporting-transmission-status]").forEach((element) => {
+    element.hidden = ["sent", "error"].includes(selected) && element.dataset.reportingTransmissionStatus !== selected;
+  });
+  const target = ["sent", "error"].includes(selected) ? $("cf-transmissions") : $("cf-obligations");
+  target?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  setStatus(t(["sent", "error"].includes(selected) ? "reporting.review.transmissions_shown" : "reporting.review.filter_applied", ["sent", "error"].includes(selected) ? "Historique des transmissions filtré." : "Obligations filtrées."));
+}
+
+function cfRenderOperationalReport(payload = {}) {
+  const profile = payload.profile || reportingProfileUi(state.company?.country);
+  const summary = payload.summary || {};
+  const obligations = Array.isArray(payload.obligations) ? payload.obligations : [];
+  const transmissions = Array.isArray(payload.transmissions) ? payload.transmissions : [];
+  const country = String(profile.country || state.company?.country || "—").toUpperCase();
+  if ($("cf-country-badge")) $("cf-country-badge").textContent = country;
+  if ($("cf-profile-name")) $("cf-profile-name").textContent = t(profile.titleKey || `reporting.profile.${country.toLowerCase()}.title`, profile.title || "—");
+  if ($("cf-profile-summary")) $("cf-profile-summary").textContent = t(profile.summaryKey || `reporting.profile.${country.toLowerCase()}.summary`, profile.summary || "—");
+  if ($("cf-kpi-ready")) $("cf-kpi-ready").textContent = String(summary.ready || 0);
+  if ($("cf-kpi-review")) $("cf-kpi-review").textContent = String(summary.review || 0);
+  if ($("cf-kpi-sent")) $("cf-kpi-sent").textContent = String(summary.sent || 0);
+  if ($("cf-kpi-error")) $("cf-kpi-error").textContent = String(summary.error || 0);
+
+  const configuration = payload.configuration || {};
+  const configurationEl = $("cf-configuration-status");
+  if (configurationEl) {
+    configurationEl.classList.toggle("is-ready", !!configuration.ready);
+    configurationEl.classList.toggle("is-blocked", !configuration.ready);
+    configurationEl.textContent = configuration.ready
+      ? t("reporting.configuration.ready", "Connecteur et adaptateur métier validés : les dossiers prêts peuvent être transmis.")
+      : t("reporting.configuration.blocked", "Préparation disponible. Transmission bloquée tant que le connecteur national et son adaptateur métier ne sont pas validés.");
   }
 
-  await cfLoadEvidence().catch((error) => cfEvidenceStatus(error.message, true));
+  const obligationsEl = $("cf-obligations");
+  if (obligationsEl) {
+    obligationsEl.innerHTML = obligations.length ? obligations.map((item) => {
+      const id = String(item.id || "generic");
+      const status = String(item.state || "review").toLowerCase();
+      return `<button type="button" class="reportingObligation" data-obligation-id="${cfEscape(id)}" data-reporting-obligation-state="${cfEscape(status)}">
+        <div><div class="reportingObligation__title">${cfEscape(t(`reporting.obligation.${id}.title`, item.title || id))}</div><div class="reportingObligation__description">${cfEscape(t(`reporting.obligation.${id}.description`, item.description || ""))}</div></div>
+        <div class="reportingObligation__count">${Number(item.count || 0)}</div>
+        <div class="reportingObligation__footer"><span class="reportingState is-${cfEscape(status)}">${cfEscape(cfReportingStateLabel(status))}</span><span class="hint">${cfEscape(t("reporting.candidates", "{count} dossier(s) candidat(s)", { count: Number(item.count || 0) }))}</span><span class="reportingObligation__action">${cfEscape(cfObligationActionLabel(status))}</span></div>
+      </button>`;
+    }).join("") : `<div class="reportingEmpty">${cfEscape(t("reporting.obligations.empty", "Aucune obligation calculée pour cette période."))}</div>`;
+  }
 
-  return cfg;
+  const transmissionsEl = $("cf-transmissions");
+  if (transmissionsEl) {
+    transmissionsEl.innerHTML = transmissions.length ? transmissions.slice(0, 30).map((item) => {
+      const status = String(item.status || "submitted").toLowerCase();
+      const date = String(item.created_at || "").slice(0, 16).replace("T", " ") || "—";
+      const reference = item.document_number || item.remote_id || item.id || "—";
+      const transmissionStatus = ["error", "rejected"].includes(status) ? "error" : "sent";
+      return `<article class="reportingTransmission" data-reporting-transmission-status="${transmissionStatus}"><div><div class="reportingTransmission__title">${cfEscape(reference)}</div><div class="reportingTransmission__meta">${cfEscape(date)} · ${cfEscape(item.channel || profile.code || country)}</div></div><span class="reportingState is-${cfEscape(transmissionStatus)}">${cfEscape(cfReportingStateLabel(transmissionStatus))}</span></article>`;
+    }).join("") : `<div class="reportingEmpty">${cfEscape(t("reporting.transmissions.empty", "Aucun envoi réglementaire."))}</div>`;
+  }
+  if (state.reportingActiveFilter) cfApplyReportingFilter(state.reportingActiveFilter);
+  if (state.currentModule === "conformity") renderToolbar("conformity");
+}
+
+async function cfLoadOperationalReport() {
+  if (!state.company && window.api?.company?.get) state.company = await window.api.company.get();
+  const period = cfReportingPeriod();
+  const payload = await window.api.conformity.rebuildPeriod(period);
+  state.regulatoryReport = payload;
+  cfRenderOperationalReport(payload);
+  return payload;
 }
 
 const CF_EVIDENCE_LABELS = {
@@ -2789,32 +3084,9 @@ function bindComplianceEvidence() {
 let __cf_saveTimer = null;
 function cfScheduleSave() {
   clearTimeout(__cf_saveTimer);
-  __cf_saveTimer = setTimeout(async () => {
-    const payload = {
-      scope: $("cf-scope").value,
-      periodicity: $("cf-periodicity").value,
-      archiving: $("cf-archiving").value,
-      platform: $("cf-platform").value,
-      next_due: $("cf-next-due").value,
-      emits_b2c: $("cf-emits-b2c").value,
-      has_international: $("cf-has-international").value
-    };
-    try {
-      await window.api.conformity.saveConfig(payload);
-      const cfg = cfNormalizeConfig(payload);
-      const elig = cfComputeEligibility(cfg);
-      cfSetHint("cf-eligibility-hint", [
-        elig.concerned ? t("conformity.eligibility.concerned", "✅ Vous êtes probablement concerné par du e-reporting.") : t("conformity.eligibility.less", "🟡 Vous êtes probablement moins concerné (à confirmer)."),
-        ...elig.reasons,
-        elig.warnings.length ? ("⚠️ " + elig.warnings.join(" ")) : ""
-      ].filter(Boolean).join(" "));
-      $("appStatus") && ($("appStatus").textContent = t("status.saved", "Enregistré"));
-      setTimeout(() => $("appStatus") && ($("appStatus").textContent = t("status.ready", "Prêt")), 800);
-    } catch (e) {
-      console.error(e);
-      $("appStatus") && ($("appStatus").textContent = t("dashboard.error", "Erreur"));
-    }
-  }, 250);
+  __cf_saveTimer = setTimeout(() => cfSaveCompanyReportingConfig().catch((error) => {
+    if ($("co-reporting-status")) $("co-reporting-status").textContent = error.message;
+  }), 250);
 }
 
 // -------------------------
@@ -2892,67 +3164,31 @@ const cfAgent = {
 };
 
 async function initConformityPage() {
-  bindComplianceEvidence();
-  if (__cf_inited) {
-    // déjà bindé : juste reload
-    await cfLoadToForm();
-    return;
-  }
+  if (__cf_inited) return;
   __cf_inited = true;
-
-  // bind changements => save
-  ["cf-scope","cf-periodicity","cf-archiving","cf-platform","cf-next-due","cf-emits-b2c","cf-has-international"]
-    .forEach(id => {
-      const el = $(id);
-      if (!el) return;
-      el.addEventListener("change", () => {
-        cfScheduleSave();
-        cfLoadToForm().catch(console.error);
-      });
-      el.addEventListener("input", () => {
-        if (id === "cf-next-due") cfScheduleSave();
-      });
-    });
-
-  // boutons IA
-  $("cf-ai-start")?.addEventListener("click", () => cfAgent.reset());
-  $("cf-ai-send")?.addEventListener("click", async () => {
-    const inp = $("cf-ai-input");
-    if (!inp) return;
-    const t = inp.value.trim();
-    if (!t) return;
-    inp.value = "";
-    cfPushChat("user", t);
-    await cfAgent.answer(t);
+  ["cf-period-start", "cf-period-end"].forEach((id) => $(id)?.addEventListener("change", () => refreshModule("conformity").catch(console.error)));
+  document.querySelector(".reportingKpis")?.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-reporting-filter]");
+    if (button) cfApplyReportingFilter(button.dataset.reportingFilter);
   });
-  $("cf-ai-input")?.addEventListener("keydown", async (e) => {
-    if (e.key === "Enter") $("cf-ai-send")?.click();
+  $("cf-obligations")?.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-obligation-id]");
+    if (!button) return;
+    const item = (state.regulatoryReport?.obligations || []).find((entry) => String(entry.id) === String(button.dataset.obligationId));
+    if (item) cfRenderReviewDialog(item);
   });
-
-  $("cf-ai-recommend")?.addEventListener("click", async () => {
-    const cfg = await cfLoadToForm();
-    const elig = cfComputeEligibility(cfg);
-    cfPushChat("agent", "Recommandations :\n" + [
-      `- Plateforme: ${cfg.platform || "à choisir"}`,
-      `- Scope: ${cfg.scope}`,
-      `- Périodicité: ${cfg.periodicity}`,
-      `- Archivage: ${cfg.archiving} (ON recommandé)`,
-      elig.concerned ? "- Vous êtes concerné : préparez les contrôles + preuves (journal/audit)." : "- Cas simple : vérifiez si vous avez du B2C/INTL."
-    ].join("\n"));
+  $("cf-review-candidates")?.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-reporting-candidate-index]");
+    if (!button) return;
+    const item = (state.regulatoryReport?.obligations || []).find((entry) => String(entry.id) === String(state.reportingSelectedObligationId));
+    const candidate = cfReportingCandidates(item)[Number(button.dataset.reportingCandidateIndex)];
+    if (candidate) cfOpenReportingCandidate(candidate);
   });
-
-  $("cf-ai-check")?.addEventListener("click", async () => {
-    const cfg = await cfLoadToForm();
-    const missing = cfMissingFields(cfg);
-    if (!missing.length) {
-      cfPushChat("agent", "✅ Tous les champs “bloquants” sont remplis.");
-    } else {
-      cfPushChat("agent", "⚠️ Champs à compléter : " + missing.join(", "));
-    }
+  document.querySelectorAll("[data-reporting-dialog-close]").forEach((button) => button.addEventListener("click", cfCloseReportingDialog));
+  document.querySelector("[data-reporting-dialog-settings]")?.addEventListener("click", cfOpenCompanyReportingSettings);
+  $("cf-review-dialog")?.addEventListener("click", (event) => {
+    if (event.target === $("cf-review-dialog")) cfCloseReportingDialog();
   });
-
-  // premier load
-  await cfLoadToForm();
 }
 
 /* ----------------- Inbound UI helpers ----------------- */
@@ -3829,6 +4065,20 @@ function renderLines(container, lines, onChange, onRemove, readOnly = false) {
         >
       </div>
 
+      <div class="t-right" data-label="${esc(t("lines.discount_percent", "Remise %"))}">
+        <input
+          class="cell-input"
+          data-k="remise_percent"
+          data-i="${idx}"
+          type="number"
+          min="0"
+          max="100"
+          step="0.01"
+          value="${Number(l.remise_percent || 0)}"
+          ${readOnly ? "disabled" : ""}
+        >
+      </div>
+
       <div class="t-right" data-label="${esc(t("lines.vat_percent", "TVA%"))}">
         <input
           class="cell-input"
@@ -3869,7 +4119,8 @@ function renderLines(container, lines, onChange, onRemove, readOnly = false) {
       if (!Array.isArray(safeLines) || !safeLines[i]) return;
 
       const raw = e.target.value;
-      safeLines[i][k] = Number(raw);
+      const numeric = Number(raw);
+      safeLines[i][k] = k === "remise_percent" ? Math.min(100, Math.max(0, numeric || 0)) : numeric;
 
       if (typeof onChange === "function") {
         onChange(i, k, raw);
@@ -3903,12 +4154,17 @@ function refreshQuoteTotals() {
   if (!state.quoteDraft) state.quoteDraft = { lines: [] };
   if (!Array.isArray(state.quoteDraft.lines)) state.quoteDraft.lines = [];
 
-  const t_ = computeTotals(state.quoteDraft.lines);
+  const t_ = computeTotals(state.quoteDraft.lines, state.quoteDraft.allowance_percent);
 
+  state.quoteDraft.subtotal_ht = Number(t_.subtotal_ht || 0);
+  state.quoteDraft.allowance_percent = Number(t_.allowance_percent || 0);
+  state.quoteDraft.allowance_amount = Number(t_.allowance_amount || 0);
   state.quoteDraft.total_ht = Number(t_.total_ht || 0);
   state.quoteDraft.total_tva = Number(t_.total_tva || 0);
   state.quoteDraft.total_ttc = Number(t_.total_ttc || 0);
 
+  if ($("q-subtotal-ht")) $("q-subtotal-ht").textContent = money(t_.subtotal_ht);
+  if ($("q-discount-amount")) $("q-discount-amount").textContent = money(t_.allowance_amount);
   if ($("q-total-ht")) $("q-total-ht").textContent = money(t_.total_ht);
   if ($("q-total-tva")) $("q-total-tva").textContent = money(t_.total_tva);
   if ($("q-total-ttc")) $("q-total-ttc").textContent = money(t_.total_ttc);
@@ -3917,7 +4173,15 @@ function refreshQuoteTotals() {
 function refreshInvoiceTotals() {
   if (!state.invoiceDraft) state.invoiceDraft = { lines: [] };
   if (!Array.isArray(state.invoiceDraft.lines)) state.invoiceDraft.lines = [];
-  const t_ = computeTotals(state.invoiceDraft.lines);
+  const t_ = computeTotals(state.invoiceDraft.lines, state.invoiceDraft.allowance_percent);
+  state.invoiceDraft.subtotal_ht = Number(t_.subtotal_ht || 0);
+  state.invoiceDraft.allowance_percent = Number(t_.allowance_percent || 0);
+  state.invoiceDraft.allowance_amount = Number(t_.allowance_amount || 0);
+  state.invoiceDraft.total_ht = Number(t_.total_ht || 0);
+  state.invoiceDraft.total_tva = Number(t_.total_tva || 0);
+  state.invoiceDraft.total_ttc = Number(t_.total_ttc || 0);
+  if ($("i-subtotal-ht")) $("i-subtotal-ht").textContent = money(t_.subtotal_ht);
+  if ($("i-discount-amount")) $("i-discount-amount").textContent = money(t_.allowance_amount);
   if ($("i-total-ht")) $("i-total-ht").textContent = money(t_.total_ht);
   if ($("i-total-tva")) $("i-total-tva").textContent = money(t_.total_tva);
   if ($("i-total-ttc")) $("i-total-ttc").textContent = money(t_.total_ttc);
@@ -3942,6 +4206,23 @@ function renderQuoteDraft() {
   if ($("q-validity-days")) $("q-validity-days").value = state.quoteDraft.validity_days ?? $("q-validity-days")?.value ?? "";
   if ($("q-valid-until")) $("q-valid-until").value = state.quoteDraft.valid_until || $("q-valid-until")?.value || "";
   if ($("q-payment-text")) $("q-payment-text").value = state.quoteDraft.payment_text || $("q-payment-text")?.value || "";
+  const quoteHistorical = Boolean(state.quoteDraft.historical_import);
+  if ($("q-discount-percent")) {
+    $("q-discount-percent").value = String(Number(state.quoteDraft.allowance_percent || 0));
+    $("q-discount-percent").disabled = quoteHistorical;
+    $("q-discount-percent").oninput = (event) => {
+      state.quoteDraft.allowance_percent = Math.min(100, Math.max(0, Number(event.target.value) || 0));
+      refreshQuoteTotals();
+    };
+  }
+  if ($("q-discount-reason")) {
+    $("q-discount-reason").value = state.quoteDraft.allowance_reason || "";
+    $("q-discount-reason").disabled = quoteHistorical;
+    $("q-discount-reason").oninput = (event) => { state.quoteDraft.allowance_reason = event.target.value; };
+  }
+  for (const id of ["q-date", "q-client", "q-vat-mode", "q-validity-days", "q-valid-until", "q-payment-text"]) {
+    if ($(id)) $(id).disabled = quoteHistorical;
+  }
 
   renderLines(
     $("q-lines"),
@@ -3955,7 +4236,8 @@ function renderQuoteDraft() {
       state.quoteDraft.lines.splice(i, 1);
       refreshQuoteTotals();
       renderQuoteDraft();
-    }
+    },
+    quoteHistorical
   );
 
   refreshQuoteTotals();
@@ -4068,14 +4350,36 @@ function renderQuoteDraft() {
 })();
 
 function renderInvoiceDraft() {
+  const readOnly = Boolean(state.invoiceDraft?.id && !isDraftInvoice());
   if ($("i-id")) $("i-id").value = state.invoiceDraft.id || "";
   if ($("i-date")) $("i-date").value = state.invoiceDraft.date || new Date().toISOString().slice(0, 10);
   if ($("i-client")) $("i-client").value = state.invoiceDraft.client_id || $("i-client")?.value || "";
+  if ($("i-due-date")) {
+    $("i-due-date").value = state.invoiceDraft.due_date || "";
+    $("i-due-date").disabled = readOnly;
+  }
+  if ($("i-payment-term")) $("i-payment-term").value = paymentTermLabel(state.invoiceDraft.payment_term) || state.invoiceDraft.payment_term || "";
+  if ($("i-payment-text")) {
+    $("i-payment-text").value = state.invoiceDraft.payment_text || "";
+    $("i-payment-text").disabled = readOnly;
+  }
 
   if ($("i-vat-mode")) $("i-vat-mode").value = state.invoiceDraft.vat_mode || getVatModeFromUi("i");
   setVatEffectiveToUi("i", state.invoiceDraft.vat_effective || "AUTO");
-
-  const readOnly = state.invoiceDraft?.id && !isDraftInvoice();
+  if ($("i-discount-percent")) {
+    $("i-discount-percent").value = String(Number(state.invoiceDraft.allowance_percent || 0));
+    $("i-discount-percent").disabled = readOnly;
+    $("i-discount-percent").oninput = (event) => {
+      state.invoiceDraft.allowance_percent = Math.min(100, Math.max(0, Number(event.target.value) || 0));
+      refreshInvoiceTotals();
+    };
+  }
+  if ($("i-discount-reason")) {
+    $("i-discount-reason").value = state.invoiceDraft.allowance_reason || "";
+    $("i-discount-reason").disabled = readOnly;
+    $("i-discount-reason").oninput = (event) => { state.invoiceDraft.allowance_reason = event.target.value; };
+  }
+  for (const id of ["i-date", "i-client", "i-vat-mode"]) if ($(id)) $(id).disabled = readOnly;
 
   renderLines(
     $("i-lines"),
@@ -4210,7 +4514,8 @@ async function refreshModule(moduleKey) {
     state.company = await window.api.company.get();
     if (state.company) fillCompanyForm(state.company);
     bindIntegrationForms();
-    await Promise.all([loadIntegrationForm("pa"), loadIntegrationForm("archive")]);
+    bindComplianceEvidence();
+    await Promise.all([loadIntegrationForm("pa"), loadIntegrationForm("archive"), cfLoadCompanyReportingConfig(), cfLoadEvidence()]);
     return;
   }
 
@@ -4221,85 +4526,8 @@ async function refreshModule(moduleKey) {
 
   // ===================== BEGIN PATCH E-INVOICING / E-REPORTING (REFRESH MODULE) =====================
 if (moduleKey === "conformity") {
-  // 1) Lire la config depuis la fiche Société (DB)
-  let cfg = null;
-
-  if (window.api?.conformity?.getConfig) {
-    cfg = await window.api.conformity.getConfig();
-  } else if (window.api?.company?.getConformityConfig) {
-    cfg = await window.api.company.getConformityConfig();
-  }
-
-  if (cfg && typeof cfg === "object") {
-    state.conformity = {
-      ...state.conformity,
-      ...cfg,
-      kpis: { ...(state.conformity?.kpis || {}), ...(cfg.kpis || {}) },
-    };
-  }
-
-  const s = state.conformity || {};
-
-  // 2) Hint éligibilité
-  const hintEl = document.getElementById("cf-eligibility-hint");
-if (hintEl) {
-  const emitsB2C = Number(s.emits_b2c || 0) === 1;
-  const hasIntl = Number(s.has_international || 0) === 1;
-
-  if (!emitsB2C && !hasIntl) {
-    hintEl.textContent = t(
-      "conformity.eligibility.none",
-      "E-reporting not required: no B2C and no international. (France B2B = e-invoicing, not e-reporting)"
-    );
-    hintEl.style.opacity = "0.85";
-  } else if (emitsB2C && !hasIntl) {
-    hintEl.textContent = t(
-      "conformity.eligibility.b2c_only",
-      "E-reporting required for B2C (Flows 9/10)."
-    );
-    hintEl.style.opacity = "0.95";
-  } else if (!emitsB2C && hasIntl) {
-    hintEl.textContent = t(
-      "conformity.eligibility.intl_only",
-      "E-reporting required for international (Flow 8 + payments)."
-    );
-    hintEl.style.opacity = "0.95";
-  } else {
-    hintEl.textContent = t(
-      "conformity.eligibility.b2c_and_intl",
-      "E-reporting required: B2C + international."
-    );
-    hintEl.style.opacity = "0.95";
-  }
-}
-
-  // 3) Appliquer vers UI
-  const elScope = document.getElementById("cf-scope");
-  const elPer = document.getElementById("cf-periodicity");
-  const elArch = document.getElementById("cf-archiving");
-  const elPlat = document.getElementById("cf-platform");
-  const elDue = document.getElementById("cf-next-due");
-  const elB2C = document.getElementById("cf-emits-b2c");
-  const elIntl = document.getElementById("cf-has-international");
-
-  if (elScope) elScope.value = s.scope || "FR";
-  if (elPer) elPer.value = s.periodicity || "M";
-  if (elArch) elArch.value = s.archiving || "ON";
-  if (elPlat) elPlat.value = s.platform || "";
-  if (elDue) elDue.value = s.next_due || "";
-
-  if (elB2C) elB2C.value = String(s.emits_b2c ?? 0);
-  if (elIntl) elIntl.value = String(s.has_international ?? 0);
-
-  // 4) KPIs
-  const kpis = s.kpis || {};
-  const k8 = document.getElementById("cf-kpi-flux8");
-  const k9 = document.getElementById("cf-kpi-flux9");
-  const k10 = document.getElementById("cf-kpi-flux10");
-  if (k8) k8.textContent = String(kpis.flux8 ?? 0);
-  if (k9) k9.textContent = String(kpis.flux9 ?? 0);
-  if (k10) k10.textContent = String(kpis.flux10 ?? 0);
-
+  await initConformityPage();
+  await cfLoadOperationalReport();
   return;
 }
 
@@ -4374,6 +4602,11 @@ return;
       validity_days: full.quote.validity_days ?? null,
       valid_until: full.quote.valid_until || "",
       payment_text: full.quote.payment_text || "",
+      allowance_percent: Number(full.quote.allowance_percent || 0),
+      allowance_amount: Number(full.quote.allowance_amount || 0),
+      allowance_reason: full.quote.allowance_reason || "",
+      allowance_reason_code: full.quote.allowance_reason_code || "95",
+      historical_import: Boolean(full.quote.historical_import),
       lines: (full.lines || []).map((l) => ({
         article_id: l.article_id,
         article_ref: l.article_ref,
@@ -4443,19 +4676,25 @@ renderQuoteDraft();
       return;
     }
 
+    const invoiceClient = state.clients.find((client) => String(client.id || "") === String(full.invoice.client_id || "")) || {};
     state.invoiceDraft = {
       id: full.invoice.id,
       client_id: full.invoice.client_id || "",
       date: full.invoice.date,
-      due_date: full.invoice.due_date || full.invoice.dueDate || "",
-      payment_term: full.invoice.payment_term || full.invoice.paymentTerm || "",
-      payment_text: full.invoice.payment_text || full.invoice.paymentText || "",
+      due_date: resolvedInvoiceDueDate(full.invoice.date, full.invoice, invoiceClient),
+      payment_term: full.invoice.payment_term || full.invoice.paymentTerm || invoiceClient.payment_term || "",
+      payment_text: full.invoice.payment_text || full.invoice.paymentText || invoiceClient.payment_text || "",
       status: full.invoice.status || "draft",
       type_code: full.invoice.type_code || full.invoice.invoice_type_code || "380",
       prepaid_amount: Number(full.invoice.prepaid_amount || 0) || 0,
       source_quote_id: full.invoice.source_quote_id || null,
       vat_mode: full.invoice.vat_mode || "AUTO",
       vat_effective: "AUTO",
+      allowance_percent: Number(full.invoice.allowance_percent || 0),
+      allowance_amount: Number(full.invoice.allowance_amount || 0),
+      allowance_reason: full.invoice.allowance_reason || "",
+      allowance_reason_code: full.invoice.allowance_reason_code || "95",
+      historical_import: Boolean(full.invoice.historical_import),
       lines: (full.lines || []).map((l) => ({
         article_id: l.article_id,
         article_ref: l.article_ref,
@@ -4985,29 +5224,9 @@ case "conformity:sendNow": {
     break;
   }
 
-  // le backend peut calculer quoi envoyer maintenant (Flux 8/9/10)
-  // selon scope/périodicité + données en DB.
-  const res = await window.api.conformity.sendNow({
-    scope: state.conformity?.scope || "FR",
-    periodicity: state.conformity?.periodicity || "M",
-  });
-
-  if (res?.queued) {
-    // version "merge" (tu l'avais)
-    state.conformity.kpis = { ...state.conformity.kpis, ...res.queued };
-
-    // version "numérique / robuste" (tu l'avais aussi)
-    state.conformity.kpis = {
-      flux8: Number(res.queued.flux8 ?? state.conformity.kpis.flux8 ?? 0),
-      flux9: Number(res.queued.flux9 ?? state.conformity.kpis.flux9 ?? 0),
-      flux10: Number(res.queued.flux10 ?? state.conformity.kpis.flux10 ?? 0),
-    };
-  }
-
-  if (res?.next_due) state.conformity.next_due = String(res.next_due || "");
-
+  const res = await window.api.conformity.sendNow(cfReportingPeriod());
   await refreshModule("conformity");
-  setStatus(res?.message || "Envoi déclenché (file d’envoi).");
+  setStatus(res?.message || t("reporting.send.started", "Transmission réglementaire remise au connecteur."));
   break;
 }
 
@@ -5017,23 +5236,15 @@ case "conformity:rebuildPeriod": {
     break;
   }
 
-  const res = await window.api.conformity.rebuildPeriod({
-    scope: state.conformity?.scope || "FR",
-    periodicity: state.conformity?.periodicity || "M",
-  });
-
-  if (res?.next_due) state.conformity.next_due = String(res.next_due || "");
-  if (res?.kpis) state.conformity.kpis = { ...state.conformity.kpis, ...res.kpis };
-
-  await refreshModule("conformity");
-  setStatus(res?.message || "Période recalculée");
+  const res = await window.api.conformity.rebuildPeriod(cfReportingPeriod());
+  state.regulatoryReport = res;
+  cfRenderOperationalReport(res);
+  setStatus(res?.message || t("reporting.period.prepared", "Période préparée"));
   break;
 }
 
 case "conformity:settings": {
-  showPage("conformity"); 
-  setStatus(t("conformity.settings.opened", "Paramètres conformité"));
-  setTimeout(() => document.getElementById("cf-scope")?.focus(), 0);
+  cfOpenCompanyReportingSettings();
   break;
 }
 
@@ -5042,8 +5253,10 @@ case "conformity:openQueue": {
     setStatus("File d’envoi non branchée (IPC conformity:openQueue manquant).");
     break;
   }
-  await window.api.conformity.openQueue();
-  setStatus("File d’envoi ouverte.");
+  const transmissions = await window.api.conformity.openQueue();
+  state.regulatoryReport = { ...(state.regulatoryReport || {}), transmissions: Array.isArray(transmissions) ? transmissions : [] };
+  cfRenderOperationalReport(state.regulatoryReport || {});
+  setStatus(t("reporting.transmissions.refreshed", "Accusés de réception actualisés."));
   break;
 }
 
@@ -5252,6 +5465,10 @@ case "quotes:new":
     validity_days: null,
     valid_until: "",
     payment_text: "",
+    allowance_percent: 0,
+    allowance_amount: 0,
+    allowance_reason: "",
+    allowance_reason_code: "95",
   };
 
   if ($("q-lines")) $("q-lines").innerHTML = "";
@@ -5302,6 +5519,7 @@ case "quotes:save": {
 
   await applyVatForQuote({ silent: true }).catch(() => {});
   validateLinesEN16931(state.quoteDraft.lines);
+  validateDocumentDiscount(state.quoteDraft);
   
   refreshQuoteTotals();
 
@@ -5312,6 +5530,11 @@ case "quotes:save": {
   currency: "EUR",
   status: "draft",
   vat_mode: state.quoteDraft.vat_mode || "AUTO",
+  subtotal_ht: Number(state.quoteDraft.subtotal_ht || 0),
+  allowance_percent: Number(state.quoteDraft.allowance_percent || 0),
+  allowance_amount: Number(state.quoteDraft.allowance_amount || 0),
+  allowance_reason: state.quoteDraft.allowance_reason || "Remise commerciale",
+  allowance_reason_code: "95",
 
   total_ht: Number(state.quoteDraft.total_ht || 0),
   total_tva: Number(state.quoteDraft.total_tva || 0),
@@ -5473,6 +5696,9 @@ case "invoices:new":
     id: null,
     client_id: "",
     date: new Date().toISOString().slice(0, 10),
+    due_date: "",
+    payment_term: "",
+    payment_text: "",
     lines: [],
     status: "draft",
     type_code: "380",
@@ -5480,6 +5706,10 @@ case "invoices:new":
     source_quote_id: null,
     vat_mode: "AUTO",
     vat_effective: "AUTO",
+    allowance_percent: 0,
+    allowance_amount: 0,
+    allowance_reason: "",
+    allowance_reason_code: "95",
   };
   if ($("i-lines")) $("i-lines").innerHTML = "";
   renderInvoiceDraft();
@@ -5529,18 +5759,30 @@ case "invoices:save": {
 
   await applyVatForInvoice({ silent: true }).catch(() => {});
   validateLinesEN16931(state.invoiceDraft.lines);
+  validateDocumentDiscount(state.invoiceDraft);
 
   const date = $("i-date")?.value || new Date().toISOString().slice(0, 10);
-  const totals = computeTotals(state.invoiceDraft.lines);
+  const totals = computeTotals(state.invoiceDraft.lines, state.invoiceDraft.allowance_percent);
 
   const payload = {
     id: state.invoiceDraft.id || undefined,
     client_id: clientId,
     date,
+    due_date: $("i-due-date")?.value || state.invoiceDraft.due_date || "",
+    payment_term: state.invoiceDraft.payment_term || buyer.payment_term || "",
+    payment_text: $("i-payment-text")?.value || state.invoiceDraft.payment_text || "",
     currency: "EUR",
     type: "final",
     status: "draft",
     prepaid_amount: Number(state.invoiceDraft.prepaid_amount || 0) || 0,
+    subtotal_ht: Number(totals.subtotal_ht || 0),
+    allowance_percent: Number(state.invoiceDraft.allowance_percent || 0),
+    allowance_amount: Number(totals.allowance_amount || 0),
+    allowance_reason: state.invoiceDraft.allowance_reason || "Remise commerciale",
+    allowance_reason_code: "95",
+    total_ht: Number(totals.total_ht || 0),
+    total_tva: Number(totals.total_tva || 0),
+    total_ttc: Number(totals.total_ttc || 0),
     lines: state.invoiceDraft.lines,
     meta_json: { kind: "final", totals_snapshot: totals },
   };
@@ -5569,6 +5811,9 @@ case "invoices:delete": {
     id: null,
     client_id: "",
     date: new Date().toISOString().slice(0, 10),
+    due_date: "",
+    payment_term: "",
+    payment_text: "",
     lines: [],
     status: "draft",
     type_code: "380",
@@ -5586,6 +5831,9 @@ case "invoices:issue": {
   const id = state.invoiceDraft?.id;
   if (!id) throw new Error("Sélectionner une facture.");
   if (!isDraftInvoice()) throw new Error("Facture déjà validée/émise.");
+  const dueDate = $("i-due-date")?.value || state.invoiceDraft.due_date || "";
+  if (!dueDate) throw new Error(t("invoices.error.due_date_required", "L’échéance est obligatoire avant l’émission de la facture."));
+  await handleAction("invoices:save");
   await window.api.invoices.issue(id);
   await refreshModule("invoices");
   setStatus(t("status.invoice_issued", "Invoice issued"));
@@ -5635,6 +5883,8 @@ case "invoices:recordPayment": {
       closeModal("paymentModal");
 
       if (isDraftInvoice()) {
+        const dueDate = $("i-due-date")?.value || state.invoiceDraft.due_date || "";
+        if (!dueDate) throw new Error(t("invoices.error.due_date_required", "L’échéance est obligatoire avant l’émission de la facture."));
         await handleAction("invoices:save");
         await window.api.invoices.issue(id);
       }
@@ -6572,6 +6822,7 @@ function init() {
     ensurePaymentModal();
 
     initNavigation();
+    initWorkflowCompanion();
     initConformityAiAgent();
 
     // data-action buttons
@@ -6664,7 +6915,13 @@ function init() {
 
     // VAT watchers
     $("q-client")?.addEventListener("change", () => applyVatForQuote().catch(console.error));
-    $("i-client")?.addEventListener("change", () => applyVatForInvoice().catch(console.error));
+    $("i-client")?.addEventListener("change", async () => {
+      const client = normalizeClient(await getBuyerForInvoice());
+      state.invoiceDraft.client_id = $("i-client")?.value || "";
+      applyInvoiceClientPaymentDefaults(client, { force: true });
+      renderInvoiceDraft();
+      await applyVatForInvoice().catch(console.error);
+    });
     $("q-vat-mode")?.addEventListener("change", () => applyVatForQuote().catch(console.error));
     $("i-vat-mode")?.addEventListener("change", () => applyVatForInvoice().catch(console.error));
 
@@ -6796,11 +7053,25 @@ function init() {
       state.quoteDraft.payment_text = $("q-payment-text")?.value || "";
     });
 
+    $("i-date")?.addEventListener("change", async () => {
+      state.invoiceDraft.date = $("i-date")?.value || new Date().toISOString().slice(0, 10);
+      const client = normalizeClient(await getBuyerForInvoice());
+      state.invoiceDraft.due_date = resolvedInvoiceDueDate(state.invoiceDraft.date, {}, client || {});
+      renderInvoiceDraft();
+    });
+    $("i-due-date")?.addEventListener("change", () => {
+      state.invoiceDraft.due_date = $("i-due-date")?.value || "";
+    });
+    $("i-payment-text")?.addEventListener("input", () => {
+      state.invoiceDraft.payment_text = $("i-payment-text")?.value || "";
+    });
+
     // seller country impacts AUTO
     $("co-country")?.addEventListener("input", () => {
       state.company = state.company || {};
       state.company.country = $("co-country")?.value?.trim().toUpperCase();
       updateCountryEInvoicingProfile(state.company);
+      cfLoadCompanyReportingConfig().catch(() => {});
       applyVatForQuote({ silent: true }).catch(() => {});
       applyVatForInvoice({ silent: true }).catch(() => {});
     });

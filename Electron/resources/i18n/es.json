@@ -2,50 +2,35 @@
   "app.window_title": "D2F – Gestión",
   "brand.name": "D2F Gestión",
   "brand.subtitle": "Conforme a EN16931",
-
   "topbar.view": "Vista",
   "topbar.view.split": "Dividida",
   "topbar.view.single": "Enfoque",
-
   "status.ready": "Listo",
-
   "sidebar.modules": "Módulos",
   "sidebar.shortcuts": "Accesos directos",
   "sidebar.hint.toolbar_changes": "Los botones cambian según la página.",
-
   "app.title.company": "Empresa",
   "app.desc.company": "Configuración del emisor y branding PDF.",
-
   "app.title.dashboard": "Panel de control",
   "app.desc.dashboard": "Resumen de presupuestos, facturas y pagos.",
-
   "app.title.clients": "Clientes",
   "app.desc.clients": "Gestión de clientes y ajustes de facturación.",
-
   "app.title.items": "Artículos",
   "app.desc.items": "Catálogo de productos y servicios.",
-
   "app.title.quotes": "Presupuestos",
   "app.desc.quotes": "Creación y gestión de presupuestos.",
-
   "app.title.invoices": "Facturas",
   "app.desc.invoices": "Facturas, pagos y abonos.",
-
   "app.title.inbound": "Compras",
   "app.desc.inbound": "Facturas de proveedores recibidas (AP / e-facturación).",
-
   "app.title.payments": "Pagos",
   "app.desc.payments": "Registro de pagos de clientes.",
-
   "app.title.exports": "Exportaciones",
   "app.desc.exports": "Exportación PDF y XML (PEPPOL / UBL).",
-
   "app.title.conformity": "Conformidad",
   "app.desc.conformity": "E-reporting: preparación, envío, estados y errores.",
-
   "app.title.audit": "Auditoría",
   "app.desc.audit": "Consulta del rastro de auditoría (append-only).",
-
   "action.save": "Guardar",
   "action.new": "Nuevo",
   "action.delete": "Eliminar",
@@ -66,11 +51,9 @@
   "action.record_payment": "Registrar pago",
   "action.export_peppol_xml": "XML PEPPOL",
   "action.export_readable_pdf": "PDF legible",
-
   "toolbar.search": "Buscar",
   "toolbar.language": "Idioma",
   "toolbar.lang": "Idioma",
-
   "ui.choose": "— seleccionar —",
   "ui.choose_reason": "— seleccionar un motivo —",
   "ui.cancel": "Cancelar",
@@ -79,7 +62,6 @@
   "ui.required": "obligatorio",
   "ui.none": "Ninguno",
   "ui.loading_dashboard": "Cargando el panel…",
-
   "common.ellipsis": "…",
   "common.empty": "",
   "common.email": "Correo electrónico",
@@ -97,26 +79,22 @@
   "common.yes_b2b": "Sí (B2B)",
   "common.no_b2c": "No (B2C)",
   "common.info": "Info",
-
   "theme.indigo": "Índigo",
   "theme.cyan": "Cian",
   "theme.green": "Verde",
   "theme.orange": "Naranja",
   "theme.pink": "Rosa",
-
   "company.identity.title": "Identidad (EN16931 BG-4)",
   "company.legal_name": "Razón social (BT-27) *",
   "company.legal_name_ph": "D2F Compliant d.o.o",
   "company.legal_id": "Identificador legal (PIB/MB/RSB/otro) *",
   "company.vat_id": "NIF/IVA (BT-32) *",
   "company.vat_id_ph": "RS…",
-
   "company.vat_regime": "Régimen de IVA (DGFiP)",
   "company.vat_regime.real_normal_monthly": "Régimen real normal (mensual)",
   "company.vat_regime.real_normal_quarterly": "Régimen real normal (opción trimestral)",
   "company.vat_regime.simplified": "Régimen simplificado",
   "company.vat_regime.franchise": "Exento (franquicia en base)",
-
   "company.country": "País (BT-31) *",
   "company.country_ph": "RS",
   "company.currency": "Moneda",
@@ -128,7 +106,6 @@
   "company.city": "Ciudad *",
   "company.email_ph": "contacto@…",
   "company.phone_ph": "+381 …",
-
   "company.branding.title": "Branding PDF",
   "company.branding.hint": "El logotipo se utiliza solo en PDFs (presupuestos/facturas).",
   "company.branding.logo_alt": "Logotipo de la empresa",
@@ -137,7 +114,6 @@
   "company.branding.logo_subtitle": "Se recomienda PNG/SVG de alta resolución",
   "company.branding.show_logo": "Mostrar logotipo en presupuestos y facturas",
   "company.branding.accent_hint": "Acento de la UI (opcional).",
-
   "company.cgv.title": "Condiciones y pago (PDF)",
   "company.cgv.hint": "Esta información se imprime en los PDF.",
   "company.cgv.text": "Condiciones generales (texto imprimible)",
@@ -151,7 +127,6 @@
   "company.bank.bic": "BIC / SWIFT",
   "company.bank.extra": "Información adicional (opcional)",
   "company.bank.extra_ph": "Referencia / mandato…",
-
   "clients.list_title": "Lista de clientes",
   "clients.search_ph": "Buscar cliente…",
   "clients.form_title": "Ficha de cliente (EN16931 BG-7)",
@@ -170,7 +145,6 @@
   "clients.street": "Dirección (BT-50) *",
   "clients.street_ph": "Calle y número…",
   "clients.street2": "Complemento",
-
   "clients.payments_quotes.title": "Pagos y presupuestos",
   "clients.payments_quotes.hint": "Parámetros por defecto para presupuestos y facturas.",
   "clients.payment_term": "Condición de pago",
@@ -181,7 +155,6 @@
   "clients.quote_validity_days": "Validez por defecto del presupuesto (días)",
   "clients.quote_validity_days_ph": "30",
   "clients.info_due_on_receipt": "B2C: por defecto a la recepción",
-
   "clients.import.open_btn": "Importar CSV…",
   "clients.import.title": "Importación de clientes (CSV)",
   "clients.import.file": "Archivo CSV",
@@ -199,7 +172,6 @@
   "clients.import.report": "Informe",
   "clients.import.analyze": "Analizar",
   "clients.import.run": "Importar",
-
   "items.list_title": "Lista de artículos",
   "items.search_ph": "Buscar artículo…",
   "items.form_title": "Artículo (catálogo)",
@@ -220,7 +192,6 @@
   "items.unit_ph": "C62, HUR, DAY…",
   "items.desc_pdf": "Descripción (PDF)",
   "items.desc_pdf_ph": "Texto imprimible…",
-
   "quotes.list_title": "Lista de presupuestos",
   "quotes.search_ph": "Buscar presupuesto…",
   "quotes.editor_title": "Editor de presupuestos",
@@ -235,20 +206,16 @@
   "quotes.conditions.valid_until": "Válido hasta",
   "quotes.conditions.payment_text": "Condiciones de pago (se imprimen)",
   "quotes.conditions.payment_text_ph": "Ej.: Pago a la recepción de la factura…",
-
   "lines.desc": "Descripción",
   "lines.qty": "Cantidad",
   "lines.unit_price_ht": "Precio unitario",
   "lines.vat_percent": "IVA %",
   "lines.line_total_ht": "Total neto",
-
   "vat.mode.label": "Régimen de IVA",
   "vat.effective": "IVA efectivo",
-
   "totals.ht": "Total neto",
   "totals.vat": "Total IVA",
   "totals.ttc": "Total bruto",
-
   "invoices.list_title": "Lista de facturas",
   "invoices.search_ph": "Buscar factura…",
   "invoices.new": "Nueva",
@@ -264,7 +231,6 @@
   "invoices.totals.vat": "Total IVA (BT-115)",
   "invoices.totals.ttc": "Total bruto (BT-116)",
   "invoices.issue_blocked_hint": "La emisión se bloquea si Empresa/Cliente/Líneas no están completos (EN16931).",
-
   "dash.ca_recognized": "Facturación reconocida (neta)",
   "dash.ca_recognized_hint": "Facturas finales emitidas (380) – abonos emitidos (381). Los anticipos no se contabilizan.",
   "dash.quotes.title": "Presupuestos",
@@ -281,7 +247,6 @@
   "dash.payments.hint": "Total + por método",
   "dash.payments.total": "Total cobrado",
   "dash.payments.none": "No hay pagos registrados.",
-
   "payments.title": "Factura a cobrar",
   "payments.hint": "Obligatorio: seleccione una factura (preferiblemente emitida). Si es borrador → se emitirá automáticamente al cobrar.",
   "payments.invoice": "Factura",
@@ -296,19 +261,16 @@
   "payments.select_invoice_hint_one": "Factura seleccionada: {id}",
   "payments.none_for_invoice": "No hay pagos para esta factura.",
   "payments.no_invoice_selected": "No se ha seleccionado ninguna factura.",
-
   "pay.method.card": "Tarjeta",
   "pay.method.transfer": "Transferencia bancaria",
   "pay.method.cash": "Efectivo",
   "pay.method.check": "Cheque",
   "pay.method.sepa": "Adeudo directo",
   "pay.method.other": "Otro",
-
   "pay.col.date": "Fecha",
   "pay.col.amount": "Importe",
   "pay.col.method": "Método",
   "pay.col.reference": "Referencia / notas",
-
   "pay.modal.title": "Registrar pago",
   "pay.modal.amount": "Importe recibido",
   "pay.modal.partial_or_total": "parcial o total",
@@ -318,14 +280,12 @@
   "pay.modal.reference_placeholder": "Transacción / remittance…",
   "pay.modal.draft_hint": "Si la factura es un borrador, se emitirá automáticamente antes de registrar el pago.",
   "pay.modal.confirm": "Guardar",
-
   "inbound.list.title": "Facturas de proveedores recibidas",
   "inbound.search_ph": "Buscar (número / proveedor / estado)…",
   "inbound.list.hint_actions": "Consejo: seleccione una factura para activar Aceptar/Rechazar.",
   "inbound.detail.title_fallback": "Detalles",
   "inbound.validation.title": "Validación en la plataforma",
   "inbound.validation.hint": "Aceptar/Rechazar genera un estado. Rechazar requiere un motivo obligatorio.",
-
   "inbound.detail.title": "Factura recibida",
   "inbound.detail.hint": "Seleccione una factura recibida.",
   "inbound.detail.status": "Estado",
@@ -338,10 +298,8 @@
   "inbound.detail.reason": "Motivo",
   "inbound.detail.warning": "Advertencia",
   "inbound.detail.error": "Error técnico",
-
   "inbound.detail.reject_reason": "Motivo de rechazo",
   "inbound.detail.technical_error": "Error técnico",
-
   "inbound.status.accepted": "Aceptada",
   "inbound.status.refused_buyer": "Rechazada (comprador)",
   "inbound.status.rejected_platform": "Rechazada (plataforma)",
@@ -349,14 +307,12 @@
   "inbound.status.received": "Recibida",
   "inbound.status.received_not_valid": "Recibida (no válida)",
   "inbound.status.error": "Error",
-
   "inbound.format.xml_ubl": "XML UBL",
   "inbound.format.xml_cii": "XML CII",
   "inbound.format.pdf_facturx": "PDF Factur-X",
   "inbound.format.pdf_facturx_xml": "PDF Factur-X (XML {xml})",
   "inbound.format.pdf_xml_embedded": "PDF (XML integrado {xml})",
   "inbound.format.pdf": "PDF",
-
   "reject.modal.title": "Rechazar factura (comprador – XP Z12-012)",
   "reject.code.label": "Motivo (RFxx)",
   "reject.code.norm": "AFNOR",
@@ -368,12 +324,10 @@
   "reject.hint": "El rechazo es una decisión del comprador (REFUSED). El comentario es obligatorio para RF99.",
   "reject.rf99": "RF99 — Otro (comentario obligatorio)",
   "reject.confirm": "Rechazar",
-
   "reject.kind.label": "Decisión",
   "reject.kind.hint": "quién emite el estado",
   "reject.kind.creditor": "Rechazo del comprador/acreedor",
   "reject.kind.platform": "Rechazo de la plataforma",
-
   "exports.selection.title": "Selección",
   "exports.selection.hint": "Seleccione un documento para exportar (si no, se utiliza la selección actual).",
   "exports.quote": "Presupuesto a exportar",
@@ -381,18 +335,15 @@
   "exports.locale": "Idioma del PDF",
   "exports.open_quote": "Abrir presupuesto",
   "exports.open_invoice": "Abrir factura",
-
   "exports.pdf.title": "Exportación PDF",
   "exports.pdf.hint": "Presentación profesional de presupuestos y facturas.",
   "exports.peppol.title": "PEPPOL (XML)",
   "exports.peppol.hint": "XML PEPPOL + PDF legible (logo de la empresa).",
-
   "lang.fr": "Français",
   "lang.en": "English",
   "lang.es": "Español",
   "lang.it": "Italiano",
   "lang.sr": "Srpski",
-
   "audit.title": "Visor de auditoría",
   "audit.hint": "Lectura del rastro de auditoría encadenado (append-only).",
   "audit.path_loading": "log: (cargando…)",
@@ -410,10 +361,8 @@
   "audit.controls.title": "Controles",
   "audit.controls.hint": "Para auditoría: append-only, encadenado, con sello temporal, idealmente sellado.",
   "audit.controls.bullets": "• audit:verify: verifica la cadena y el HMAC si existe\n• audit:read: lectura paginada (sinceSeq/limit)\n• Evidencia: exports (PDF/UBL) + auditoría.",
-
   "footer.left": "© 2025 - D2F Compliant doo",
   "footer.right": "Marcado SC y marcado PA",
-
   "exports.pdf_quote_ok": "PDF del presupuesto exportado: {path}",
   "exports.pdf_invoice_ok": "PDF de la factura exportado: {path}",
   "exports.pdf_canceled": "Exportación PDF cancelada",
@@ -423,20 +372,16 @@
   "exports.ubl_exported_no_xml": "UBL exportado (XML no devuelto).",
   "exports.peppol_pdf_todo": "PDF legible (PEPPOL): por implementar.",
   "exports.issue_before_ubl": "Emitiendo la factura antes de exportar UBL…",
-
   "vat.mode.auto": "AUTO",
   "vat.mode.vat": "IVA",
   "vat.mode.reverse_charge": "Inversión del sujeto pasivo",
   "vat.mode.no_vat": "Sin IVA",
   "vat.mode.exempt": "Exento",
-
   "payterm.due_on_receipt": "A la recepción",
   "payterm.net_15": "Neto 15 días",
   "payterm.net_30": "Neto 30 días",
   "payterm.negotiated": "Negociado / específico",
-
   "status.language_changed": "Idioma cambiado",
-
   "status.dashboard_refreshed": "Panel actualizado",
   "status.payments_refreshed": "Pagos actualizados",
   "status.company_saved": "Empresa guardada",
@@ -469,24 +414,18 @@
   "status.inbound.deleted": "Factura eliminada",
   "status.xmlexport_canceled": "Exportación XML cancelada",
   "status.pdfexport_canceled": "Exportación PDF cancelada",
-
   "confirm.inbound.delete": "¿Eliminar esta factura recibida? (Recibida / No válida / Error)",
-
   "err.init_failed": "Error de inicialización (ver consola)",
   "err.init": "Error de inicialización: {msg}",
   "err.generic": "Error: {msg}",
-
   "err.pay.select_invoice": "Seleccione una factura.",
   "err.pay.amount_required": "El importe debe ser > 0.",
   "err.pay.ui_missing": "Falta la UI de pago (paymentModal).",
   "err.pay.amount_required2": "El importe es obligatorio (> 0).",
-
   "err.files_missing": "Función de archivos no disponible (files:pickImage).",
   "err.logo_invalid_path": "Logo no válido (falta la ruta).",
-
   "status.none_client_selected": "No se ha seleccionado ningún cliente",
   "status.none_item_selected": "No se ha seleccionado ningún artículo",
-
   "err.quote.client_required": "Presupuesto: el cliente es obligatorio.",
   "err.quote.choose_item": "Seleccione un artículo.",
   "err.quote.item_not_found": "Artículo no encontrado.",
@@ -496,7 +435,6 @@
   "err.deposit_value_required_percent": "Introduzca un porcentaje > 0.",
   "err.deposit_value_required_amount": "Introduzca un importe total > 0.",
   "err.deposit_percent_max": "El porcentaje debe ser ≤ 100.",
-
   "err.invoice.client_required": "Factura: el cliente es obligatorio.",
   "err.invoice.select_invoice": "Seleccione una factura.",
   "err.invoice.not_editable": "La factura no es editable: solo borradores.",
@@ -505,7 +443,6 @@
   "err.invoice.already_issued": "La factura ya está emitida.",
   "err.creditnote_only_issued": "El abono solo puede crearse desde una factura emitida.",
   "err.creditnote_no_id": "Abono creado, pero no se devolvió el id.",
-
   "err.inbound.ipc_missing_import": "Falta IPC: inbound:importFile",
   "err.inbound.import_failed": "Importación fallida",
   "err.inbound.select_doc": "Seleccione una factura recibida.",
@@ -519,7 +456,6 @@
   "err.reject.ui_missing": "Falta la UI de rechazo (rejectModal).",
   "err.reject.code_required": "El código del motivo (RFxx) es obligatorio.",
   "err.reject.comment_required_rf99": "El comentario es obligatorio para RF99.",
-
   "err.exports.select_quote": "Seleccione un presupuesto.",
   "err.exports.select_invoice": "Seleccione una factura.",
   "err.exports.choose_quote_in_exports": "Seleccione un presupuesto en Exportaciones.",
@@ -529,7 +465,6 @@
   "err.exports.pdf_invoice_failed": "Falló la exportación PDF de la factura",
   "err.exports.xml_failed": "Falló la exportación XML",
   "err.exports.pdf_failed": "Falló la exportación PDF",
-
   "err.en16931.company_legal_name": "Empresa: la razón social es obligatoria (BG-4/BT-27)",
   "err.en16931.company_country": "Empresa: el país es obligatorio (BT-31)",
   "err.en16931.buyer_name": "Cliente: el nombre es obligatorio (BG-7/BT-44)",
@@ -538,15 +473,12 @@
   "err.en16931.line_desc": "Línea {n}: la descripción es obligatoria (BT-126)",
   "err.en16931.line_qty": "Línea {n}: la cantidad debe ser > 0 (BT-129)",
   "err.en16931.line_unit_price": "Línea {n}: el precio unitario es obligatorio (BT-130)",
-
   "conformity.title": "Conformidad e-facturación / e-reporting",
   "conformity.hint": "Configuración de flujos, periodicidad de envío, estados y errores (Francia + internacional).",
-
   "conformity.mode": "Modo",
   "conformity.scope": "Ámbito",
   "conformity.scope.fr": "Francia",
   "conformity.scope.intl": "Internacional",
-
   "conformity.periodicity": "Periodicidad del e-reporting",
   "conformity.periodicity.label": "Periodicidad",
   "conformity.periodicity.decade": "Década",
@@ -554,40 +486,44 @@
   "conformity.periodicity.bimonthly": "Bimestral",
   "conformity.periodicity.quarterly": "Trimestral",
   "conformity.periodicity.yearly": "Anual",
-
   "conformity.next_due": "Próximo envío",
-
   "conformity.archive": "Archivado con valor probatorio",
   "conformity.archiving": "Archivado",
   "conformity.archiving.on": "Activado",
   "conformity.archiving.off": "Desactivado",
-
   "conformity.platform": "Plataforma",
   "conformity.platform_ph": "PDP / PPF…",
-
   "conformity.emits_b2c": "La empresa emite facturas B2C",
   "conformity.has_international": "La empresa factura internacionalmente",
-
   "conformity.eligibility.default": "—",
-
   "conformity.flows.title": "Flujos esperados",
   "conformity.flows.hint": "Francia: B2B/B2G (e-facturación en tiempo real) + B2C (e-reporting periódico). Internacional: e-reporting Flujo 8 (facturas) + Flujo 10 (pagos).",
-
   "conformity.flux9": "Flujo 9 — Datos acumulados de transacciones (B2C)",
   "conformity.flux10": "Flujo 10 — Datos de cobros (B2C + internacional)",
   "conformity.flux8": "Flujo 8 — Facturas internacionales",
-
   "conformity.todo_backend": "Los botones « Enviar ahora » / « Actualizar » se conectarán vía IPC + base de datos (cola de envío, estados, errores).",
-
   "conformity.kpi.title": "Indicadores",
   "conformity.kpi.flux8": "Flujo 8",
   "conformity.kpi.flux9": "Flujo 9",
   "conformity.kpi.flux10": "Flujo 10",
-
   "conformity.action.send_now": "Enviar ahora",
   "conformity.action.open_queue": "Cola de envío",
   "conformity.action.rebuild_period": "Recalcular periodo",
   "conformity.action.settings": "Ajustes de la reforma",
-
-  "status.conformity_refreshed": "Conformidad actualizada"
+  "status.conformity_refreshed": "Conformidad actualizada",
+  "lines.discount_percent": "Descuento %",
+  "discount.document_percent": "Descuento global (%)",
+  "discount.reason": "Motivo del descuento",
+  "discount.reason_placeholder": "Descuento comercial",
+  "discount.subtotal": "Subtotal sin IVA antes del descuento global",
+  "discount.amount": "Descuento global sin IVA",
+  "discount.default_reason": "Descuento comercial",
+  "items.import_csv": "Importar artículos CSV…",
+  "quotes.import_csv_history": "Importar presupuestos históricos CSV…",
+  "invoices.import_csv_history": "Importar facturas históricas CSV…",
+  "history.status": "Histórico (solo lectura)",
+  "import.csv_success": "{count} fila(s) importada(s); {skipped} duplicado(s) omitido(s).",
+  "import.csv_no_rows": "El archivo CSV no contiene filas utilizables.",
+  "import.csv_missing_columns": "Faltan columnas CSV obligatorias: {columns}",
+  "import.csv_confirm_history": "¿Importar {count} documento(s) como histórico de solo lectura sin afectar al panel?"
 }

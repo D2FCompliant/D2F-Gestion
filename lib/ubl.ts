@@ -66,8 +66,15 @@ export function createUblDocument(input: { document: JsonRecord; lines: JsonReco
   if (!value(input.seller.legal_name || input.seller.name) || !value(input.buyer.name || input.buyer.legal_name)) throw new Error("L'émetteur et le client sont obligatoires");
   if (!lines.length) throw new Error("Au moins une ligne est obligatoire");
 
-  const totalHt = document.total_ht == null ? lines.reduce((sum, line) => sum + lineAmount(line), 0) : numberValue(document.total_ht);
-  const totalVat = document.total_tva == null ? lines.reduce((sum, line) => sum + lineAmount(line) * numberValue(line.tva_percent) / 100, 0) : numberValue(document.total_tva);
+  const lineExtensionTotal = Math.round(lines.reduce((sum, line) => sum + lineAmount(line), 0) * 100) / 100;
+  const allowancePercent = Math.min(100, Math.max(0, numberValue(document.allowance_percent)));
+  const documentAllowance = document.allowance_amount == null
+    ? Math.round(lineExtensionTotal * allowancePercent) / 100
+    : Math.abs(numberValue(document.allowance_amount));
+  const computedTotalHt = Math.round((lineExtensionTotal - documentAllowance) * 100) / 100;
+  const totalHt = document.total_ht == null ? computedTotalHt : numberValue(document.total_ht);
+  const taxFactor = lineExtensionTotal > 0 ? Math.max(0, Math.min(1, Math.abs(totalHt) / lineExtensionTotal)) : 1;
+  const totalVat = document.total_tva == null ? lines.reduce((sum, line) => sum + lineAmount(line) * taxFactor * numberValue(line.tva_percent) / 100, 0) : numberValue(document.total_tva);
   const totalTtc = document.total_ttc == null ? totalHt + totalVat : numberValue(document.total_ttc);
   const due = document.amount_due == null ? totalTtc - numberValue(document.prepaid_amount) : numberValue(document.amount_due);
   const root = isCredit ? "CreditNote" : "Invoice";
@@ -77,7 +84,7 @@ export function createUblDocument(input: { document: JsonRecord; lines: JsonReco
   const taxGroups = new Map<number, { taxable: number; tax: number }>();
   for (const line of lines) {
     const rate = numberValue(line.tva_percent);
-    const taxable = lineAmount(line);
+    const taxable = lineAmount(line) * taxFactor;
     const current = taxGroups.get(rate) || { taxable: 0, tax: 0 };
     current.taxable += taxable;
     current.tax += taxable * rate / 100;
@@ -86,10 +93,24 @@ export function createUblDocument(input: { document: JsonRecord; lines: JsonReco
   const category = value(document.vat_effective).toUpperCase() === "REVERSE_CHARGE" ? "AE" : "S";
   const lineXml = lines.map((line, index) => {
     const rate = numberValue(line.tva_percent);
+    const quantity = Math.abs(numberValue(line.quantity || 1));
+    const unitPrice = Math.abs(numberValue(line.unit_price_ht));
+    const lineDiscountPercent = Math.min(100, Math.max(0, numberValue(line.remise_percent)));
+    const lineGross = Math.round(quantity * unitPrice * 100) / 100;
+    const lineDiscountAmount = Math.round((lineGross - lineAmount(line)) * 100) / 100;
+    const lineAllowanceXml = lineDiscountAmount > 0 ? `<cac:AllowanceCharge>
+        <cbc:ChargeIndicator>false</cbc:ChargeIndicator>
+        <cbc:AllowanceChargeReasonCode>95</cbc:AllowanceChargeReasonCode>
+        <cbc:AllowanceChargeReason>${xml(line.remise_reason || "Remise commerciale")}</cbc:AllowanceChargeReason>
+        <cbc:MultiplierFactorNumeric>${(lineDiscountPercent / 100).toFixed(4)}</cbc:MultiplierFactorNumeric>
+        <cbc:Amount currencyID="${xml(currency)}">${amount(lineDiscountAmount)}</cbc:Amount>
+        <cbc:BaseAmount currencyID="${xml(currency)}">${amount(lineGross)}</cbc:BaseAmount>
+      </cac:AllowanceCharge>` : "";
     return `<cac:${lineTag}>
       <cbc:ID>${index + 1}</cbc:ID>
       <cbc:${quantityTag} unitCode="${xml(line.unit_code || "C62")}">${Math.abs(numberValue(line.quantity || 1))}</cbc:${quantityTag}>
       <cbc:LineExtensionAmount currencyID="${xml(currency)}">${amount(lineAmount(line))}</cbc:LineExtensionAmount>
+      ${lineAllowanceXml}
       <cac:Item><cbc:Name>${xml(line.description || line.name || line.label)}</cbc:Name><cac:ClassifiedTaxCategory><cbc:ID>${category}</cbc:ID><cbc:Percent>${rate.toFixed(2)}</cbc:Percent><cac:TaxScheme><cbc:ID>VAT</cbc:ID></cac:TaxScheme></cac:ClassifiedTaxCategory></cac:Item>
       <cac:Price><cbc:PriceAmount currencyID="${xml(currency)}">${amount(line.unit_price_ht)}</cbc:PriceAmount></cac:Price>
     </cac:${lineTag}>`;
@@ -106,6 +127,14 @@ export function createUblDocument(input: { document: JsonRecord; lines: JsonReco
       : "urn:cen.eu:en16931:2017";
   const profileId = profile === "peppol" || profile === "fr-cius" ? "urn:fdc:peppol.eu:2017:poacc:billing:01:1.0" : "";
   const sourceInvoiceNumber = value(document.source_invoice_number || document.source_document_number || document.source_invoice_id);
+  const documentAllowanceXml = documentAllowance > 0 ? `<cac:AllowanceCharge>
+    <cbc:ChargeIndicator>false</cbc:ChargeIndicator>
+    <cbc:AllowanceChargeReasonCode>${xml(document.allowance_reason_code || "95")}</cbc:AllowanceChargeReasonCode>
+    <cbc:AllowanceChargeReason>${xml(document.allowance_reason || "Remise commerciale")}</cbc:AllowanceChargeReason>
+    ${allowancePercent ? `<cbc:MultiplierFactorNumeric>${(allowancePercent / 100).toFixed(4)}</cbc:MultiplierFactorNumeric>` : ""}
+    <cbc:Amount currencyID="${xml(currency)}">${amount(documentAllowance)}</cbc:Amount>
+    <cbc:BaseAmount currencyID="${xml(currency)}">${amount(lineExtensionTotal)}</cbc:BaseAmount>
+  </cac:AllowanceCharge>` : "";
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <${root} xmlns="urn:oasis:names:specification:ubl:schema:xsd:${root}-2" xmlns:cac="urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2" xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2">
@@ -121,9 +150,11 @@ export function createUblDocument(input: { document: JsonRecord; lines: JsonReco
   ${partyXml("AccountingSupplierParty", input.seller)}
   ${partyXml("AccountingCustomerParty", input.buyer)}
   ${iban ? `<cac:PaymentMeans><cbc:PaymentMeansCode>30</cbc:PaymentMeansCode><cac:PayeeFinancialAccount><cbc:ID>${xml(iban)}</cbc:ID></cac:PayeeFinancialAccount></cac:PaymentMeans>` : ""}
+  ${documentAllowanceXml}
   <cac:TaxTotal><cbc:TaxAmount currencyID="${xml(currency)}">${amount(totalVat)}</cbc:TaxAmount>${taxSubtotals}</cac:TaxTotal>
   <cac:LegalMonetaryTotal>
-    <cbc:LineExtensionAmount currencyID="${xml(currency)}">${amount(totalHt)}</cbc:LineExtensionAmount>
+    <cbc:LineExtensionAmount currencyID="${xml(currency)}">${amount(lineExtensionTotal)}</cbc:LineExtensionAmount>
+    ${documentAllowance > 0 ? `<cbc:AllowanceTotalAmount currencyID="${xml(currency)}">${amount(documentAllowance)}</cbc:AllowanceTotalAmount>` : ""}
     <cbc:TaxExclusiveAmount currencyID="${xml(currency)}">${amount(totalHt)}</cbc:TaxExclusiveAmount>
     <cbc:TaxInclusiveAmount currencyID="${xml(currency)}">${amount(totalTtc)}</cbc:TaxInclusiveAmount>
     ${document.prepaid_amount ? `<cbc:PrepaidAmount currencyID="${xml(currency)}">${amount(document.prepaid_amount)}</cbc:PrepaidAmount>` : ""}

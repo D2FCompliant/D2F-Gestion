@@ -2,50 +2,35 @@
   "app.window_title": "D2F – Gestion",
   "brand.name": "D2F Gestion v2.0",
   "brand.subtitle": "EN16931 usklađeno",
-
   "topbar.view": "Prikaz",
   "topbar.view.split": "Podeljeno",
   "topbar.view.single": "Fokus",
-
   "status.ready": "Spremno",
-
   "sidebar.modules": "Moduli",
   "sidebar.shortcuts": "Prečice",
   "sidebar.hint.toolbar_changes": "Dugmad se menjaju u zavisnosti od stranice.",
-
   "app.title.company": "Kompanija",
   "app.desc.company": "Podešavanja izdavaoca i PDF brending.",
-
   "app.title.dashboard": "Kontrolna tabla",
   "app.desc.dashboard": "Pregled ponuda, faktura i uplata.",
-
   "app.title.clients": "Klijenti",
   "app.desc.clients": "Upravljanje klijentima i podešavanja fakturisanja.",
-
   "app.title.items": "Artikli",
   "app.desc.items": "Katalog proizvoda i usluga.",
-
   "app.title.quotes": "Ponude",
   "app.desc.quotes": "Kreiranje i upravljanje ponudama.",
-
   "app.title.invoices": "Fakture",
   "app.desc.invoices": "Fakture, uplate i storna/odobrenja.",
-
   "app.title.inbound": "Nabavka",
   "app.desc.inbound": "Primljene fakture dobavljača (AP / e-fakturisanje).",
-
   "app.title.payments": "Uplate",
   "app.desc.payments": "Evidencija uplata klijenata.",
-
   "app.title.exports": "Izvoz",
   "app.desc.exports": "Izvoz PDF i XML (PEPPOL / UBL).",
-
   "app.title.conformity": "Usklađenost",
   "app.desc.conformity": "E-reporting: priprema, slanje, statusi, greške.",
-
   "app.title.audit": "Audit",
   "app.desc.audit": "Pregled audit traga (append-only).",
-
   "action.save": "Sačuvaj",
   "action.new": "Novo",
   "action.delete": "Obriši",
@@ -66,11 +51,9 @@
   "action.record_payment": "Evidentiraj uplatu",
   "action.export_peppol_xml": "PEPPOL XML",
   "action.export_readable_pdf": "Čitljiv PDF",
-
   "toolbar.search": "Pretraga",
   "toolbar.language": "Jezik",
   "toolbar.lang": "Jezik",
-
   "ui.choose": "— izaberi —",
   "ui.choose_reason": "— izaberi razlog —",
   "ui.cancel": "Otkaži",
@@ -79,7 +62,6 @@
   "ui.required": "obavezno",
   "ui.none": "Nijedno",
   "ui.loading_dashboard": "Učitavanje dashboard-a…",
-
   "common.ellipsis": "…",
   "common.empty": "",
   "common.email": "Email",
@@ -97,26 +79,22 @@
   "common.yes_b2b": "Da (B2B)",
   "common.no_b2c": "Ne (B2C)",
   "common.info": "Info",
-
   "theme.indigo": "Indigo",
   "theme.cyan": "Cijan",
   "theme.green": "Zelena",
   "theme.orange": "Narandžasta",
   "theme.pink": "Ružičasta",
-
   "company.identity.title": "Identitet (EN16931 BG-4)",
   "company.legal_name": "Naziv (BT-27) *",
   "company.legal_name_ph": "D2F Compliant d.o.o",
   "company.legal_id": "Pravni identifikator (PIB/MB/RSB/drugo) *",
   "company.vat_id": "PIB/PDV (BT-32) *",
   "company.vat_id_ph": "RS…",
-
   "company.vat_regime": "PDV režim (DGFiP)",
   "company.vat_regime.real_normal_monthly": "Stvarni režim (mesečno)",
   "company.vat_regime.real_normal_quarterly": "Stvarni režim (opcija tromesečno)",
   "company.vat_regime.simplified": "Pojednostavljeni režim",
   "company.vat_regime.franchise": "Oslobođenje (franšiza u osnovici)",
-
   "company.country": "Zemlja (BT-31) *",
   "company.country_ph": "RS",
   "company.currency": "Valuta",
@@ -128,7 +106,6 @@
   "company.city": "Grad *",
   "company.email_ph": "kontakt@…",
   "company.phone_ph": "+381 …",
-
   "company.branding.title": "PDF brending",
   "company.branding.hint": "Logo se koristi samo u PDF-ovima (ponude/fakture).",
   "company.branding.logo_alt": "Logo kompanije",
@@ -137,7 +114,6 @@
   "company.branding.logo_subtitle": "Preporučen PNG/SVG visoke rezolucije",
   "company.branding.show_logo": "Prikaži logo na ponudama i fakturama",
   "company.branding.accent_hint": "UI akcenat (opciono).",
-
   "company.cgv.title": "Uslovi i plaćanje (PDF)",
   "company.cgv.hint": "Ove informacije se štampaju na PDF-ovima.",
   "company.cgv.text": "Opšti uslovi (tekst za štampu)",
@@ -151,7 +127,6 @@
   "company.bank.bic": "BIC / SWIFT",
   "company.bank.extra": "Dodatne informacije (opciono)",
   "company.bank.extra_ph": "Poziv na broj / mandat…",
-
   "clients.list_title": "Lista klijenata",
   "clients.search_ph": "Pretraži klijenta…",
   "clients.form_title": "Kartica klijenta (EN16931 BG-7)",
@@ -170,7 +145,6 @@
   "clients.street": "Adresa (BT-50) *",
   "clients.street_ph": "Ulica i broj…",
   "clients.street2": "Dodatak",
-
   "clients.payments_quotes.title": "Plaćanje i ponude",
   "clients.payments_quotes.hint": "Podrazumevani parametri za ponude i fakture.",
   "clients.payment_term": "Uslov plaćanja",
@@ -181,7 +155,6 @@
   "clients.quote_validity_days": "Podrazumevana validnost ponude (dani)",
   "clients.quote_validity_days_ph": "30",
   "clients.info_due_on_receipt": "B2C: podrazumevano po prijemu",
-
   "clients.import.open_btn": "Uvezi CSV…",
   "clients.import.title": "Uvoz klijenata (CSV)",
   "clients.import.file": "CSV fajl",
@@ -199,7 +172,6 @@
   "clients.import.report": "Izveštaj",
   "clients.import.analyze": "Analiziraj",
   "clients.import.run": "Uvezi",
-
   "items.list_title": "Lista artikala",
   "items.search_ph": "Pretraži artikal…",
   "items.form_title": "Artikal (šifarnik)",
@@ -220,7 +192,6 @@
   "items.unit_ph": "C62, HUR, DAY…",
   "items.desc_pdf": "Opis (PDF)",
   "items.desc_pdf_ph": "Tekst za štampu…",
-
   "quotes.list_title": "Lista ponuda",
   "quotes.search_ph": "Pretraži ponudu…",
   "quotes.editor_title": "Editor ponuda",
@@ -235,20 +206,16 @@
   "quotes.conditions.valid_until": "Važi do",
   "quotes.conditions.payment_text": "Uslovi plaćanja (štampaju se)",
   "quotes.conditions.payment_text_ph": "Npr.: Plaćanje po prijemu fakture…",
-
   "lines.desc": "Opis",
   "lines.qty": "Količina",
   "lines.unit_price_ht": "Jed. cena",
   "lines.vat_percent": "PDV%",
   "lines.line_total_ht": "Neto ukupno",
-
   "vat.mode.label": "PDV režim",
   "vat.effective": "Efektivni PDV",
-
   "totals.ht": "Neto ukupno",
   "totals.vat": "Ukupno PDV",
   "totals.ttc": "Bruto ukupno",
-
   "invoices.list_title": "Lista faktura",
   "invoices.search_ph": "Pretraži fakturu…",
   "invoices.new": "Nova",
@@ -264,7 +231,6 @@
   "invoices.totals.vat": "Ukupno PDV (BT-115)",
   "invoices.totals.ttc": "Bruto ukupno (BT-116)",
   "invoices.issue_blocked_hint": "Izdavanje blokirano ako Kompanija/Klijent/Stavke nisu kompletni (EN16931).",
-
   "dash.ca_recognized": "Priznati promet (neto)",
   "dash.ca_recognized_hint": "Izdane konačne fakture (380) – izdana storna (381). Avansi se ne računaju.",
   "dash.quotes.title": "Ponude",
@@ -281,7 +247,6 @@
   "dash.payments.hint": "Ukupno + po metodu",
   "dash.payments.total": "Ukupno naplaćeno",
   "dash.payments.none": "Nema evidentiranih uplata.",
-
   "payments.title": "Faktura za naplatu",
   "payments.hint": "Obavezno: izaberite fakturu (poželjno izdatu). Ako je nacrt → biće izdata automatski pri naplati.",
   "payments.invoice": "Faktura",
@@ -296,19 +261,16 @@
   "payments.select_invoice_hint_one": "Izabrana faktura: {id}",
   "payments.none_for_invoice": "Nema uplata za ovu fakturu.",
   "payments.no_invoice_selected": "Nijedna faktura nije izabrana.",
-
   "pay.method.card": "Kartica",
   "pay.method.transfer": "Bankovni transfer",
   "pay.method.cash": "Gotovina",
   "pay.method.check": "Ček",
   "pay.method.sepa": "Direktno zaduženje",
   "pay.method.other": "Ostalo",
-
   "pay.col.date": "Datum",
   "pay.col.amount": "Iznos",
   "pay.col.method": "Metod",
   "pay.col.reference": "Referenca / napomene",
-
   "pay.modal.title": "Evidentiraj uplatu",
   "pay.modal.amount": "Primljeni iznos",
   "pay.modal.partial_or_total": "delimično ili ukupno",
@@ -318,14 +280,12 @@
   "pay.modal.reference_placeholder": "Transakcija / remittance…",
   "pay.modal.draft_hint": "Ako je faktura nacrt, biće automatski izdata pre evidencije uplate.",
   "pay.modal.confirm": "Sačuvaj",
-
   "inbound.list.title": "Primljene fakture dobavljača",
   "inbound.search_ph": "Pretraga (broj / dobavljač / status)…",
   "inbound.list.hint_actions": "Savet: izaberite fakturu da biste aktivirali Prihvati/Odbij.",
   "inbound.detail.title_fallback": "Detalji",
   "inbound.validation.title": "Validacija na platformi",
   "inbound.validation.hint": "Prihvati/Odbij generiše status. Odbijanje zahteva obavezan razlog.",
-
   "inbound.detail.title": "Primljena faktura",
   "inbound.detail.hint": "Izaberite primljenu fakturu.",
   "inbound.detail.status": "Status",
@@ -338,10 +298,8 @@
   "inbound.detail.reason": "Razlog",
   "inbound.detail.warning": "Upozorenje",
   "inbound.detail.error": "Tehnička greška",
-
   "inbound.detail.reject_reason": "Razlog odbijanja",
   "inbound.detail.technical_error": "Tehnička greška",
-
   "inbound.status.accepted": "Prihvaćena",
   "inbound.status.refused_buyer": "Odbijena (kupac)",
   "inbound.status.rejected_platform": "Odbijena (platforma)",
@@ -349,14 +307,12 @@
   "inbound.status.received": "Primljena",
   "inbound.status.received_not_valid": "Primljena (nevažeća)",
   "inbound.status.error": "Greška",
-
   "inbound.format.xml_ubl": "UBL XML",
   "inbound.format.xml_cii": "CII XML",
   "inbound.format.pdf_facturx": "Factur-X PDF",
   "inbound.format.pdf_facturx_xml": "Factur-X PDF (XML {xml})",
   "inbound.format.pdf_xml_embedded": "PDF (ugrađeni XML {xml})",
   "inbound.format.pdf": "PDF",
-
   "reject.modal.title": "Odbij fakturu (kupac – XP Z12-012)",
   "reject.code.label": "Razlog (RFxx)",
   "reject.code.norm": "AFNOR",
@@ -368,12 +324,10 @@
   "reject.hint": "Odbijanje je odluka kupca (REFUSED). Komentar je obavezan za RF99.",
   "reject.rf99": "RF99 — Ostalo (komentar obavezan)",
   "reject.confirm": "Odbij",
-
   "reject.kind.label": "Odluka",
   "reject.kind.hint": "ko emituje status",
   "reject.kind.creditor": "Odbijanje kupca / poverioca",
   "reject.kind.platform": "Odbijanje platforme",
-
   "exports.selection.title": "Izbor",
   "exports.selection.hint": "Izaberite dokument za izvoz (inače se koristi trenutni izbor).",
   "exports.quote": "Ponuda za izvoz",
@@ -381,18 +335,15 @@
   "exports.locale": "Jezik PDF-a",
   "exports.open_quote": "Otvori ponudu",
   "exports.open_invoice": "Otvori fakturu",
-
   "exports.pdf.title": "Izvoz PDF",
   "exports.pdf.hint": "Profesionalni prikaz ponuda i faktura.",
   "exports.peppol.title": "PEPPOL (XML)",
   "exports.peppol.hint": "PEPPOL XML + čitljiv PDF (logo kompanije).",
-
   "lang.fr": "Français",
   "lang.en": "English",
   "lang.es": "Español",
   "lang.it": "Italiano",
   "lang.sr": "Srpski",
-
   "audit.title": "Audit pregledač",
   "audit.hint": "Čitanje ulančanog audit traga (append-only).",
   "audit.path_loading": "log: (učitavanje…)",
@@ -410,10 +361,8 @@
   "audit.controls.title": "Kontrole",
   "audit.controls.hint": "Za audit: append-only, ulančan, vremenski označen, idealno zapečaćen.",
   "audit.controls.bullets": "• audit:verify: proverava lanac i HMAC ako postoji\n• audit:read: paginirano čitanje (sinceSeq/limit)\n• Dokaz: exports (PDF/UBL) + audit.",
-
   "footer.left": "© 2025 - D2F Compliant doo",
   "footer.right": "SC oznaka i PA oznaka",
-
   "exports.pdf_quote_ok": "PDF ponude izvezen: {path}",
   "exports.pdf_invoice_ok": "PDF fakture izvezen: {path}",
   "exports.pdf_canceled": "Izvoz PDF otkazan",
@@ -423,20 +372,16 @@
   "exports.ubl_exported_no_xml": "UBL izvezen (XML nije vraćen).",
   "exports.peppol_pdf_todo": "Čitljiv PDF (PEPPOL): za implementaciju.",
   "exports.issue_before_ubl": "Izdavanje fakture pre UBL izvoza…",
-
   "vat.mode.auto": "AUTO",
   "vat.mode.vat": "PDV",
   "vat.mode.reverse_charge": "Reverse charge",
   "vat.mode.no_vat": "Bez PDV-a",
   "vat.mode.exempt": "Oslobođeno",
-
   "payterm.due_on_receipt": "Po prijemu",
   "payterm.net_15": "Neto 15 dana",
   "payterm.net_30": "Neto 30 dana",
   "payterm.negotiated": "Dogovoreno / specifično",
-
   "status.language_changed": "Jezik promenjen",
-
   "status.dashboard_refreshed": "Dashboard osvežen",
   "status.payments_refreshed": "Uplate osvežene",
   "status.company_saved": "Kompanija sačuvana",
@@ -469,24 +414,18 @@
   "status.inbound.deleted": "Faktura obrisana",
   "status.xmlexport_canceled": "Izvoz XML otkazan",
   "status.pdfexport_canceled": "Izvoz PDF otkazan",
-
   "confirm.inbound.delete": "Obrisati ovu primljenu fakturu? (Primljena / Nevažeća / Greška)",
-
   "err.init_failed": "Greška pri inicijalizaciji (vidi konzolu)",
   "err.init": "Greška pri inicijalizaciji: {msg}",
   "err.generic": "Greška: {msg}",
-
   "err.pay.select_invoice": "Izaberite fakturu.",
   "err.pay.amount_required": "Iznos mora biti > 0.",
   "err.pay.ui_missing": "Nedostaje UI za uplatu (paymentModal).",
   "err.pay.amount_required2": "Iznos je obavezan (> 0).",
-
   "err.files_missing": "Funkcija fajlova nije dostupna (files:pickImage).",
   "err.logo_invalid_path": "Nevažeći logo (nedostaje putanja).",
-
   "status.none_client_selected": "Nijedan klijent nije izabran",
   "status.none_item_selected": "Nijedan artikal nije izabran",
-
   "err.quote.client_required": "Ponuda: klijent je obavezan.",
   "err.quote.choose_item": "Izaberite artikal.",
   "err.quote.item_not_found": "Artikal nije pronađen.",
@@ -496,7 +435,6 @@
   "err.deposit_value_required_percent": "Unesite procenat > 0.",
   "err.deposit_value_required_amount": "Unesite ukupan iznos > 0.",
   "err.deposit_percent_max": "Procenat mora biti <= 100.",
-
   "err.invoice.client_required": "Faktura: klijent je obavezan.",
   "err.invoice.select_invoice": "Izaberite fakturu.",
   "err.invoice.not_editable": "Faktura nije izmenjiva: samo nacrti.",
@@ -505,7 +443,6 @@
   "err.invoice.already_issued": "Faktura je već izdata.",
   "err.creditnote_only_issued": "Storno/odobrenje se može kreirati samo iz izdate fakture.",
   "err.creditnote_no_id": "Storno/odobrenje kreirano, ali id nije vraćen.",
-
   "err.inbound.ipc_missing_import": "Nedostaje IPC: inbound:importFile",
   "err.inbound.import_failed": "Uvoz neuspešan",
   "err.inbound.select_doc": "Izaberite primljenu fakturu.",
@@ -519,7 +456,6 @@
   "err.reject.ui_missing": "Nedostaje UI za odbijanje (rejectModal).",
   "err.reject.code_required": "Kod razloga (RFxx) je obavezan.",
   "err.reject.comment_required_rf99": "Komentar je obavezan za RF99.",
-
   "err.exports.select_quote": "Izaberite ponudu.",
   "err.exports.select_invoice": "Izaberite fakturu.",
   "err.exports.choose_quote_in_exports": "Izaberite ponudu u Izvozu.",
@@ -529,7 +465,6 @@
   "err.exports.pdf_invoice_failed": "Neuspešan izvoz PDF fakture",
   "err.exports.xml_failed": "Neuspešan izvoz XML",
   "err.exports.pdf_failed": "Neuspešan izvoz PDF",
-
   "err.en16931.company_legal_name": "Kompanija: naziv je obavezan (BG-4/BT-27)",
   "err.en16931.company_country": "Kompanija: zemlja je obavezna (BT-31)",
   "err.en16931.buyer_name": "Klijent: naziv je obavezan (BG-7/BT-44)",
@@ -538,15 +473,12 @@
   "err.en16931.line_desc": "Stavka {n}: opis je obavezan (BT-126)",
   "err.en16931.line_qty": "Stavka {n}: količina mora biti > 0 (BT-129)",
   "err.en16931.line_unit_price": "Stavka {n}: jedinična cena je obavezna (BT-130)",
-
   "conformity.title": "Usklađenost e-fakturisanje / e-izveštavanje",
   "conformity.hint": "Podešavanje tokova, perioda slanja, statusa i grešaka (Francuska + međunarodno).",
-
   "conformity.mode": "Režim",
   "conformity.scope": "Obuhvat",
   "conformity.scope.fr": "Francuska",
   "conformity.scope.intl": "Međunarodno",
-
   "conformity.periodicity": "Periodičnost e-izveštavanja",
   "conformity.periodicity.label": "Periodičnost",
   "conformity.periodicity.decade": "Dekada",
@@ -554,40 +486,44 @@
   "conformity.periodicity.bimonthly": "Bimestralno",
   "conformity.periodicity.quarterly": "Kvartalno",
   "conformity.periodicity.yearly": "Godišnje",
-
   "conformity.next_due": "Sledeće slanje",
-
   "conformity.archive": "Arhiviranje sa dokaznom vrednošću",
   "conformity.archiving": "Arhiviranje",
   "conformity.archiving.on": "Uključeno",
   "conformity.archiving.off": "Isključeno",
-
   "conformity.platform": "Platforma",
   "conformity.platform_ph": "PDP / PPF…",
-
   "conformity.emits_b2c": "Kompanija izdaje B2C fakture",
   "conformity.has_international": "Kompanija fakturiše međunarodno",
-
   "conformity.eligibility.default": "—",
-
   "conformity.flows.title": "Očekivani tokovi",
   "conformity.flows.hint": "Francuska: B2B/B2G (e-fakturisanje u realnom vremenu) + B2C (periodično e-izveštavanje). Međunarodno: e-izveštavanje Tok 8 (fakture) + Tok 10 (uplate).",
-
   "conformity.flux9": "Tok 9 — Kumulativni podaci o transakcijama (B2C)",
   "conformity.flux10": "Tok 10 — Podaci o naplatama (B2C + međunarodno)",
   "conformity.flux8": "Tok 8 — Međunarodne fakture",
-
   "conformity.todo_backend": "Dugmad „Pošalji sada” / „Osveži” biće povezana preko IPC + baze (red slanja, statusi, greške).",
-
   "conformity.kpi.title": "Indikatori",
   "conformity.kpi.flux8": "Tok 8",
   "conformity.kpi.flux9": "Tok 9",
   "conformity.kpi.flux10": "Tok 10",
-
   "conformity.action.send_now": "Pošalji sada",
   "conformity.action.open_queue": "Red slanja",
   "conformity.action.rebuild_period": "Ponovo izračunaj period",
   "conformity.action.settings": "Podešavanja reforme",
-
-  "status.conformity_refreshed": "Usklađenost osvežena"
+  "status.conformity_refreshed": "Usklađenost osvežena",
+  "lines.discount_percent": "Popust %",
+  "discount.document_percent": "Ukupan popust (%)",
+  "discount.reason": "Razlog popusta",
+  "discount.reason_placeholder": "Komercijalni popust",
+  "discount.subtotal": "Osnovica pre ukupnog popusta",
+  "discount.amount": "Ukupan popust bez PDV",
+  "discount.default_reason": "Komercijalni popust",
+  "items.import_csv": "Uvezi artikle iz CSV…",
+  "quotes.import_csv_history": "Uvezi istorijske ponude iz CSV…",
+  "invoices.import_csv_history": "Uvezi istorijske fakture iz CSV…",
+  "history.status": "Istorija (samo čitanje)",
+  "import.csv_success": "Uvezeno redova: {count}; preskočeno duplikata: {skipped}.",
+  "import.csv_no_rows": "CSV datoteka nema upotrebljivih redova.",
+  "import.csv_missing_columns": "Nedostaju obavezne CSV kolone: {columns}",
+  "import.csv_confirm_history": "Uvesti {count} dokumenata kao istoriju samo za čitanje, bez uticaja na kontrolnu tablu?"
 }

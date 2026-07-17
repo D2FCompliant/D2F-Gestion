@@ -129,6 +129,7 @@
     // pour i18n old-style (si ton front appelle window.api.i18n.load)
     i18n: ns("i18n"),
     files: ns("files", {
+      pickCsv: () => chooseFile({ accept: ".csv,text/csv,text/plain" }),
       pickImage: () => chooseFile({ accept: "image/png,image/jpeg,image/webp", asDataUrl: true }),
       pickEvidence: () => chooseFile({ accept: ".pdf,.xml,.json,.csv,.txt,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.webp,.eml,application/pdf,application/xml,application/json,text/csv,text/plain,image/*" }),
     }),

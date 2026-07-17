@@ -313,16 +313,25 @@ function normalizeRecord(entity: Entity, raw: JsonRecord) {
       const item = object(line);
       const quantity = numberValue(item.quantity || 1);
       const unitPrice = numberValue(item.unit_price_ht);
-      const discount = numberValue(item.remise_percent);
+      const discount = Math.min(100, Math.max(0, numberValue(item.remise_percent)));
       const lineTotal = round2(quantity * unitPrice * (1 - discount / 100));
       return { ...item, id: String(item.id || crypto.randomUUID()), position: index, quantity, unit_price_ht: unitPrice, remise_percent: discount, total_ht: lineTotal };
     }) : [];
-    const totalHt = lines.length ? round2(lines.reduce((sum, line) => sum + numberValue(line.total_ht), 0)) : numberValue(raw.total_ht);
-    const totalTva = lines.length ? round2(lines.reduce((sum, line) => sum + numberValue(line.total_ht) * numberValue(line.tva_percent) / 100, 0)) : numberValue(raw.total_tva);
+    const subtotalHt = lines.length ? round2(lines.reduce((sum, line) => sum + numberValue(line.total_ht), 0)) : numberValue(raw.subtotal_ht || raw.total_ht);
+    const allowancePercent = Math.min(100, Math.max(0, numberValue(raw.allowance_percent)));
+    const factor = 1 - allowancePercent / 100;
+    const allowanceAmount = lines.length ? round2(subtotalHt * allowancePercent / 100) : numberValue(raw.allowance_amount);
+    const totalHt = lines.length ? round2(subtotalHt - allowanceAmount) : numberValue(raw.total_ht);
+    const totalTva = lines.length ? round2(lines.reduce((sum, line) => sum + numberValue(line.total_ht) * numberValue(line.tva_percent) / 100, 0) * factor) : numberValue(raw.total_tva);
     normalized.lines = lines;
     normalized.date = String(raw.date || today());
     normalized.currency = String(raw.currency || "EUR");
     normalized.status = String(raw.status || "draft");
+    normalized.subtotal_ht = subtotalHt;
+    normalized.allowance_percent = allowancePercent;
+    normalized.allowance_amount = allowanceAmount;
+    normalized.allowance_reason = String(raw.allowance_reason || (allowanceAmount ? "Remise commerciale" : ""));
+    normalized.allowance_reason_code = String(raw.allowance_reason_code || "95");
     normalized.total_ht = totalHt;
     normalized.total_tva = totalTva;
     normalized.total_ttc = round2(totalHt + totalTva);
@@ -483,12 +492,12 @@ function groupCount(records: JsonRecord[], field: string) {
 function recognizedRevenueHt(invoices: JsonRecord[], datePrefix = "") {
   const byId = new Map(invoices.map((invoice) => [String(invoice.id || ""), invoice]));
   return round2(invoices.reduce((sum, invoice) => {
-    if (invoice.status !== "issued") return sum;
+    if (invoiceStatus(invoice) !== "issued") return sum;
     if (datePrefix && !String(invoice.date || "").startsWith(datePrefix)) return sum;
-    if (invoice.type === "final") return sum + numberValue(invoice.total_ht);
-    if (invoice.type !== "credit_note") return sum;
-    const source = byId.get(String(invoice.source_invoice_id || ""));
-    return source?.type === "final" ? sum + numberValue(invoice.total_ht) : sum;
+    if (invoiceType(invoice) === "final") return sum + Math.max(0, numberValue(invoice.total_ht));
+    if (invoiceType(invoice) !== "credit_note") return sum;
+    const source = byId.get(creditSourceId(invoice));
+    return source && invoiceType(source) === "final" ? sum - Math.abs(numberValue(invoice.total_ht)) : sum;
   }, 0));
 }
 
@@ -522,6 +531,42 @@ function paymentSignedAmount(payment: JsonRecord) {
   if (String(payment.status || "posted").toLowerCase() === "cancelled") return 0;
   const amount = Math.abs(numberValue(payment.amount));
   return String(payment.direction || "in").toLowerCase() === "out" ? -amount : amount;
+}
+
+function isoDate(value: unknown) {
+  const match = String(value || "").match(/^(\d{4}-\d{2}-\d{2})/);
+  return match?.[1] || "";
+}
+
+function addDaysIso(value: unknown, days: number) {
+  const date = isoDate(value);
+  if (!date) return "";
+  const parsed = new Date(`${date}T00:00:00Z`);
+  if (Number.isNaN(parsed.getTime())) return "";
+  parsed.setUTCDate(parsed.getUTCDate() + Math.max(0, Math.floor(days)));
+  return parsed.toISOString().slice(0, 10);
+}
+
+function paymentDays(record: JsonRecord) {
+  const explicit = record.payment_days ?? record.paymentDays;
+  if (explicit !== undefined && explicit !== null && String(explicit).trim() !== "") {
+    const numeric = Number(explicit);
+    if (Number.isFinite(numeric) && numeric >= 0) return Math.floor(numeric);
+  }
+  const term = String(record.payment_term || record.paymentTerm || "").trim().toUpperCase();
+  if (term === "DUE_ON_RECEIPT") return 0;
+  if (term === "NET_15") return 15;
+  if (term === "NET_30") return 30;
+  return null;
+}
+
+function effectiveDueDate(invoice: JsonRecord, client: JsonRecord = {}) {
+  const explicit = isoDate(invoice.due_date || invoice.dueDate);
+  if (explicit) return explicit;
+  const invoiceDays = paymentDays(invoice);
+  const clientDays = paymentDays(client);
+  const days = invoiceDays ?? clientDays;
+  return days === null ? "" : addDaysIso(invoice.date, days);
 }
 
 function receivableRows(invoices: JsonRecord[], payments: JsonRecord[]) {
@@ -577,8 +622,8 @@ async function savePaymentRecord(ownerEmail: string, input: JsonRecord) {
 }
 
 async function dashboard(ownerEmail: string) {
-  const [quotes, invoices, payments] = await Promise.all([
-    listRecords(ownerEmail, "quotes"), listRecords(ownerEmail, "invoices"), listRecords(ownerEmail, "payments"),
+  const [quotes, invoices, payments, clients] = await Promise.all([
+    listRecords(ownerEmail, "quotes"), listRecords(ownerEmail, "invoices"), listRecords(ownerEmail, "payments"), listRecords(ownerEmail, "clients"),
   ]);
   const quoteCounts = groupCount(quotes, "status");
   const quoteAmounts = quotes.reduce<Record<string, number>>((acc, quote) => {
@@ -587,6 +632,22 @@ async function dashboard(ownerEmail: string) {
     return acc;
   }, {});
   const rows = receivableRows(invoices, payments);
+  const todayIso = new Date().toISOString().slice(0, 10);
+  const dueLimit = new Date();
+  dueLimit.setUTCDate(dueLimit.getUTCDate() + 30);
+  const dueLimitIso = dueLimit.toISOString().slice(0, 10);
+  const openRows = rows.filter((row) => row.remaining > .001);
+  const clientsById = new Map(clients.map((client) => [String(client.id || ""), client]));
+  const rowDueDate = (row: (typeof rows)[number]) => effectiveDueDate(row.invoice, clientsById.get(String(row.invoice.client_id || row.invoice.clientId || "")) || {});
+  const overdueRows = openRows.filter((row) => {
+    const dueDate = rowDueDate(row);
+    return Boolean(dueDate && dueDate < todayIso);
+  });
+  const dueSoonRows = openRows.filter((row) => {
+    const dueDate = rowDueDate(row);
+    return Boolean(dueDate && dueDate >= todayIso && dueDate <= dueLimitIso);
+  });
+  const missingDueRows = openRows.filter((row) => !rowDueDate(row));
   const paymentTotal = round2(payments.reduce((sum, payment) => sum + paymentSignedAmount(payment), 0));
   const paid = rows.filter((row) => row.netDue > .001 && row.paid + .001 >= row.netDue).length;
   const credited = rows.filter((row) => row.credited > .001 && row.netDue <= .001).length;
@@ -594,6 +655,11 @@ async function dashboard(ownerEmail: string) {
   const deposits = rows.filter((row) => invoiceType(row.invoice) === "deposit");
   const depositsTotal = round2(deposits.reduce((sum, row) => sum + row.netDue, 0));
   const depositsPaid = round2(deposits.reduce((sum, row) => sum + Math.min(row.netDue, row.paid), 0));
+  const depositsOverdue = round2(deposits.filter((row) => overdueRows.includes(row)).reduce((sum, row) => sum + row.remaining, 0));
+  const dashboardYear = String(new Date().getFullYear());
+  const yearQuoteCounts = groupCount(quotes.filter((quote) => String(quote.date || "").startsWith(dashboardYear)), "status");
+  const quoteDecisions = (yearQuoteCounts.accepted || 0) + (yearQuoteCounts.rejected || 0);
+  const quoteConversionRate = quoteDecisions ? (yearQuoteCounts.accepted || 0) / quoteDecisions : 0;
   const byMethod = Object.entries(payments.reduce<Record<string, number>>((acc, payment) => {
     const amount = paymentSignedAmount(payment);
     if (!amount) return acc;
@@ -605,9 +671,21 @@ async function dashboard(ownerEmail: string) {
     ok: true,
     currency: "EUR",
     ca_recognized_ht: recognizedRevenueHt(invoices),
-    deposits: { total_ttc: depositsTotal, issued_ttc: depositsTotal, paid_ttc: depositsPaid, waiting_ttc: round2(depositsTotal - depositsPaid), overdue_ttc: 0 },
-    quotes: { counts: { draft: quoteCounts.draft || 0, sent: quoteCounts.sent || 0, accepted: quoteCounts.accepted || 0, rejected: quoteCounts.rejected || 0, done: (quoteCounts.sent || 0) + (quoteCounts.accepted || 0) + (quoteCounts.rejected || 0) }, amounts: quoteAmounts, amounts_ht: quoteAmounts },
+    deposits: { total_ttc: depositsTotal, issued_ttc: depositsTotal, paid_ttc: depositsPaid, waiting_ttc: round2(depositsTotal - depositsPaid), overdue_ttc: depositsOverdue },
+    quotes: {
+      counts: { draft: quoteCounts.draft || 0, sent: quoteCounts.sent || 0, accepted: quoteCounts.accepted || 0, rejected: quoteCounts.rejected || 0, done: (quoteCounts.sent || 0) + (quoteCounts.accepted || 0) + (quoteCounts.rejected || 0) },
+      amounts: quoteAmounts, amounts_ht: quoteAmounts, conversion_rate: quoteConversionRate, decision_count: quoteDecisions,
+    },
     invoices: { issued: rows.length, paid, credited, waiting },
+    receivables: {
+      outstanding_ttc: round2(openRows.reduce((sum, row) => sum + row.remaining, 0)),
+      overdue_ttc: round2(overdueRows.reduce((sum, row) => sum + row.remaining, 0)),
+      overdue_count: overdueRows.length,
+      due_30_ttc: round2(dueSoonRows.reduce((sum, row) => sum + row.remaining, 0)),
+      due_30_count: dueSoonRows.length,
+      missing_due_ttc: round2(missingDueRows.reduce((sum, row) => sum + row.remaining, 0)),
+      missing_due_count: missingDueRows.length,
+    },
     payments: { total: paymentTotal, by_method: byMethod },
   };
 }
@@ -616,7 +694,7 @@ async function dashboardMetrics(ownerEmail: string, yearInput: unknown) {
   const year = numberValue(yearInput) || new Date().getFullYear();
   const [company, invoices, payments] = await Promise.all([getCompany(ownerEmail), listRecords(ownerEmail, "invoices"), listRecords(ownerEmail, "payments")]);
   const months = Array.from({ length: 12 }, (_, index) => `${year}-${String(index + 1).padStart(2, "0")}`);
-  const issued = invoices.filter((item) => item.status === "issued" && String(item.date || "").startsWith(String(year)));
+  const issued = invoices.filter((item) => invoiceStatus(item) === "issued" && String(item.date || "").startsWith(String(year)));
   const yearPayments = payments.filter((item) => String(item.date || "").startsWith(String(year)));
   const cashMonthly = months.map((ym) => ({ ym, cash_deposit: 0, cash_final: 0, cash_total: round2(yearPayments.filter((item) => String(item.date || "").startsWith(ym)).reduce((sum, item) => sum + paymentSignedAmount(item), 0)) }));
   let running = 0;
@@ -626,10 +704,10 @@ async function dashboardMetrics(ownerEmail: string, yearInput: unknown) {
   const targetCumulative = months.map((ym, index) => ({ ym, target_cum: annualTarget ? round2(annualTarget * (index + 1) / 12) : 0 }));
   const cashTotal = round2(yearPayments.reduce((sum, item) => sum + paymentSignedAmount(item), 0));
   const finalRevenue = recognizedRevenueHt(invoices, String(year));
-  const depositRevenue = round2(issued.filter((item) => item.type === "deposit").reduce((sum, item) => sum + numberValue(item.total_ttc), 0));
+  const depositRevenue = round2(issued.filter((item) => invoiceType(item) === "deposit").reduce((sum, item) => sum + numberValue(item.total_ttc), 0));
   return {
     ok: true, currency: "EUR", year,
-    target: { annual_target_ht: annualTarget, pct_of_target_cash_ytd: annualTarget ? Math.min(1, cashTotal / annualTarget) : 0, cash_ytd: cashTotal, remaining_to_target: annualTarget ? Math.max(0, annualTarget - cashTotal) : null },
+    target: { annual_target_ht: annualTarget, pct_of_target_revenue_ytd: annualTarget ? Math.min(1, finalRevenue / annualTarget) : 0, cash_ytd: cashTotal, remaining_to_target: annualTarget ? Math.max(0, annualTarget - finalRevenue) : null },
     ytd: { recognized: { ca_recognized_ht_ytd: finalRevenue }, cash: { cash_deposit_ytd: 0, cash_final_ytd: cashTotal, cash_total_ytd: cashTotal }, revenue_issued: { revenue_deposit_ytd: depositRevenue, revenue_final_ytd: finalRevenue, revenue_total_ytd: round2(finalRevenue + depositRevenue) } },
     series: { cash_monthly: cashMonthly, cash_cumulative: cashCumulative, target_cumulative: targetCumulative, recognized_ht_monthly: months.map((ym) => ({ ym, recognized_ht: recognizedRevenueHt(invoices, ym) })) },
   };
@@ -918,13 +996,207 @@ async function lookupPeppolDirectory(input: JsonRecord) {
   }
 }
 
-async function conformitySummary(ownerEmail: string) {
-  const [invoices, payments] = await Promise.all([listRecords(ownerEmail, "invoices"), listRecords(ownerEmail, "payments")]);
-  const issued = invoices.filter((invoice) => invoiceStatus(invoice) === "issued");
-  const flux8 = issued.filter((invoice) => String(invoice.country || invoice.buyer_country || "FR").toUpperCase() !== "FR").length;
-  const flux9 = issued.filter((invoice) => String(invoice.customer_type || "").toUpperCase() === "B2C").length;
-  const flux10 = payments.filter((payment) => String(payment.status || "posted").toLowerCase() !== "cancelled").length;
-  return { flux8, flux9, flux10 };
+function reportingBoolean(value: unknown) {
+  return value === true || value === 1 || String(value || "").toLowerCase() === "true" || String(value || "") === "1";
+}
+
+function reportingPeriod(input: JsonRecord) {
+  const now = new Date();
+  const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString().slice(0, 10);
+  const monthEnd = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 0)).toISOString().slice(0, 10);
+  const start = String(input.periodStart || input.period_start || monthStart).slice(0, 10);
+  const end = String(input.periodEnd || input.period_end || monthEnd).slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(start) || !/^\d{4}-\d{2}-\d{2}$/.test(end) || start > end) throw new Error("Période réglementaire invalide");
+  return { start, end };
+}
+
+function regulatoryProfile(country: string) {
+  const profiles: Record<string, JsonRecord> = {
+    FR: { country: "FR", code: "FR_PA", titleKey: "reporting.profile.fr.title", summaryKey: "reporting.profile.fr.summary", title: "France — Facturation électronique et e-reporting" },
+    RS: { country: "RS", code: "RS_SEF", titleKey: "reporting.profile.rs.title", summaryKey: "reporting.profile.rs.summary", title: "Serbie — SEF, TVA électronique et fiscalisation" },
+    IT: { country: "IT", code: "IT_SDI", titleKey: "reporting.profile.it.title", summaryKey: "reporting.profile.it.summary", title: "Italie — SdI et transmissions fiscales" },
+    ES: { country: "ES", code: "ES_AEAT", titleKey: "reporting.profile.es.title", summaryKey: "reporting.profile.es.summary", title: "Espagne — AEAT, VERI*FACTU et SII" },
+  };
+  return profiles[country] || { country, code: "GENERIC", titleKey: "reporting.profile.default.title", summaryKey: "reporting.profile.default.summary", title: "Déclarations nationales à qualifier" };
+}
+
+function transmissionIsRegulatory(item: JsonRecord) {
+  const receipt = object(item.receipt);
+  const metadata = object(receipt.metadata);
+  return String(metadata.kind || "") === "regulatory_reporting";
+}
+
+async function conformitySummary(ownerEmail: string, periodInput: JsonRecord = {}) {
+  const [company, invoices, payments, clients, inbound, connector, allTransmissions] = await Promise.all([
+    getCompany(ownerEmail),
+    listRecords(ownerEmail, "invoices"),
+    listRecords(ownerEmail, "payments"),
+    listRecords(ownerEmail, "clients"),
+    listRecords(ownerEmail, "inbound"),
+    getIntegration(getSupabaseAdmin(), ownerEmail, "pa").catch(() => ({})),
+    listTransmissions(getSupabaseAdmin(), ownerEmail).catch(() => []),
+  ]);
+  const companyData = object(company);
+  const connectorData = object(connector);
+  const invoiceRecords = invoices.map(object);
+  const paymentRecords = payments.map(object);
+  const clientRecords = clients.map(object);
+  const inboundRecords = inbound.map(object);
+  const country = String(companyData.country || "").trim().toUpperCase().slice(0, 2) || "FR";
+  const profile = regulatoryProfile(country);
+  const config = object(companyData.conformity);
+  const period = reportingPeriod(periodInput);
+  const inPeriod = (record: JsonRecord) => {
+    const date = String(record.date || record.document_date || record.created_at || "").slice(0, 10);
+    return Boolean(date && date >= period.start && date <= period.end);
+  };
+  const clientById = new Map<string, JsonRecord>(clientRecords.map((client) => [String(client.id || ""), client]));
+  const invoiceById = new Map<string, JsonRecord>(invoiceRecords.map((invoice) => [String(invoice.id || ""), invoice]));
+  const invoiceIds = new Set(invoiceById.keys());
+  const paymentIds = new Set(paymentRecords.map((payment) => String(payment.id || "")).filter(Boolean));
+  const inboundIds = new Set(inboundRecords.map((record) => String(record.id || "")).filter(Boolean));
+  const customer = (invoice: JsonRecord): JsonRecord => clientById.get(String(invoice.client_id || "")) || {};
+  const customerCountry = (invoice: JsonRecord) => String(customer(invoice).country || invoice.buyer_country || country).toUpperCase().slice(0, 2);
+  const customerType = (invoice: JsonRecord) => String(customer(invoice).customer_type || invoice.customer_type || "B2B").toUpperCase();
+  const issued = invoiceRecords.filter((invoice) => invoiceStatus(invoice) === "issued" && inPeriod(invoice));
+  const postedPayments = paymentRecords.filter((payment) => !["cancelled", "voided"].includes(String(payment.status || "posted").toLowerCase()) && inPeriod(payment));
+  const domestic = issued.filter((invoice) => customerCountry(invoice) === country);
+  const international = issued.filter((invoice) => customerCountry(invoice) !== country);
+  const b2c = issued.filter((invoice) => customerType(invoice) === "B2C");
+  const domesticB2b = domestic.filter((invoice) => customerType(invoice) !== "B2C");
+  const creditNotes = issued.filter((invoice) => invoiceType(invoice) === "credit_note");
+  const foreignInbound = inboundRecords.filter((record) => inPeriod(record) && String(record.supplier_country || record.country || country).toUpperCase().slice(0, 2) !== country);
+  const regulatoryTransmissions = (Array.isArray(allTransmissions) ? allTransmissions.map(object) : []).filter(transmissionIsRegulatory);
+  const adapterReady = Boolean(
+    connectorData.enabled && connectorData.configured && connectorData.last_test_status === "ok" &&
+    connectorData.reporting_enabled && connectorData.reporting_adapter_qualified && connectorData.reporting_submit_path &&
+    connectorData.reporting_adapter_contract === "D2F_REGULATORY_BATCH_V1" &&
+    String(connectorData.country || "").toUpperCase() === country
+  );
+  const readyState = adapterReady ? "ready" : "review";
+  const candidateSummary = (item: JsonRecord): JsonRecord => {
+    const id = String(item.id || "");
+    if (invoiceIds.has(id)) {
+      const party = customer(item);
+      return {
+        id,
+        kind: "invoice",
+        source_module: "invoices",
+        source_id: id,
+        reference: String(item.invoice_number || item.number || id || "—"),
+        date: String(item.date || item.document_date || "").slice(0, 10),
+        counterparty: String(party.name || party.legal_name || item.client_name || "—"),
+        country: customerCountry(item),
+        amount: numberValue(item.total_ttc),
+        currency: String(item.currency || companyData.currency || "EUR"),
+      };
+    }
+    if (paymentIds.has(id)) {
+      const invoice = invoiceById.get(String(item.invoice_id || item.invoiceId || "")) || {};
+      const party = customer(invoice);
+      return {
+        id,
+        kind: "payment",
+        source_module: "payments",
+        source_id: String(invoice.id || item.invoice_id || item.invoiceId || ""),
+        invoice_id: String(invoice.id || item.invoice_id || item.invoiceId || ""),
+        reference: String(invoice.invoice_number || invoice.number || item.reference || id || "—"),
+        date: String(item.date || item.payment_date || item.created_at || "").slice(0, 10),
+        counterparty: String(party.name || party.legal_name || invoice.client_name || "—"),
+        amount: numberValue(item.amount),
+        currency: String(item.currency || invoice.currency || companyData.currency || "EUR"),
+        method: String(item.method || item.payment_method || ""),
+      };
+    }
+    if (inboundIds.has(id)) {
+      return {
+        id,
+        kind: "inbound",
+        source_module: "inbound",
+        source_id: id,
+        reference: String(item.doc_number || item.invoice_number || item.number || id || "—"),
+        date: String(item.date || item.document_date || item.doc_date || "").slice(0, 10),
+        counterparty: String(item.supplier_name || item.seller_name || "—"),
+        country: String(item.supplier_country || item.country || "").toUpperCase().slice(0, 2),
+        amount: numberValue(item.total_ttc || item.amount),
+        currency: String(item.currency || companyData.currency || "EUR"),
+      };
+    }
+    return { id, kind: "record", source_module: "", source_id: id, reference: id || "—" };
+  };
+  const obligation = (id: string, count: number, state = readyState, candidates: JsonRecord[] = []) => ({
+    id,
+    count,
+    state,
+    candidate_ids: candidates.map((item) => String(item.id || "")).filter(Boolean),
+    candidates: candidates.map(candidateSummary),
+  });
+  let obligations: JsonRecord[] = [];
+  if (country === "FR") {
+    const cashVat = reportingBoolean(config.vat_on_collections);
+    const b2cPayments = postedPayments.filter((payment) => b2c.some((invoice) => String(invoice.id) === String(payment.invoice_id || payment.invoiceId)));
+    const otherCashPayments = postedPayments.filter((payment) => !b2c.some((invoice) => String(invoice.id) === String(payment.invoice_id || payment.invoiceId)));
+    obligations = [
+      obligation("fr_structured_invoice_data_8_9", domesticB2b.length, readyState, domesticB2b),
+      obligation("fr_transaction_data_10_1", international.length, readyState, international),
+      obligation("fr_payment_data_10_2", cashVat ? otherCashPayments.length : 0, cashVat ? readyState : "not_applicable", otherCashPayments),
+      obligation("fr_b2c_transactions_10_3", b2c.length, reportingBoolean(config.emits_b2c) ? readyState : "not_applicable", b2c),
+      obligation("fr_b2c_payments_10_4", cashVat ? b2cPayments.length : 0, cashVat && reportingBoolean(config.emits_b2c) ? readyState : "not_applicable", b2cPayments),
+    ];
+  } else if (country === "RS") {
+    obligations = [
+      obligation("rs_sef_sales", domesticB2b.length, readyState, domesticB2b),
+      obligation("rs_fiscal_receipts", b2c.length, reportingBoolean(config.retail_fiscalization) ? "external" : "review", b2c),
+      obligation("rs_foreign_vat_records", international.length + foreignInbound.length, readyState, [...international, ...foreignInbound]),
+      obligation("rs_aggregate_vat", issued.length + foreignInbound.length, readyState, [...issued, ...foreignInbound]),
+    ];
+  } else if (country === "IT") {
+    obligations = [
+      obligation("it_sdi_invoices", domestic.length, readyState, domestic),
+      obligation("it_corrispettivi", b2c.length, "external", b2c),
+      obligation("it_cross_border", international.length + foreignInbound.length, readyState, [...international, ...foreignInbound]),
+    ];
+  } else if (country === "ES") {
+    const verifactu = String(config.spain_mode || "VERIFACTU").toUpperCase() === "VERIFACTU";
+    const sii = reportingBoolean(config.spain_sii);
+    obligations = [
+      obligation("es_verifactu_records", issued.length, verifactu ? readyState : "external", issued),
+      obligation("es_sii_books", sii ? issued.length + inboundRecords.filter(inPeriod).length : 0, sii ? readyState : "not_applicable", [...issued, ...inboundRecords.filter(inPeriod)]),
+      obligation("es_cancellation_records", creditNotes.length, verifactu ? readyState : "external", creditNotes),
+    ];
+  } else {
+    obligations = [obligation("generic_country_profile", issued.length, "review", issued)];
+  }
+  const sent = regulatoryTransmissions.filter((item) => !["error", "rejected", "failed"].includes(String(item.status || "").toLowerCase())).length;
+  const error = regulatoryTransmissions.filter((item) => ["error", "rejected", "failed"].includes(String(item.status || "").toLowerCase())).length;
+  const summary = {
+    ready: obligations.filter((item) => item.state === "ready").reduce((sum, item) => sum + numberValue(item.count), 0),
+    review: obligations.filter((item) => ["review", "external"].includes(String(item.state))).reduce((sum, item) => sum + numberValue(item.count), 0),
+    sent,
+    error,
+  };
+  return {
+    ok: true,
+    profile,
+    period,
+    configuration: { ready: adapterReady, connector_tested: connectorData.last_test_status === "ok", adapter_enabled: Boolean(connectorData.reporting_enabled), adapter_qualified: Boolean(connectorData.reporting_adapter_qualified) },
+    obligations,
+    summary,
+    transmissions: regulatoryTransmissions,
+    package: {
+      schema: "D2F_REGULATORY_BATCH_V1",
+      generated_at: new Date().toISOString(),
+      company: { legal_name: companyData.legal_name || companyData.name, legal_id: companyData.legal_id, vat_id: companyData.vat_id, country },
+      period,
+      profile: String(profile.code || "GENERIC"),
+      obligations,
+      records: {
+        invoices: issued.map((invoice) => ({ id: invoice.id, number: invoice.invoice_number || invoice.number, date: invoice.date, type: invoiceType(invoice), customer_country: customerCountry(invoice), customer_type: customerType(invoice), total_ht: invoice.total_ht, total_tva: invoice.total_tva, total_ttc: invoice.total_ttc })),
+        payments: postedPayments.map((payment) => ({ id: payment.id, invoice_id: payment.invoice_id || payment.invoiceId, date: payment.date, amount: payment.amount, method: payment.method })),
+        inbound: foreignInbound.map((record) => ({ id: record.id, number: record.doc_number || record.invoice_number, date: record.date || record.document_date, supplier_country: record.supplier_country || record.country })),
+      },
+    },
+  };
 }
 
 async function saveTransmissionIntegration(ownerEmail: string, args: unknown[]) {
@@ -1023,7 +1295,11 @@ async function dispatch(ownerEmail: string, method: string, args: unknown[], ten
     if (!["pa", "archive", "email"].includes(type)) throw new Error("Type de connecteur invalide");
     return testIntegration(getSupabaseAdmin(), ownerEmail, type);
   }
-  if (method === "connections:listTransmissions" || method === "conformity:openQueue") return listTransmissions(getSupabaseAdmin(), ownerEmail);
+  if (method === "connections:listTransmissions") return listTransmissions(getSupabaseAdmin(), ownerEmail);
+  if (method === "conformity:openQueue") {
+    const transmissions = await listTransmissions(getSupabaseAdmin(), ownerEmail);
+    return (Array.isArray(transmissions) ? transmissions.map(object) : []).filter(transmissionIsRegulatory);
+  }
   if (method === "connections:sendInvoice") {
     const payload = object(first(args));
     const connector = await validatedNationalConnector(ownerEmail);
@@ -1040,16 +1316,27 @@ async function dispatch(ownerEmail: string, method: string, args: unknown[], ten
     return transmitIntegration(getSupabaseAdmin(), ownerEmail, "pa", { documentId: String(bundle.document.id || ""), documentNumber: String(bundle.document.invoice_number || ""), content: xml, contentType: "application/xml", metadata: { format: "UBL-2.1", standard: "EN16931", channel_profile: connector.expectedProfile, country: connector.country } });
   }
   if (method === "conformity:rebuildPeriod") {
-    const queued = await conformitySummary(ownerEmail);
-    return { ok: true, queued, kpis: queued, next_due: object(first(args)).periodEnd || object(first(args)).period_end || today() };
+    const prepared = await conformitySummary(ownerEmail, object(first(args)));
+    return { ...prepared, message: "Période réglementaire préparée à partir des données de l’entreprise" };
   }
   if (method === "conformity:sendNow") {
-    const queued = await conformitySummary(ownerEmail);
     const connector = await validatedNationalConnector(ownerEmail);
-    if (connector.country !== "FR") throw new Error("Cet écran e-reporting correspond au dispositif français. Pour ce pays, utilisez le flux national indiqué dans la fiche Entreprise.");
-    const report = JSON.stringify({ type: "e-reporting", generated_at: new Date().toISOString(), period: object(first(args)), flows: queued });
-    const sent = await transmitIntegration(getSupabaseAdmin(), ownerEmail, "pa", { documentNumber: `EREPORT-${today()}`, content: report, contentType: "application/json", metadata: { flows: queued } });
-    return { ...sent, queued, next_due: today(), message: "Transmission e-reporting remise à la Plateforme Agréée" };
+    if (!connector.config.reporting_enabled || !connector.config.reporting_submit_path) throw new Error("Configurez le chemin API de l’adaptateur réglementaire dans la fiche Entreprise");
+    if (!connector.config.reporting_adapter_qualified || connector.config.reporting_adapter_contract !== "D2F_REGULATORY_BATCH_V1") {
+      throw new Error("Transmission bloquée : la recette métier de l’adaptateur réglementaire n’est pas validée pour ce pays");
+    }
+    const prepared = await conformitySummary(ownerEmail, object(first(args)));
+    if (!prepared.configuration.ready) throw new Error("Transmission bloquée : le connecteur réglementaire n’est pas prêt");
+    if (prepared.summary.ready < 1) throw new Error("Aucun dossier prêt à transmettre pour cette période");
+    const batchNumber = `REG-${connector.country}-${prepared.period.start}-${prepared.period.end}`;
+    const sent = await transmitIntegration(getSupabaseAdmin(), ownerEmail, "pa", {
+      documentNumber: batchNumber,
+      content: JSON.stringify(prepared.package),
+      contentType: "application/json",
+      path: String(connector.config.reporting_submit_path),
+      metadata: { kind: "regulatory_reporting", profile: connector.expectedProfile, period: prepared.period, schema: "D2F_REGULATORY_BATCH_V1", summary: prepared.summary },
+    });
+    return { ...sent, profile: prepared.profile, summary: prepared.summary, message: `Lot ${batchNumber} remis à l’adaptateur réglementaire ${connector.config.provider_name || connector.expectedProfile}` };
   }
   if (method === "email:send") {
     const payload = object(first(args));

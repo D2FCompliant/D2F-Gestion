@@ -2,55 +2,39 @@
   "app.window_title": "D2F – Management",
   "brand.name": "D2F Gestion v2.0",
   "brand.subtitle": "EN16931 compliant",
-
   "topbar.view": "View",
   "topbar.view.split": "Split",
   "topbar.view.single": "Focus",
-
   "status.ready": "Ready",
-
   "sidebar.modules": "Modules",
   "sidebar.shortcuts": "Shortcuts",
   "sidebar.hint.toolbar_changes": "Buttons vary depending on the page.",
-
   "shortcuts.search": "Search",
   "shortcuts.search.key": "⌘K",
   "shortcuts.new": "New",
   "shortcuts.new.key": "⌘N",
-
   "app.title.company": "Company",
   "app.desc.company": "Issuer settings and PDF branding.",
-
   "app.title.dashboard": "Dashboard",
   "app.desc.dashboard": "Overview of quotes, invoices, and payments.",
-
   "app.title.clients": "Clients",
   "app.desc.clients": "Client management and billing settings.",
-
   "app.title.items": "Items",
   "app.desc.items": "Product and service catalog.",
-
   "app.title.quotes": "Quotes",
   "app.desc.quotes": "Create and manage quotes.",
-
   "app.title.invoices": "Invoices & e-Invoicing",
   "app.desc.invoices": "Invoices, payments, and credit notes.",
-
   "app.title.inbound": "Supplier e-Invoicing",
   "app.desc.inbound": "Received supplier invoices (AP / e-invoicing).",
-
   "app.title.payments": "Payments",
   "app.desc.payments": "Record customer payments.",
-
   "app.title.exports": "Exports",
   "app.desc.exports": "PDF and XML export (PEPPOL / UBL).",
-
   "app.title.conformity": "e-Reporting",
   "app.desc.conformity": "E-reporting: preparation, submission, statuses, and errors.",
-
   "app.title.audit": "Audit",
   "app.desc.audit": "View the audit trail (append-only).",
-
   "action.save": "Save",
   "action.new": "New",
   "action.delete": "Delete",
@@ -71,11 +55,9 @@
   "action.record_payment": "Record a payment",
   "action.export_peppol_xml": "PEPPOL XML",
   "action.export_readable_pdf": "Readable PDF",
-
   "toolbar.search": "Search",
   "toolbar.language": "Language",
   "toolbar.lang": "Language",
-
   "ui.choose": "— select —",
   "ui.choose_reason": "— select a reason —",
   "ui.cancel": "Cancel",
@@ -84,7 +66,6 @@
   "ui.required": "required",
   "ui.none": "None",
   "ui.loading_dashboard": "Loading dashboard…",
-
   "common.ellipsis": "…",
   "common.empty": "",
   "common.email": "Email",
@@ -102,26 +83,22 @@
   "common.yes_b2b": "Yes (B2B)",
   "common.no_b2c": "No (B2C)",
   "common.info": "Info",
-
   "theme.indigo": "Indigo",
   "theme.cyan": "Cyan",
   "theme.green": "Green",
   "theme.orange": "Orange",
   "theme.pink": "Pink",
-
   "company.identity.title": "Identity (EN16931 BG-4)",
   "company.legal_name": "Legal name (BT-27) *",
   "company.legal_name_ph": "D2F Compliant d.o.o",
   "company.legal_id": "Legal identifier (PIB/MB/RSB/other) *",
   "company.vat_id": "VAT number (BT-32) *",
   "company.vat_id_ph": "RS…",
-
   "company.vat_regime": "VAT regime (DGFiP)",
   "company.vat_regime.real_normal_monthly": "Real normal regime (monthly)",
   "company.vat_regime.real_normal_quarterly": "Real normal regime (quarterly option)",
   "company.vat_regime.simplified": "Simplified regime",
   "company.vat_regime.franchise": "Exemption (small business exemption)",
-
   "company.country": "Country (BT-31) *",
   "company.country_ph": "RS",
   "company.currency": "Currency",
@@ -133,7 +110,6 @@
   "company.city": "City *",
   "company.email_ph": "contact@…",
   "company.phone_ph": "+381 …",
-
   "company.branding.title": "PDF branding",
   "company.branding.hint": "The logo is used only in PDFs (quotes/invoices).",
   "company.branding.logo_alt": "Company logo",
@@ -142,7 +118,6 @@
   "company.branding.logo_subtitle": "High-resolution PNG/SVG recommended",
   "company.branding.show_logo": "Show the logo on quotes and invoices",
   "company.branding.accent_hint": "UI accent (optional).",
-
   "company.cgv.title": "Terms & payment (PDF)",
   "company.cgv.hint": "This information is printed on PDFs.",
   "company.cgv.text": "General terms (printable text)",
@@ -156,7 +131,6 @@
   "company.bank.bic": "BIC / SWIFT",
   "company.bank.extra": "Additional information (optional)",
   "company.bank.extra_ph": "Reference / mandate…",
-
   "clients.list_title": "Client list",
   "clients.search_ph": "Search for a client…",
   "clients.form_title": "Client record (EN16931 BG-7)",
@@ -175,7 +149,6 @@
   "clients.street": "Address (BT-50) *",
   "clients.street_ph": "Street and number…",
   "clients.street2": "Address line 2",
-
   "clients.payments_quotes.title": "Payment and quotes",
   "clients.payments_quotes.hint": "Default settings for quotes and invoices.",
   "clients.payment_term": "Payment term",
@@ -186,7 +159,6 @@
   "clients.quote_validity_days": "Default quote validity (days)",
   "clients.quote_validity_days_ph": "30",
   "clients.info_due_on_receipt": "B2C: default due on receipt",
-
   "clients.import.open_btn": "Import CSV…",
   "clients.import.title": "Client import (CSV)",
   "clients.import.file": "CSV file",
@@ -204,7 +176,6 @@
   "clients.import.report": "Report",
   "clients.import.analyze": "Analyze",
   "clients.import.run": "Import",
-
   "items.list_title": "Item list",
   "items.search_ph": "Search for an item…",
   "items.form_title": "Item (reference)",
@@ -225,7 +196,6 @@
   "items.unit_ph": "C62, HUR, DAY…",
   "items.desc_pdf": "Description (PDF)",
   "items.desc_pdf_ph": "Printable text…",
-
   "quotes.list_title": "Quote list",
   "quotes.search_ph": "Search for a quote…",
   "quotes.editor_title": "Quote editor",
@@ -240,20 +210,16 @@
   "quotes.conditions.valid_until": "Valid until",
   "quotes.conditions.payment_text": "Payment terms (printed)",
   "quotes.conditions.payment_text_ph": "E.g.: Payment upon receipt of invoice…",
-
   "lines.desc": "Description",
   "lines.qty": "Quantity",
   "lines.unit_price_ht": "Unit price excl. VAT",
   "lines.vat_percent": "VAT %",
   "lines.line_total_ht": "Total excl. VAT",
-
   "vat.mode.label": "VAT regime",
   "vat.effective": "Effective VAT",
-
   "totals.ht": "Total excl. VAT",
   "totals.vat": "Total VAT",
   "totals.ttc": "Total incl. VAT",
-
   "invoices.list_title": "Invoice list",
   "invoices.search_ph": "Search for an invoice…",
   "invoices.new": "New",
@@ -269,15 +235,12 @@
   "invoices.totals.vat": "Total VAT (BT-115)",
   "invoices.totals.ttc": "Total incl. VAT (BT-116)",
   "invoices.issue_blocked_hint": "Issuance is blocked if Company/Client/Lines are incomplete (EN16931).",
-
   "dash.ca_recognized": "Recognized revenue (excl. VAT)",
   "dash.ca_recognized_hint": "Final invoices issued (380) – credit notes issued (381). Deposits are not counted.",
-
   "dash.deposits.title": "Deposits",
   "dash.deposits.issued_ttc": "Deposits issued (incl. VAT)",
   "dash.deposits.received_ttc": "Deposits received (incl. VAT)",
   "dash.deposits.pending_ttc": "Deposits pending (incl. VAT)",
-
   "dash.quotes.title": "Quotes",
   "dash.quotes.hint": "In progress / accepted / refused",
   "dash.quotes.in_progress": "In progress",
@@ -297,18 +260,14 @@
   "dash.goal_vs_revenue.target": "Target",
   "dash.goal_vs_revenue.remaining": "Remaining",
   "dash.goal_vs_revenue.percent": "Achieved",
-
   "dash.deposits_vs_pending.title": "Deposits received vs pending (incl. VAT)",
   "dash.deposits_vs_pending.collected": "Collected",
   "dash.deposits_vs_pending.issued": "Issued",
   "dash.deposits_vs_pending.pending": "Pending",
-
   "dash.cashflow_ytd.title": "Cash inflow (YTD) — by month",
   "dash.cashflow_ytd.max_month": "Max {amount} month {month}",
-
   "dash.revenue_ytd.title": "Recognized revenue (YTD) — by month",
-  "dash.revenue_ytd.unavailable": "Not available via dashboard:metrics (use dashboard:get for total YTD)."
-
+  "dash.revenue_ytd.unavailable": "Not available via dashboard:metrics (use dashboard:get for total YTD).",
   "payments.title": "Invoice to collect",
   "payments.hint": "Required: select an invoice (ideally issued). If draft → it will be automatically issued when recording the payment.",
   "payments.invoice": "Invoice",
@@ -323,19 +282,16 @@
   "payments.select_invoice_hint_one": "Selected invoice: {id}",
   "payments.none_for_invoice": "No payments for this invoice.",
   "payments.no_invoice_selected": "No invoice selected.",
-
   "pay.method.card": "Card",
   "pay.method.transfer": "Bank transfer",
   "pay.method.cash": "Cash",
   "pay.method.check": "Check",
   "pay.method.sepa": "Direct debit",
   "pay.method.other": "Other",
-
   "pay.col.date": "Date",
   "pay.col.amount": "Amount",
   "pay.col.method": "Method",
   "pay.col.reference": "Reference / notes",
-
   "pay.modal.title": "Record a payment",
   "pay.modal.amount": "Amount received",
   "pay.modal.partial_or_total": "partial or total",
@@ -345,14 +301,12 @@
   "pay.modal.reference_placeholder": "Transaction / remittance…",
   "pay.modal.draft_hint": "If the invoice is a draft, it will be automatically issued before recording the payment.",
   "pay.modal.confirm": "Save",
-
   "inbound.list.title": "Received supplier invoices",
   "inbound.search_ph": "Search (number / supplier / status)…",
   "inbound.list.hint_actions": "Tip: select an invoice to enable Accept/Reject.",
   "inbound.detail.title_fallback": "Details",
   "inbound.validation.title": "Platform validation",
   "inbound.validation.hint": "Accept/Reject generates a status. Rejection requires a mandatory reason.",
-
   "inbound.detail.title": "Received invoice",
   "inbound.detail.hint": "Select a received invoice.",
   "inbound.detail.status": "Status",
@@ -365,10 +319,8 @@
   "inbound.detail.reason": "Reason",
   "inbound.detail.warning": "Warning",
   "inbound.detail.error": "Technical error",
-
   "inbound.detail.reject_reason": "Rejection reason",
   "inbound.detail.technical_error": "Technical error",
-
   "inbound.status.accepted": "Accepted",
   "inbound.status.refused_buyer": "Refused (buyer)",
   "inbound.status.rejected_platform": "Refused (platform)",
@@ -376,14 +328,12 @@
   "inbound.status.received": "Received",
   "inbound.status.received_not_valid": "Received (invalid)",
   "inbound.status.error": "Error",
-
   "inbound.format.xml_ubl": "UBL XML",
   "inbound.format.xml_cii": "CII XML",
   "inbound.format.pdf_facturx": "Factur-X PDF",
   "inbound.format.pdf_facturx_xml": "Factur-X PDF (XML {xml})",
   "inbound.format.pdf_xml_embedded": "PDF (embedded XML {xml})",
   "inbound.format.pdf": "PDF",
-
   "reject.modal.title": "Reject invoice (buyer – XP Z12-012)",
   "reject.code.label": "Reason (RFxx)",
   "reject.code.norm": "AFNOR",
@@ -395,12 +345,10 @@
   "reject.hint": "Rejection is a buyer decision (REFUSED). Comment is mandatory for RF99.",
   "reject.rf99": "RF99 — Other (comment required)",
   "reject.confirm": "Reject",
-
   "reject.kind.label": "Decision",
   "reject.kind.hint": "who issues the status",
   "reject.kind.creditor": "Buyer / creditor rejection",
   "reject.kind.platform": "Platform rejection",
-
   "exports.selection.title": "Selection",
   "exports.selection.hint": "Select a document to export (otherwise the current selection is used).",
   "exports.quote": "Quote to export",
@@ -408,18 +356,15 @@
   "exports.locale": "PDF language",
   "exports.open_quote": "Open quote",
   "exports.open_invoice": "Open invoice",
-
   "exports.pdf.title": "PDF export",
   "exports.pdf.hint": "Professional rendering of quotes and invoices.",
   "exports.peppol.title": "PEPPOL (XML)",
   "exports.peppol.hint": "PEPPOL XML + readable PDF (company logo).",
-
   "lang.fr": "French",
   "lang.en": "English",
   "lang.es": "Spanish",
   "lang.it": "Italian",
   "lang.sr": "Serbian",
-
   "audit.title": "Audit viewer",
   "audit.hint": "Read the chained audit trail (append-only).",
   "audit.path_loading": "log: (loading…)",
@@ -437,10 +382,8 @@
   "audit.controls.title": "Controls",
   "audit.controls.hint": "For audit: append-only, chained, timestamped, ideally sealed.",
   "audit.controls.bullets": "• audit:verify : verifies the chain and HMAC if present\n• audit:read : paginated read (sinceSeq/limit)\n• Evidence: exports (PDF/UBL) + audit.",
-
   "footer.left": "© 2025 - D2F Compliant doo",
   "footer.right": "SC Label and PA Label",
-
   "exports.pdf_quote_ok": "Quote PDF exported: {path}",
   "exports.pdf_invoice_ok": "Invoice PDF exported: {path}",
   "exports.pdf_canceled": "PDF export canceled",
@@ -450,20 +393,16 @@
   "exports.ubl_exported_no_xml": "UBL exported (XML not returned).",
   "exports.peppol_pdf_todo": "Readable PDF (PEPPOL): to be implemented.",
   "exports.issue_before_ubl": "Issuing the invoice before UBL export…",
-
   "vat.mode.auto": "AUTO",
   "vat.mode.vat": "VAT",
   "vat.mode.reverse_charge": "Reverse charge",
   "vat.mode.no_vat": "No VAT",
   "vat.mode.exempt": "Exempt",
-
   "payterm.due_on_receipt": "Due on receipt",
   "payterm.net_15": "Net 15 days",
   "payterm.net_30": "Net 30 days",
   "payterm.negotiated": "Negotiated / specific",
-
   "status.language_changed": "Language changed",
-
   "status.dashboard_refreshed": "Dashboard refreshed",
   "status.payments_refreshed": "Payments refreshed",
   "status.company_saved": "Company saved",
@@ -496,24 +435,18 @@
   "status.inbound.deleted": "Invoice deleted",
   "status.xmlexport_canceled": "XML export canceled",
   "status.pdfexport_canceled": "PDF export canceled",
-
   "confirm.inbound.delete": "Delete this received invoice? (Received / Invalid / Error)",
-
   "err.init_failed": "Initialization error (see console)",
   "err.init": "Initialization error: {msg}",
   "err.generic": "Error: {msg}",
-
   "err.pay.select_invoice": "Select an invoice.",
   "err.pay.amount_required": "Amount must be > 0.",
   "err.pay.ui_missing": "Missing payment UI (paymentModal).",
   "err.pay.amount_required2": "Amount is required (> 0).",
-
   "err.files_missing": "Files feature unavailable (files:pickImage).",
   "err.logo_invalid_path": "Invalid logo (missing path).",
-
   "status.none_client_selected": "No client selected",
   "status.none_item_selected": "No item selected",
-
   "err.quote.client_required": "Quote: client is required.",
   "err.quote.choose_item": "Select an item.",
   "err.quote.item_not_found": "Item not found.",
@@ -523,7 +456,6 @@
   "err.deposit_value_required_percent": "Enter a percentage > 0.",
   "err.deposit_value_required_amount": "Enter a total amount > 0.",
   "err.deposit_percent_max": "Percentage must be ≤ 100.",
-
   "err.invoice.client_required": "Invoice: client is required.",
   "err.invoice.select_invoice": "Select an invoice.",
   "err.invoice.not_editable": "Invoice not editable: only drafts are editable.",
@@ -532,7 +464,6 @@
   "err.invoice.already_issued": "Invoice is already issued.",
   "err.creditnote_only_issued": "A credit note can only be created from an issued invoice.",
   "err.creditnote_no_id": "Credit note created, but id was not returned.",
-
   "err.inbound.ipc_missing_import": "Missing IPC: inbound:importFile",
   "err.inbound.import_failed": "Import failed",
   "err.inbound.select_doc": "Select a received invoice.",
@@ -546,7 +477,6 @@
   "err.reject.ui_missing": "Missing rejection UI (rejectModal).",
   "err.reject.code_required": "Reason code (RFxx) is required.",
   "err.reject.comment_required_rf99": "Comment is required for RF99.",
-
   "err.exports.select_quote": "Select a quote.",
   "err.exports.select_invoice": "Select an invoice.",
   "err.exports.choose_quote_in_exports": "Select a quote in Exports.",
@@ -556,7 +486,6 @@
   "err.exports.pdf_invoice_failed": "Failed to export invoice PDF",
   "err.exports.xml_failed": "Failed to export XML",
   "err.exports.pdf_failed": "Failed to export PDF",
-
   "err.en16931.company_legal_name": "Company: legal name is required (BG-4/BT-27)",
   "err.en16931.company_country": "Company: country is required (BT-31)",
   "err.en16931.buyer_name": "Client: name is required (BG-7/BT-44)",
@@ -565,196 +494,162 @@
   "err.en16931.line_desc": "Line {n}: description is required (BT-126)",
   "err.en16931.line_qty": "Line {n}: quantity must be > 0 (BT-129)",
   "err.en16931.line_unit_price": "Line {n}: unit price is required (BT-130)",
-
   "conformity.title": "e-invoicing / e-reporting compliance",
   "conformity.hint": "Flow configuration, periodicity, statuses, and errors (France + international).",
-
   "conformity.mode": "Mode",
   "conformity.scope": "Scope",
   "conformity.scope.fr": "France",
   "conformity.scope.intl": "International",
-
   "conformity.periodicity": "e-reporting periodicity",
   "conformity.periodicity.label": "Periodicity",
   "conformity.periodicity.decade": "Ten-day period",
-  "conformity.periodicity.monthly": "Monthly",
-  "conformity.periodicity.bimonthly": "Bimonthly",
+  "conformity.periodicity.monthly": "M — Monthly",
+  "conformity.periodicity.bimonthly": "B — Bimonthly",
   "conformity.periodicity.quarterly": "Quarterly",
   "conformity.periodicity.yearly": "Yearly",
-
   "conformity.next_due": "Next submission",
-
   "conformity.archive": "Evidential archiving",
   "conformity.archiving": "Archiving",
   "conformity.archiving.on": "Enabled",
   "conformity.archiving.off": "Disabled",
-
   "conformity.platform": "Platform",
   "conformity.platform_ph": "PDP / PPF…",
-
   "conformity.emits_b2c": "The company issues B2C invoices",
   "conformity.has_international": "The company invoices internationally",
-
   "conformity.eligibility.default": "—",
-
   "conformity.flows.title": "Expected flows",
   "conformity.flows.hint": "France: B2B/B2G (real-time e-invoicing) + B2C (periodic e-reporting). International: e-reporting Flow 8 (invoices) + Flow 10 (payments).",
-
   "conformity.flux9": "Flow 9 — Aggregated transaction data (B2C)",
   "conformity.flux10": "Flow 10 — Payment data (B2C + international)",
   "conformity.flux8": "Flow 8 — International invoices",
-
   "conformity.todo_backend": "The “Send now” / “Refresh” buttons will be connected via IPC + database (send queue, statuses, errors).",
-
   "conformity.kpi.title": "Indicators",
   "conformity.kpi.flux8": "Flow 8",
   "conformity.kpi.flux9": "Flow 9",
   "conformity.kpi.flux10": "Flow 10",
-
   "conformity.action.send_now": "Send now",
   "conformity.action.open_queue": "Send queue",
   "conformity.action.rebuild_period": "Recompute period",
   "conformity.action.settings": "Reform settings",
-
   "status.conformity_refreshed": "Compliance refreshed",
-
   "reform.title": "Reform settings",
   "reform.subtitle_required_intl": "E-reporting required for international (Flow 8 + payments).",
-
   "reform.scope.label": "Scope",
   "reform.scope.fr_intl": "FR / INTL",
   "reform.scope.intl_badge": "INTL",
   "reform.scope.intl_hint": "INTL: you report international transactions.",
-
   "reform.periodicity.label": "Periodicity",
   "reform.periodicity.short": "D / M / B",
   "reform.periodicity.m_monthly": "M — Monthly",
   "reform.periodicity.hint": "Choose your internal build/check frequency (based on your processes).",
-
   "reform.archiving.label": "Archiving",
   "reform.archiving.on_badge": "ON",
   "reform.archiving.on_hint": "ON recommended: keeps evidence and exports.",
-
   "reform.platform.label": "Platform",
   "reform.platform.short": "PPF / PDP / PA",
   "reform.platform.pa_label": "PA (Provider / integrator)",
   "reform.platform.legend": "PPF = public portal; PDP = partner platform; PA = integrator/provider.",
-
   "reform.emits_b2c.label": "Issues B2C invoices?",
   "reform.emits_b2c.no": "No",
   "reform.emits_b2c.yes_hint": "Yes if you invoice individuals.",
-
   "reform.has_international.label": "International (outside France)?",
   "reform.has_international.yes": "Yes",
   "reform.has_international.yes_hint": "Yes if you sell/buy outside France (EU/non-EU).",
-
   "reform.next_due.label": "Next due date (info)",
   "reform.next_due.value_example": "20/01/2026",
   "reform.next_due.hint": "Info: next internal due date (not an automatic submission).",
-
   "reform.kpis.title": "KPIs (queue / flows)",
   "reform.kpis.flux8": "Flow 8",
   "reform.kpis.flux9": "Flow 9",
   "reform.kpis.flux10": "Flow 10",
   "reform.kpis.value_zero": "0",
   "reform.kpis.hint": "These counters must come from actual calculations (not purely declarative).",
-
   "ai_agent.title": "AI agent — reform assistant",
   "ai_agent.hint": "I ask you a few questions and tell you whether you are concerned, and what to fill in.",
   "ai_agent.start": "Start diagnosis",
   "ai_agent.recommendations": "Recommendations",
   "ai_agent.check_completeness": "Check completeness",
   "ai_agent.answer_hint": "Answer (e.g., yes / no / I don't know)…",
-
   "reform.action.send": "Send",
   "reform.summary.title": "Summary",
   "reform.summary.not_concerned_badge": "🟦 Not concerned (e-reporting)",
-  "reform.summary.not_concerned_text": "No e-reporting if no B2C and no international (France B2B = mainly e-invoicing). Current fields: scope=FR, periodicity=M, archiving=ON, platform=—"
-,
-"company.meta_json": "Meta JSON (optional)",
-"company.meta_json_ph": "{\"objective_annual_ca\":250000}",
-
-"company.annual_target_ht": "Annual revenue target (excl. VAT)",
-"company.annual_target_ht_ph": "120000",
-
-"company.smtp.title": "Email Configuration (SMTP)",
-"company.smtp.host": "SMTP Host",
-"company.smtp.host_ph": "smtp.office365.com",
-
-"company.smtp.port": "SMTP Port",
-
-"company.smtp.user": "SMTP User",
-"company.smtp.user_ph": "contact@company.com",
-
-"company.smtp.password": "SMTP Password",
-
-"company.smtp.from_name": "Sender name",
-"company.smtp.from_name_ph": "D2F Compliant",
-
-"exports.settings.title": "Sending preferences",
-"exports.settings.client_language": "Client language",
-"exports.settings.client_language_hint": "Used for PDFs and emails sent to the client.",
-
-"exports.quotes.title": "📝 Quotes",
-"exports.quotes.description": "Preparation and transmission of quotes.",
-"exports.quotes.label": "Quote",
-"exports.quotes.generate_pdf": "📄 Generate PDF",
-"exports.quotes.preview": "👁 Preview",
-"exports.quotes.send_mail": "📧 Send to client",
-
-"exports.invoices.title": "🧾 Invoices",
-"exports.invoices.description": "Invoice management and electronic invoicing.",
-"exports.invoices.label": "Invoice",
-"exports.invoices.generate_pdf": "📄 Generate PDF",
-"exports.invoices.preview": "👁 Preview",
-"exports.invoices.send_mail": "📧 Send to client",
-"exports.invoices.send_structured": "📤 Send structured format",
-
-"conformity.settings.title": "Reform settings",
-
-"conformity.scope.label": "Scope",
-"conformity.scope.help_short": "FR / INTL",
-
-"conformity.periodicity.help_short": "D / M / B",
-"conformity.periodicity.daily": "D — Daily",
-"conformity.periodicity.monthly": "M — Monthly",
-"conformity.periodicity.bimonthly": "B — Bimonthly",
-
-"conformity.archiving.label": "Archiving",
-
-"conformity.platform.label": "Platform",
-"conformity.platform.help_short": "PA / OTHER",
-"conformity.platform.pa": "PA (Approved platform)",
-"conformity.platform.other": "Other (connected solution)",
-
-"conformity.b2c.label": "Issues B2C invoices?",
-"conformity.intl.label": "International (outside France)?",
-
-"conformity.next_due.label": "Next due date (info)",
-
-"conformity.kpis.title": "KPIs (queue / flows)",
-"conformity.kpis.flow8": "Flow 8",
-"conformity.kpis.flow9": "Flow 9",
-"conformity.kpis.flow10": "Flow 10",
-"conformity.kpis.hint": "These counters must come from actual calculations.",
-
-"conformity.missing.title": "Fields to complete",
-
-"conformity.ai.title": "AI Agent — Reform Assistant",
-"conformity.ai.description": "Diagnosis and recommendations.",
-"conformity.ai.start": "Start diagnosis",
-"conformity.ai.recommend": "Recommendations",
-"conformity.ai.check": "Check completeness",
-"conformity.ai.placeholder": "Answer (yes / no / I don't know)…",
-"conformity.ai.summary_title": "Summary",
-
-"common.send": "Send",
-
-"audit.results.verify": "Verification",
-"audit.results.events_loaded": "Events loaded",
-"audit.results.last_seq": "Last sequence",
-"audit.results.last_hash": "Last hash",
-"audit.results.log": "Log",
-"audit.results.ready": "Ready.",
-"audit.results.footer_hint": "• audit:verify: verifies chain + HMAC\n• audit:read: paginated read (sinceSeq/limit)\n• Human evidence: exports (PDF/UBL) + audit."
+  "reform.summary.not_concerned_text": "No e-reporting if no B2C and no international (France B2B = mainly e-invoicing). Current fields: scope=FR, periodicity=M, archiving=ON, platform=—",
+  "company.meta_json": "Meta JSON (optional)",
+  "company.meta_json_ph": "{\"objective_annual_ca\":250000}",
+  "company.annual_target_ht": "Annual revenue target (excl. VAT)",
+  "company.annual_target_ht_ph": "120000",
+  "company.smtp.title": "Email Configuration (SMTP)",
+  "company.smtp.host": "SMTP Host",
+  "company.smtp.host_ph": "smtp.office365.com",
+  "company.smtp.port": "SMTP Port",
+  "company.smtp.user": "SMTP User",
+  "company.smtp.user_ph": "contact@company.com",
+  "company.smtp.password": "SMTP Password",
+  "company.smtp.from_name": "Sender name",
+  "company.smtp.from_name_ph": "D2F Compliant",
+  "exports.settings.title": "Sending preferences",
+  "exports.settings.client_language": "Client language",
+  "exports.settings.client_language_hint": "Used for PDFs and emails sent to the client.",
+  "exports.quotes.title": "📝 Quotes",
+  "exports.quotes.description": "Preparation and transmission of quotes.",
+  "exports.quotes.label": "Quote",
+  "exports.quotes.generate_pdf": "📄 Generate PDF",
+  "exports.quotes.preview": "👁 Preview",
+  "exports.quotes.send_mail": "📧 Send to client",
+  "exports.invoices.title": "🧾 Invoices",
+  "exports.invoices.description": "Invoice management and electronic invoicing.",
+  "exports.invoices.label": "Invoice",
+  "exports.invoices.generate_pdf": "📄 Generate PDF",
+  "exports.invoices.preview": "👁 Preview",
+  "exports.invoices.send_mail": "📧 Send to client",
+  "exports.invoices.send_structured": "📤 Send structured format",
+  "conformity.settings.title": "Reform settings",
+  "conformity.scope.label": "Scope",
+  "conformity.scope.help_short": "FR / INTL",
+  "conformity.periodicity.help_short": "D / M / B",
+  "conformity.periodicity.daily": "D — Daily",
+  "conformity.archiving.label": "Archiving",
+  "conformity.platform.label": "Platform",
+  "conformity.platform.help_short": "PA / OTHER",
+  "conformity.platform.pa": "PA (Approved platform)",
+  "conformity.platform.other": "Other (connected solution)",
+  "conformity.b2c.label": "Issues B2C invoices?",
+  "conformity.intl.label": "International (outside France)?",
+  "conformity.next_due.label": "Next due date (info)",
+  "conformity.kpis.title": "KPIs (queue / flows)",
+  "conformity.kpis.flow8": "Flow 8",
+  "conformity.kpis.flow9": "Flow 9",
+  "conformity.kpis.flow10": "Flow 10",
+  "conformity.kpis.hint": "These counters must come from actual calculations.",
+  "conformity.missing.title": "Fields to complete",
+  "conformity.ai.title": "AI Agent — Reform Assistant",
+  "conformity.ai.description": "Diagnosis and recommendations.",
+  "conformity.ai.start": "Start diagnosis",
+  "conformity.ai.recommend": "Recommendations",
+  "conformity.ai.check": "Check completeness",
+  "conformity.ai.placeholder": "Answer (yes / no / I don't know)…",
+  "conformity.ai.summary_title": "Summary",
+  "common.send": "Send",
+  "audit.results.verify": "Verification",
+  "audit.results.events_loaded": "Events loaded",
+  "audit.results.last_seq": "Last sequence",
+  "audit.results.last_hash": "Last hash",
+  "audit.results.log": "Log",
+  "audit.results.ready": "Ready.",
+  "audit.results.footer_hint": "• audit:verify: verifies chain + HMAC\n• audit:read: paginated read (sinceSeq/limit)\n• Human evidence: exports (PDF/UBL) + audit.",
+  "lines.discount_percent": "Discount %",
+  "discount.document_percent": "Document discount (%)",
+  "discount.reason": "Discount reason",
+  "discount.reason_placeholder": "Commercial discount",
+  "discount.subtotal": "Subtotal excl. VAT before document discount",
+  "discount.amount": "Document discount excl. VAT",
+  "discount.default_reason": "Commercial discount",
+  "items.import_csv": "Import items CSV…",
+  "quotes.import_csv_history": "Import historical quotes CSV…",
+  "invoices.import_csv_history": "Import historical invoices CSV…",
+  "history.status": "Historical (read-only)",
+  "import.csv_success": "{count} row(s) imported; {skipped} duplicate(s) skipped.",
+  "import.csv_no_rows": "The CSV file contains no usable rows.",
+  "import.csv_missing_columns": "Required CSV columns are missing: {columns}",
+  "import.csv_confirm_history": "Import {count} document(s) as read-only history without affecting the dashboard?"
 }

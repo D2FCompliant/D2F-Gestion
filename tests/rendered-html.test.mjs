@@ -26,7 +26,7 @@ test("server-renders the D2F Gestion cockpit", async () => {
   assert.doesNotMatch(html, /codex-preview|Your site is taking shape|react-loading-skeleton/i);
 
   const shell = await readFile(new URL("../app/session-shell.tsx", import.meta.url), "utf8");
-  assert.match(shell, /src="\/erp\/index\.html\?v=20260716-company-v14"/);
+  assert.match(shell, /src="\/erp\/index\.html\?v=20260717-dashboard-receivables-v214"/);
   assert.match(shell, /title="D2F Gestion"/);
 });
 
@@ -37,8 +37,8 @@ test("ships a touch-first smartphone layout", async () => {
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
     readFile(new URL("../public/erp/index.html", import.meta.url), "utf8"),
   ]);
-  assert.match(html, /styles\.css\?v=20260716-company-v14/);
-  assert.match(html, /app\.js\?v=20260716-company-v14/);
+  assert.match(html, /styles\.css\?v=20260717-dashboard-receivables-v214/);
+  assert.match(html, /app\.js\?v=20260717-dashboard-receivables-v214/);
   assert.match(styles, /@media \(max-width: 760px\)/);
   assert.match(styles, /position:fixed;\s*z-index:1000;\s*left:0;\s*right:0;\s*bottom:0/);
   assert.match(styles, /grid-template-columns:minmax\(0,1fr\) minmax\(0,1fr\) !important/);
@@ -87,6 +87,7 @@ test("uses independent company columns and compact disclosure sections", async (
   assert.match(html, /class="companySecondaryStack"/);
   assert.match(html, /<details class="card companyTermsCard companyDisclosureCard">/);
   assert.match(html, /<details class="card integrationCard companyDisclosureCard" id="company-einvoice-card">/);
+  assert.match(html, /id="company-reporting-card"/);
   assert.match(html, /<details class="card integrationCard companyArchiveCard companyDisclosureCard">/);
   assert.match(html, /id="co-meta-json" rows="3"/);
   assert.match(html, /id="co-cgv-text" rows="4"/);
@@ -96,6 +97,50 @@ test("uses independent company columns and compact disclosure sections", async (
   assert.match(styles, /\.companyDisclosureCard\[open\] > \.companySectionSummary::after\{ content:"−"; \}/);
   assert.match(styles, /\.companyPrimaryStack,[\s\S]*?display:contents/);
   assert.match(styles, /page\[data-page="company"\] \.companyBrandingCard \.upload\{[\s\S]*?flex-direction:row/);
+});
+
+test("uses country-aware regulatory workspaces and fails closed without a qualified adapter", async () => {
+  const [html, app, route, integrations, styles, ...dictionarySources] = await Promise.all([
+    readFile(new URL("../public/erp/index.html", import.meta.url), "utf8"),
+    readFile(new URL("../public/erp/app.js", import.meta.url), "utf8"),
+    readFile(new URL("../app/rpc/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../lib/integrations.ts", import.meta.url), "utf8"),
+    readFile(new URL("../public/erp/styles.css", import.meta.url), "utf8"),
+    ...["fr", "en", "sr", "it", "es"].map((locale) => readFile(new URL(`../renderer/i18n/${locale}.json`, import.meta.url), "utf8")),
+  ]);
+  assert.match(html, /id="company-reporting-card"/);
+  assert.match(html, /id="cf-obligations"/);
+  assert.match(html, /id="cf-transmissions"/);
+  assert.match(html, /id="cf-review-dialog"/);
+  assert.match(html, /data-reporting-filter="review"/);
+  assert.match(html, /id="cf-pa-reporting-submit-path"/);
+  assert.doesNotMatch(html, /id="cf-scope"|id="cf-kpi-flux8"|id="cf-ai-chat"/);
+  assert.match(app, /REPORTING_PROFILE_UI/);
+  assert.match(app, /cfLoadOperationalReport/);
+  assert.match(app, /function cfRenderReviewDialog/);
+  assert.match(app, /data-reporting-candidate-id/);
+  assert.match(app, /cfOpenReportingCandidate/);
+  assert.match(route, /fr_structured_invoice_data_8_9/);
+  assert.match(route, /fr_b2c_payments_10_4/);
+  assert.match(route, /rs_foreign_vat_records/);
+  assert.match(route, /it_cross_border/);
+  assert.match(route, /es_verifactu_records/);
+  assert.match(route, /D2F_REGULATORY_BATCH_V1/);
+  assert.match(route, /candidates: candidates\.map\(candidateSummary\)/);
+  assert.match(route, /Transmission bloquée : la recette métier/);
+  assert.doesNotMatch(route, /const flux8 = issued\.filter|const flux9 = issued\.filter|type: "e-reporting"/);
+  assert.match(integrations, /reporting_adapter_qualified/);
+  assert.match(styles, /\.reportingKpis/);
+  assert.match(styles, /\.reportingReviewDialog/);
+  assert.match(styles, /\.reportingReviewCandidate/);
+  for (const source of dictionarySources) {
+    const dictionary = JSON.parse(source);
+    assert.ok(dictionary["reporting.profile.fr.title"]);
+    assert.ok(dictionary["reporting.profile.rs.title"]);
+    assert.ok(dictionary["reporting.obligation.rs_foreign_vat_records.description"]);
+    assert.ok(dictionary["reporting.review.step.open_documents"]);
+    assert.ok(dictionary["reporting.review.open_invoice"]);
+  }
 });
 
 test("keeps Supabase access tenant-scoped and server-side", async () => {
@@ -174,16 +219,42 @@ test("shows one visible product brand and blocks clients until payment is verifi
   ]);
   assert.doesNotMatch(legacyHtml, /class="brand"/);
   assert.match(styles, /\.account-brand img \{ width:72px; height:72px/);
-  assert.match(shell, /PORTAIL DE RÈGLEMENT/);
+  assert.match(shell, /ACCÈS D2F GESTION/);
   assert.match(shell, /confirmTransfer/);
-  assert.match(shell, /Confirmer reçu \+ 1 mois/);
+  assert.match(shell, /Confirmer reçu \+/);
   assert.match(accounts, /currentPeriodStart && account\.subscription\.currentPeriodEnd/);
   assert.match(accounts, /account\.subscription\.status !== "payment_declared"/);
   assert.match(signup, /acceptPaymentTerms/);
   assert.match(subscription, /body\.confirmTransfer !== true/);
 });
 
-test("shows the monthly tariff before establishment registration in every portal language", async () => {
+test("shows a dynamic official regulatory watch only for supported establishment countries", async () => {
+  const [shell, watch, portal, identifiers, styles] = await Promise.all([
+    readFile(new URL("../app/session-shell.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/regulatory-watch.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/portal-i18n.ts", import.meta.url), "utf8"),
+    readFile(new URL("../lib/company-identifiers.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
+  ]);
+  assert.match(shell, /className="auth-regulatory"/);
+  assert.match(shell, /regulatoryCountries.map/);
+  assert.match(shell, /window.setInterval/);
+  assert.match(shell, /aria-live="polite"/);
+  assert.doesNotMatch(shell, /option value="DE"|option value="OTHER"/);
+  assert.doesNotMatch(portal, /Germany|Allemagne|Nemačka|Germania|Alemania/);
+  assert.ok(watch.includes('regulatoryCountries = ["FR", "RS", "IT", "ES"]'));
+  assert.ok(watch.includes("economie.gouv.fr/tout-savoir-sur-la-facturation-electronique"));
+  assert.ok(watch.includes("efaktura.gov.rs/vest/en/8335"));
+  assert.ok(watch.includes("agenziaentrate.gov.it/web_app_entrate/fatturazione_elettronica"));
+  assert.ok(watch.includes("agenciatributaria.gob.es/Sede/iva/sistemas-informaticos-facturacion-verifactu"));
+  assert.equal(Array.from(watch.matchAll(/officialSource: "/g)).length, 5);
+  assert.ok(identifiers.includes('SUPPORTED_ESTABLISHMENT_COUNTRIES = ["FR", "RS", "IT", "ES"]'));
+  assert.ok(identifiers.includes('if (!isSupportedEstablishmentCountry(country)) throw new Error'));
+  assert.ok(styles.includes('.regulatory-countries{ display:grid; grid-template-columns:repeat(4'));
+  assert.ok(styles.includes('@media (max-width:620px){') && styles.includes('.auth-regulatory{ grid-column:1 / -1;'));
+});
+
+test("shows monthly and annual tariffs before establishment registration in every portal language", async () => {
   const [page, shell, styles, portal, auth, envExample] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/session-shell.tsx", import.meta.url), "utf8"),
@@ -192,9 +263,12 @@ test("shows the monthly tariff before establishment registration in every portal
     readFile(new URL("../lib/auth/server.ts", import.meta.url), "utf8"),
     readFile(new URL("../.env.example", import.meta.url), "utf8"),
   ]);
-  assert.match(page, /publicBillingConfig\(\)\.amountEur/);
+  assert.match(page, /publicBillingConfig\(\)/);
+  assert.match(page, /annualAmountEur/);
   assert.match(shell, /className="pricing-card"/);
   assert.match(shell, /formatPortalPrice\(monthlyPriceEur, locale\)/);
+  assert.match(shell, /formatPortalPrice\(annualPriceEur, locale\)/);
+  assert.match(shell, /billingTerm === "annual"/);
   assert.match(styles, /\.pricing-card\s*\{/);
   assert.match(styles, /\.pricing-card ul \{ display:grid; grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
   assert.equal(Array.from(portal.matchAll(/pricingPlan: "/g)).length, 5);
@@ -205,7 +279,9 @@ test("shows the monthly tariff before establishment registration in every portal
   assert.match(portal, /2 utenti inclusi/);
   assert.match(portal, /2 usuarios incluidos/);
   assert.match(auth, /D2F_MONTHLY_PRICE_EUR \|\| "29"/);
+  assert.match(auth, /D2F_ANNUAL_PRICE_EUR \|\| "290"/);
   assert.match(envExample, /D2F_MONTHLY_PRICE_EUR=29/);
+  assert.match(envExample, /D2F_ANNUAL_PRICE_EUR=290/);
 });
 
 test("scopes tenants to establishments and selects national e-invoicing profiles", async () => {
@@ -306,11 +382,38 @@ test("wires every visible command and enforces the quote lifecycle", async () =>
   assert.match(app, /list__item--rejected/);
   assert.match(app, /\["draft", "sent"\]\.includes\(canonicalQuoteStatus/);
   assert.match(app, /if \(state\.currentModule === "quotes"\) renderToolbar\("quotes"\)/);
-  assert.match(app, /setButtonDisabled\(acceptBtn, !canDecide\)/);
-  assert.match(app, /setButtonDisabled\(rejectBtn, !canDecide\)/);
+  assert.match(app, /\["quotes:accept", "quotes:reject"\]\.includes\(actionId\)/);
+  assert.match(app, /return \["quotes:accept", "quotes:reject"\]/);
   assert.match(route, /draft: \["sent", "accepted", "rejected"\]/);
   assert.match(route, /sent: \["accepted", "rejected"\]/);
   assert.match(route, /Transition de devis interdite/);
+});
+
+test("keeps every command once in an adaptive desktop and mobile action bar", async () => {
+  const [html, app, styles, portalStyles] = await Promise.all([
+    readFile(new URL("../public/erp/index.html", import.meta.url), "utf8"),
+    readFile(new URL("../public/erp/app.js", import.meta.url), "utf8"),
+    readFile(new URL("../public/erp/styles.css", import.meta.url), "utf8"),
+    readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
+  ]);
+
+  for (const action of ["clients:new", "clients:importCsv", "items:new", "quotes:new", "invoices:new", "inbound:refresh", "inbound:import"]) {
+    assert.equal(Array.from(html.matchAll(new RegExp(`data-action="${action}"`, "g"))).length, 0, `${action} is duplicated outside the toolbar`);
+  }
+  for (const action of ["payments:record", "company:chooseLogo", "company:clearLogo"]) {
+    assert.equal(Array.from(html.matchAll(new RegExp(`data-action="${action}"`, "g"))).length, 1, `${action} must have one contextual entry point`);
+  }
+
+  assert.match(app, /function toolbarDirectActionIds\(moduleKey\)/);
+  assert.match(app, /className = "toolbarMore"/);
+  assert.match(app, /className = "toolbarMore__menu"/);
+  assert.match(styles, /D2F 2026 light interface/);
+  assert.match(styles, /\.toolbarMore__menu\s*\{/);
+  assert.match(styles, /@media \(max-width:760px\)[\s\S]*\.toolbarMore__text\{ display:none; \}/);
+  assert.match(portalStyles, /D2F 2026 light portal/);
+  assert.match(portalStyles, /\.account-bar\{[\s\S]*background:#fff;/);
+  const navigation = html.match(/<nav class="nav" id="navModules">([\s\S]*?)<\/nav>/)?.[1] || "";
+  assert.doesNotMatch(navigation, /[🏢📊👥🧩📝🧾💳📥🚀✅📜]/u);
 });
 
 test("country-aware structured export fails closed and client PEPPOL lookup is available", async () => {
@@ -351,6 +454,10 @@ test("removes issued credit notes from invoice balances", async () => {
   vm.runInContext(source, context);
   const receivables = context.D2FReceivables;
   assert.ok(receivables);
+  assert.equal(receivables.effectiveDueDate({ date: "2026-07-01", due_date: "2026-07-20" }, {}), "2026-07-20");
+  assert.equal(receivables.effectiveDueDate({ date: "2026-07-01" }, { payment_term: "NET_15" }), "2026-07-16");
+  assert.equal(receivables.effectiveDueDate({ date: "2026-07-01" }, { payment_term: "DUE_ON_RECEIPT", payment_days: 10 }), "2026-07-11");
+  assert.equal(receivables.effectiveDueDate({ date: "2026-07-01" }, {}), "");
 
   const invoices = [
     { id: "f15", invoice_number: "F2026-0015", type: "final", status: "issued", total_ttc: 200 },
@@ -438,5 +545,162 @@ test("stores country-aware PAF evidence with integrity and archive handoff", asy
   for (const dictionary of dictionaries) {
     assert.match(dictionary, /"conformity\.evidence\.title"/);
     assert.match(dictionary, /"conformity\.evidence\.profile\.fr_paf\.label"/);
+  }
+});
+
+
+test("keeps client activation under D2F control and supports one reviewed trial", async () => {
+  const [accounts, adminRoute, shell, auth, signup, envExample, workerConfig] = await Promise.all([
+    readFile(new URL("../lib/saas/accounts.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/auth/admin/companies/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/session-shell.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../lib/auth/server.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/auth/signup/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../.env.example", import.meta.url), "utf8"),
+    readFile(new URL("../wrangler.cloudflare.jsonc", import.meta.url), "utf8"),
+  ]);
+  assert.match(adminRoute, /isPlatformAdminEmail/);
+  assert.match(adminRoute, /body\.status === "trial"/);
+  assert.match(accounts, /requestedStatus: "active" \| "suspended" \| "trial"/);
+  assert.match(accounts, /addUtcDays\(periodStart, TRIAL_DAYS - 1\)/);
+  assert.match(accounts, /requestTrialAccess/);
+  assert.match(accounts, /selectBillingTerm/);
+  assert.match(accounts, /addUtcYear/);
+  assert.match(accounts, /prefillCompanyProfile/);
+  assert.match(accounts, /Une période d’essai ou d’abonnement a déjà été accordée/);
+  assert.match(shell, /className="admin-request-button"/);
+  assert.match(shell, /window\.setInterval\(refreshRequests, 60000\)/);
+  assert.match(shell, /Accorder 14 jours d’essai/);
+  assert.match(shell, /className="signup-payment-card"/);
+  assert.match(shell, /linkedin\.com\/in\/d2fcompliant11030\/recent-activity\/all/);
+  assert.match(shell, /https:\/\/d2fcompliant\.com/);
+  assert.match(shell, /Demander mes 14 jours d’essai/);
+  assert.match(shell, /Démarrer l’essai demandé/);
+  assert.match(auth, /RS35160600000229522419/);
+  assert.match(auth, /DBDBRSBG/);
+  assert.match(signup, /billing: publicBillingConfig\(\)/);
+  assert.match(envExample, /D2F_BILLING_IBAN=RS35160600000229522419/);
+  assert.match(envExample, /D2F_ANNUAL_PRICE_EUR=290/);
+  assert.match(workerConfig, /"D2F_BILLING_BIC": "DBDBRSBG"/);
+  assert.match(workerConfig, /"D2F_ANNUAL_PRICE_EUR": "290"/);
+});
+
+test("provides a decision-ready dashboard, monthly revenue and ticket actions", async () => {
+  const [route, dashboard, styles, shell, identifiers, validationRoute, signup, erpApp] = await Promise.all([
+    readFile(new URL("../app/rpc/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../public/erp/dashboard-ui.js", import.meta.url), "utf8"),
+    readFile(new URL("../public/erp/styles.css", import.meta.url), "utf8"),
+    readFile(new URL("../app/session-shell.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../lib/company-identifiers.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/auth/validate-identifier/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/auth/signup/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../public/erp/app.js", import.meta.url), "utf8"),
+  ]);
+  assert.match(route, /recognized_ht_monthly/);
+  assert.match(route, /creditSourceId\(invoice\)/);
+  assert.match(route, /outstanding_ttc/);
+  assert.match(route, /overdue_count/);
+  assert.match(route, /effectiveDueDate/);
+  assert.match(route, /missing_due_count/);
+  assert.match(route, /conversion_rate/);
+  assert.match(dashboard, /recognizedSeries/);
+  assert.match(dashboard, /fetchSupportDashboard/);
+  assert.match(dashboard, /data-support-ticket/);
+  assert.match(dashboard, /ticket\.ticketScope \|\| "customer"/);
+  assert.match(dashboard, /support\?\.isAdmin \? mt\("viewQueue"\)/);
+  assert.match(dashboard, /dashSupportSummary/);
+  assert.match(dashboard, /support\?\.isAdmin \? adminQueue : customerQueue/);
+  assert.match(dashboard, /data-open-module="payments"/);
+  assert.match(styles, /Management cockpit/);
+  assert.match(styles, /\.dashManagementGrid/);
+  assert.match(styles, /\.dashSupportSummary/);
+  assert.match(shell, /d2f-open-support/);
+  assert.match(shell, /initialTicketId=\{supportTicketId\}/);
+  assert.match(identifiers, /function frenchSiretValid/);
+  assert.match(identifiers, /function serbianPibValid/);
+  assert.match(identifiers, /function italianPartitaIvaValid/);
+  assert.match(identifiers, /function italianCodiceFiscaleValid/);
+  assert.match(identifiers, /function spanishNifValid/);
+  assert.match(validationRoute, /recherche-entreprises\.api\.gouv\.fr/);
+  assert.match(validationRoute, /closed_establishment/);
+  assert.match(signup, /validateEstablishmentIdentifier/);
+  assert.match(erpApp, /due_date: \$\("i-due-date"\)/);
+  assert.match(erpApp, /invoices\.error\.due_date_required/);
+  assert.match(erpApp, /applyInvoiceClientPaymentDefaults/);
+});
+
+test("provides tenant-scoped support tickets with guided level-1 triage and tracked notifications", async () => {
+  const [migration, workflowMigration, support, route, center, i18n, shell, styles, envExample, workerConfig] = await Promise.all([
+    readFile(new URL("../supabase/migrations/20260717140000_support_tickets.sql", import.meta.url), "utf8"),
+    readFile(new URL("../supabase/migrations/20260717160000_support_dashboard_workflow.sql", import.meta.url), "utf8"),
+    readFile(new URL("../lib/support.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/auth/support/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/support-center.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/support-i18n.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/session-shell.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
+    readFile(new URL("../.env.example", import.meta.url), "utf8"),
+    readFile(new URL("../wrangler.cloudflare.jsonc", import.meta.url), "utf8"),
+  ]);
+  assert.match(migration, /create sequence if not exists public\.d2f_support_ticket_seq/);
+  assert.match(migration, /create table if not exists public\.d2f_support_tickets/);
+  assert.match(migration, /create table if not exists public\.d2f_support_messages/);
+  assert.match(migration, /create table if not exists public\.d2f_support_notifications/);
+  assert.match(migration, /enable row level security/);
+  assert.match(migration, /revoke all on public\.d2f_support_tickets from anon, authenticated/);
+  assert.match(workflowMigration, /ticket_scope/);
+  assert.match(workflowMigration, /request_type/);
+  assert.match(support, /\.eq\("owner_email", session\.ownerKey\)/);
+  assert.match(support, /String\(ticket\.tenant_id \|\| ""\) !== session\.tenantId/);
+  assert.match(support, /_support_tickets/);
+  assert.match(support, /isPlatformAdminEmail\(session\.email\)/);
+  assert.match(support, /support@d2fcompliant\.com/);
+  assert.match(support, /D2F_SUPPORT_MAIL_WEBHOOK_URL/);
+  assert.match(support, /Assistant D2F niveau 1/);
+  assert.match(support, /generativeAiConfigured: false/);
+  assert.match(route, /readAppSession/);
+  assert.match(route, /createSupportTicket/);
+  assert.match(route, /addSupportMessage/);
+  assert.match(route, /updateSupportStatus/);
+  assert.match(center, /className="support-center"/);
+  assert.match(center, /copy\.adminTitle/);
+  assert.match(center, /copy\.newInternalTicket/);
+  assert.match(center, /supportApi\("PATCH"/);
+  assert.match(center, /name="contactEmail"/);
+  assert.match(center, /name="ticketScope"/);
+  assert.match(center, /name="requestType"/);
+  assert.match(shell, /className="support-header-button"/);
+  assert.match(shell, /window\.setInterval\(refreshSupport, 60000\)/);
+  assert.match(styles, /\.support-layout\{ min-height:0; display:grid; grid-template-columns:360px/);
+  assert.match(styles, /@media\(max-width:680px\)/);
+  assert.equal(Array.from(i18n.matchAll(/title: "(?:Support D2F|D2F Support|D2F podrška|Supporto D2F|Soporte D2F)"/g)).length, 5);
+  assert.match(envExample, /D2F_SUPPORT_EMAIL=support@d2fcompliant\.com/);
+  assert.match(workerConfig, /"D2F_SUPPORT_EMAIL": "support@d2fcompliant\.com"/);
+});
+
+test("provides a translated workflow companion on every application module", async () => {
+  const [html, app, styles, ...dictionarySources] = await Promise.all([
+    readFile(new URL("../public/erp/index.html", import.meta.url), "utf8"),
+    readFile(new URL("../public/erp/app.js", import.meta.url), "utf8"),
+    readFile(new URL("../public/erp/styles.css", import.meta.url), "utf8"),
+    ...["fr", "en", "sr", "it", "es"].map((locale) => readFile(new URL("../renderer/i18n/" + locale + ".json", import.meta.url), "utf8")),
+  ]);
+  assert.match(html, /id="workflowCompanionToggle"/);
+  assert.match(html, /id="workflowCompanionPanel"/);
+  assert.match(app, /const WORKFLOW_GUIDES = \{/);
+  assert.match(app, /function renderWorkflowCompanion\(moduleKey\)/);
+  assert.match(app, /initWorkflowCompanion\(\)/);
+  assert.match(app, /renderWorkflowCompanion\(cur\)/);
+  for (const moduleName of ["company", "dashboard", "clients", "items", "quotes", "invoices", "payments", "inbound", "exports", "conformity", "audit"]) {
+    assert.match(app, new RegExp("\\n  " + moduleName + ": \\{"));
+  }
+  assert.match(styles, /\.workflowCompanionToggle\{/);
+  assert.match(styles, /\.workflowCompanionPanel\{/);
+  assert.match(styles, /@media \(max-width:760px\)[\s\S]*\.workflowCompanionPanel/);
+  for (const source of dictionarySources) {
+    const dictionary = JSON.parse(source);
+    assert.ok(dictionary["companion.open"]);
+    assert.ok(dictionary["companion.conformity.step2"]);
+    assert.ok(dictionary["companion.audit.expected"]);
   }
 });

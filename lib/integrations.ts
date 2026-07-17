@@ -49,6 +49,7 @@ function publicConfig(input: JsonRecord) {
   const allowed = [
     "provider_name", "base_url", "health_path", "submit_path", "status_path", "auth_type", "auth_header", "retention_years", "enabled",
     "country", "channel_profile", "environment", "public_identifier", "routing_id", "routing_email", "last_test_status", "last_tested_at",
+    "reporting_submit_path", "reporting_enabled", "reporting_adapter_qualified", "reporting_adapter_contract",
   ];
   return Object.fromEntries(allowed.filter((key) => input[key] !== undefined).map((key) => [key, input[key]]));
 }
@@ -137,10 +138,10 @@ export async function testIntegration(supabase: SupabaseClient, ownerEmail: stri
   return { ok: true, provider: config.provider_name || type, profile: config.channel_profile || type, status: result.status, tested_at: lastTestedAt };
 }
 
-export async function transmitIntegration(supabase: SupabaseClient, ownerEmail: string, type: IntegrationType, input: { documentId?: string; documentNumber?: string; content: BodyInit; contentType: string; metadata?: JsonRecord }) {
+export async function transmitIntegration(supabase: SupabaseClient, ownerEmail: string, type: IntegrationType, input: { documentId?: string; documentNumber?: string; content: BodyInit; contentType: string; metadata?: JsonRecord; path?: string }) {
   const config = await getIntegration(supabase, ownerEmail, type, true);
   if (!config.enabled) return { ok: true, skipped: true, reason: "disabled" };
-  const path = type === "archive" ? config.submit_path || "/archives" : config.submit_path || "/invoices";
+  const path = input.path || (type === "archive" ? config.submit_path || "/archives" : config.submit_path || "/invoices");
   const response = await connectorFetch(connectorUrl(config.base_url, path), {
     method: "POST",
     headers: { ...authorizationHeaders(config, stringValue(config.secret)), "content-type": input.contentType, accept: "application/json", "x-d2f-document-id": input.documentId || "", "x-d2f-document-number": input.documentNumber || "" },
