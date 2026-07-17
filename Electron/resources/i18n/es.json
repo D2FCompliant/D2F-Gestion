@@ -532,5 +532,16 @@
   "quotes.deposit_percent_value": "Porcentaje del anticipo",
   "quotes.deposit_amount_value": "Importe del anticipo IVA incluido",
   "quotes.deposit_percent_placeholder": "Introducir un porcentaje",
-  "quotes.deposit_amount_placeholder": "Introducir un importe"
+  "quotes.deposit_amount_placeholder": "Introducir un importe",
+  "clients.import.choose_or_drop": "Haga clic para elegir un archivo CSV",
+  "clients.import.drop_hint": "o arrástrelo aquí · máximo 10 MB",
+  "clients.import.recognized_columns": "Columnas reconocidas",
+  "clients.import.recognized_columns_hint": "nombre, correo, teléfono, país, IVA, ID legal, dirección y condiciones de pago",
+  "clients.import.separator": "Separador",
+  "clients.import.mapping_waiting": "Seleccione un archivo y ejecute el análisis.",
+  "clients.import.err_csv_only": "Utilice un archivo CSV.",
+  "clients.import.err_too_large": "El archivo supera el máximo de 10 MB.",
+  "clients.import.analysis_summary": "Análisis terminado: {rows} filas, {valid} importables, {mapped} columnas asociadas, separador «{delimiter}».",
+  "clients.import.run_count": "Importar {count}",
+  "clients.import.complete": "Importación terminada: {imported} clientes importados, {skipped} omitidos."
 }

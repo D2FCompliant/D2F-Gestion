@@ -4837,6 +4837,25 @@ button.dashManagementKpi:hover{border-color:rgba(99,102,241,.38);transform:trans
 
 /* CSV history import */
 .documentCsvImportPanel{ width:min(900px,calc(100vw - 32px)); }
+.clientsCsvImportPanel{ width:min(1040px,calc(100vw - 32px)); }
+.clientsCsvImportTop{ display:grid; grid-template-columns:minmax(0,1.35fr) minmax(280px,.65fr); gap:16px; align-items:start; }
+.clientsCsvImportTop .documentCsvDropzone{ min-height:210px; }
+.clientsCsvOptions{ display:grid; gap:13px; padding:16px; border:1px solid rgba(11,18,32,.1); border-radius:16px; background:#f7fafc; }
+.clientsCsvToggle{ display:grid; grid-template-columns:auto minmax(0,1fr); align-items:start; gap:9px; color:var(--text); font-size:12px; line-height:1.4; cursor:pointer; }
+.clientsCsvToggle input{ width:18px; height:18px; margin:0; }
+.clientsCsvSection{ margin-top:16px; }
+.clientsCsvMapping{ min-height:92px; margin-top:8px; padding:12px; border:1px solid rgba(11,18,32,.1); border-radius:14px; background:#f8fafc; display:grid; gap:8px; }
+.clientsCsvMappingRow{ display:grid; grid-template-columns:minmax(180px,.7fr) minmax(220px,1.3fr); gap:12px; align-items:center; }
+.clientsCsvMappingRow strong{ font-size:12px; }
+.clientsCsvMappingRow select{ min-width:0; }
+.clientsCsvEmpty{ margin:0; align-self:center; color:var(--muted); font-size:12px; text-align:center; }
+.clientsCsvResults{ margin-top:16px; }
+@media(max-width:700px){
+  .clientsCsvImportPanel{ width:calc(100vw - 16px); }
+  .clientsCsvImportTop{ grid-template-columns:1fr; }
+  .clientsCsvMappingRow{ grid-template-columns:1fr; gap:5px; }
+}
+
 .documentCsvDropzone{
   width:100%; min-height:190px; padding:28px; border:2px dashed #9eb5c9; border-radius:18px;
   background:#f7fafc; color:#10263a; display:flex; flex-direction:column; align-items:center;

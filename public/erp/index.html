@@ -15,7 +15,7 @@
                  object-src 'none';
                  base-uri 'none'">
 
-  <link rel="stylesheet" href="./styles.css?v=20260717-support-sync-v215" />
+  <link rel="stylesheet" href="./styles.css?v=20260717-client-import-v215" />
 </head>
 
 <body>
@@ -1538,67 +1538,75 @@
   </aside>
 
   <script src="./xp-z12-012.js"></script>
-  <script src="./receivables.js?v=20260717-support-sync-v215"></script>
-  <script src="./audit-ui.js?v=20260717-support-sync-v215"></script>
-  <script src="./renderer/web-electron-shim.js?v=20260717-support-sync-v215"></script>
-  <script src="./renderer/web-api-shim.js?v=20260717-support-sync-v215"></script>
-  <script src="./dashboard-ui.js?v=20260717-support-sync-v215"></script>
-  <script src="./app.js?v=20260717-support-sync-v215"></script>
+  <script src="./receivables.js?v=20260717-client-import-v215"></script>
+  <script src="./audit-ui.js?v=20260717-client-import-v215"></script>
+  <script src="./renderer/web-electron-shim.js?v=20260717-client-import-v215"></script>
+  <script src="./renderer/web-api-shim.js?v=20260717-client-import-v215"></script>
+  <script src="./dashboard-ui.js?v=20260717-client-import-v215"></script>
+  <script src="./app.js?v=20260717-client-import-v215"></script>
 
   <div id="clientsImportModal" class="modal" aria-hidden="true">
     <div class="modal__backdrop" data-modal-close></div>
 
-    <div class="modal__panel" role="dialog" aria-modal="true" aria-labelledby="clientsImportTitle">
+    <div class="modal__panel documentCsvImportPanel clientsCsvImportPanel" role="dialog" aria-modal="true" aria-labelledby="clientsImportTitle">
       <div class="modal__header">
         <div class="modal__title" id="clientsImportTitle" data-i18n="clients.import.title">Importer des clients (CSV)</div>
         <button class="icon-btn" type="button" data-modal-close data-i18n-attr="aria-label:ui.close" aria-label="Fermer">✕</button>
       </div>
 
       <div class="modal__body">
-        <div class="grid2-modal">
-          <label class="field">
-            <div class="field__label">
-              <span data-i18n="clients.import.file">Fichier CSV</span>
+        <div class="clientsCsvImportTop">
+          <div>
+            <input id="clImportFile" type="file" accept=".csv,text/csv,text/plain" hidden />
+            <button id="clientsImportDropzone" class="documentCsvDropzone" type="button">
+              <span class="documentCsvDropzone__icon" aria-hidden="true">CSV</span>
+              <strong data-i18n="clients.import.choose_or_drop">Cliquez pour choisir un fichier CSV</strong>
+              <span data-i18n="clients.import.drop_hint">ou déposez-le ici · 10 Mo maximum</span>
+              <small id="clientsImportFileName"></small>
+            </button>
+            <div class="documentCsvImportHelp">
+              <strong data-i18n="clients.import.recognized_columns">Colonnes reconnues</strong>
+              <span data-i18n="clients.import.recognized_columns_hint">nom, e-mail, téléphone, pays, TVA, identifiant légal, adresse et conditions de paiement</span>
             </div>
-            <input id="clImportFile" type="file" accept=".csv,text/csv" />
-            <div class="hint" data-i18n="clients.import.file_hint">UTF-8 recommandé. Séparateurs supportés: , ; tab |</div>
-          </label>
+          </div>
 
-          <label class="field">
-            <div class="field__label"><span data-i18n="clients.import.options">Options</span></div>
-            <select id="clImportDelimiter">
-              <option value="auto" data-i18n="clients.import.delim_auto">Auto-détection</option>
-              <option value=",">,</option>
-              <option value=";">;</option>
-              <option value="\t" data-i18n="clients.import.delim_tab">Tab</option>
-              <option value="|">|</option>
-            </select>
-
-            <div class="toggle u-mt--sm">
+          <section class="clientsCsvOptions" aria-labelledby="clientsImportOptionsTitle">
+            <div class="card__title" id="clientsImportOptionsTitle" data-i18n="clients.import.options">Options</div>
+            <label class="field">
+              <span class="field__label" data-i18n="clients.import.separator">Séparateur</span>
+              <select id="clImportDelimiter">
+                <option value="auto" data-i18n="clients.import.delim_auto">Auto-détection</option>
+                <option value=",">,</option>
+                <option value=";">;</option>
+                <option value="\t" data-i18n="clients.import.delim_tab">Tab</option>
+                <option value="|">|</option>
+              </select>
+            </label>
+            <label class="clientsCsvToggle" for="clImportHasHeader">
               <input id="clImportHasHeader" type="checkbox" checked />
-              <label for="clImportHasHeader" data-i18n="clients.import.has_header">La première ligne contient les en-têtes</label>
-            </div>
-
-            <div class="toggle">
+              <span data-i18n="clients.import.has_header">La première ligne contient les en-têtes</span>
+            </label>
+            <label class="clientsCsvToggle" for="clImportUpdateExisting">
               <input id="clImportUpdateExisting" type="checkbox" checked />
-              <label for="clImportUpdateExisting" data-i18n="clients.import.update_existing">Mettre à jour si email/VAT/ID existe</label>
-            </div>
-          </label>
+              <span data-i18n="clients.import.update_existing">Mettre à jour si email/TVA/ID existe</span>
+            </label>
+          </section>
         </div>
 
-        <div class="u-mt">
+        <section class="clientsCsvSection">
           <div class="card__title" data-i18n="clients.import.mapping">Correspondance des colonnes</div>
-          <div id="clImportMapping" class="auditPre" style="min-height: 160px;"></div>
-        </div>
+          <div id="clImportMapping" class="clientsCsvMapping"><p class="clientsCsvEmpty" data-i18n="clients.import.mapping_waiting">Sélectionnez un fichier puis lancez l’analyse.</p></div>
+        </section>
 
-        <div class="u-mt">
-          <div class="card__title" data-i18n="clients.import.preview">Prévisualisation</div>
-          <div id="clImportPreview" class="auditPre" style="min-height: 180px;"></div>
-        </div>
-
-        <div class="u-mt">
-          <div class="card__title" data-i18n="clients.import.report">Rapport</div>
-          <div id="clImportReport" class="auditPre" style="min-height: 120px;"></div>
+        <div class="documentCsvImportGrid clientsCsvResults">
+          <section>
+            <div class="card__title" data-i18n="clients.import.preview">Prévisualisation</div>
+            <div id="clImportPreview" class="auditPre documentCsvPreview"></div>
+          </section>
+          <section>
+            <div class="card__title" data-i18n="clients.import.report">Rapport</div>
+            <div id="clImportReport" class="auditPre documentCsvReport" aria-live="polite"></div>
+          </section>
         </div>
       </div>
 

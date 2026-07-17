@@ -532,5 +532,16 @@
   "quotes.deposit_percent_value": "Percentuale dell’acconto",
   "quotes.deposit_amount_value": "Importo dell’acconto IVA inclusa",
   "quotes.deposit_percent_placeholder": "Inserisci una percentuale",
-  "quotes.deposit_amount_placeholder": "Inserisci un importo"
+  "quotes.deposit_amount_placeholder": "Inserisci un importo",
+  "clients.import.choose_or_drop": "Fate clic per scegliere un file CSV",
+  "clients.import.drop_hint": "oppure trascinatelo qui · massimo 10 MB",
+  "clients.import.recognized_columns": "Colonne riconosciute",
+  "clients.import.recognized_columns_hint": "nome, e-mail, telefono, paese, IVA, ID legale, indirizzo e condizioni di pagamento",
+  "clients.import.separator": "Separatore",
+  "clients.import.mapping_waiting": "Selezionate un file, quindi avviate l’analisi.",
+  "clients.import.err_csv_only": "Utilizzate un file CSV.",
+  "clients.import.err_too_large": "Il file supera la dimensione massima di 10 MB.",
+  "clients.import.analysis_summary": "Analisi completata: {rows} righe, {valid} importabili, {mapped} colonne associate, separatore «{delimiter}».",
+  "clients.import.run_count": "Importa {count}",
+  "clients.import.complete": "Importazione completata: {imported} clienti importati, {skipped} ignorati."
 }

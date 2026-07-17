@@ -5228,6 +5228,8 @@ async function handleAction(actionId, payload) {
         openModal(id);
 
   const fileEl = document.getElementById("clImportFile");
+  const dropzone = document.getElementById("clientsImportDropzone");
+  const fileNameEl = document.getElementById("clientsImportFileName");
   const delimEl = document.getElementById("clImportDelimiter");
   const headEl = document.getElementById("clImportHasHeader");
   const updEl = document.getElementById("clImportUpdateExisting");
@@ -5239,7 +5241,7 @@ async function handleAction(actionId, payload) {
   const runBtn = document.getElementById("clImportRunBtn");
 
   // sécurité
-  if (!fileEl || !delimEl || !headEl || !updEl || !mapBox || !prevBox || !repBox || !analyzeBtn || !runBtn) {
+  if (!fileEl || !dropzone || !fileNameEl || !delimEl || !headEl || !updEl || !mapBox || !prevBox || !repBox || !analyzeBtn || !runBtn) {
     setStatus("UI import CSV manquante (clientsImportModal). Vérifie index.html.");
     break;
   }
@@ -5248,6 +5250,7 @@ async function handleAction(actionId, payload) {
   analyzeBtn.onclick = null;
   runBtn.onclick = null;
 
+  let selectedFile = null;
   let parsed = null;      // { headers, data, delimiter }
   let mapping = {};       // { fieldKey: headerName }
 
@@ -5257,14 +5260,6 @@ async function handleAction(actionId, payload) {
 
   const setPreviewText = (text) => {
     prevBox.textContent = String(text || "");
-  };
-
-  const setPreviewJson = (obj) => {
-    try {
-      prevBox.textContent = JSON.stringify(obj, null, 2);
-    } catch {
-      prevBox.textContent = String(obj || "");
-    }
   };
 
   const renderMappingUi = (headers) => {
@@ -5285,10 +5280,10 @@ async function handleAction(actionId, payload) {
         .join("");
 
       return `
-        <div style="display:grid;grid-template-columns: 220px 1fr;gap:10px;align-items:center;margin-bottom:10px;">
-          <div style="font-weight:800;">${esc(label)}</div>
+        <label class="clientsCsvMappingRow">
+          <strong>${esc(label)}</strong>
           <select data-map-field="${esc(f.key)}">${opts}</select>
-        </div>
+        </label>
       `;
     }).join("");
 
@@ -5353,15 +5348,52 @@ async function handleAction(actionId, payload) {
     }));
   };
 
-  // état boutons
-  runBtn.disabled = true;
+  const resetAnalysis = () => {
+    parsed = null;
+    mapping = {};
+    mapBox.innerHTML = '<p class="clientsCsvEmpty">' + esc(t("clients.import.mapping_waiting", "Sélectionnez un fichier puis lancez l’analyse.")) + '</p>';
+    setPreviewText("");
+    repBox.textContent = "";
+    runBtn.textContent = t("clients.import.run", "Importer");
+    runBtn.disabled = true;
+  };
+
+  const selectFile = (file) => {
+    resetAnalysis();
+    selectedFile = file || null;
+    fileNameEl.textContent = "";
+    if (!selectedFile) return;
+    if (!/\.csv$/i.test(selectedFile.name) && !/csv|text/i.test(selectedFile.type || "")) {
+      selectedFile = null;
+      setReport(t("clients.import.err_csv_only", "Utilisez un fichier CSV."), true);
+      return;
+    }
+    if (selectedFile.size > 10 * 1024 * 1024) {
+      selectedFile = null;
+      setReport(t("clients.import.err_too_large", "Le fichier dépasse la taille maximale de 10 Mo."), true);
+      return;
+    }
+    fileNameEl.textContent = selectedFile.name + " · " + Math.max(1, Math.round(selectedFile.size / 1024)) + " Ko";
+  };
+
+  fileEl.value = "";
+  selectFile(null);
+  dropzone.onclick = () => fileEl.click();
+  fileEl.onchange = () => selectFile(fileEl.files && fileEl.files[0]);
+  dropzone.ondragover = (event) => { event.preventDefault(); dropzone.classList.add("is-dragging"); };
+  dropzone.ondragleave = () => dropzone.classList.remove("is-dragging");
+  dropzone.ondrop = (event) => {
+    event.preventDefault();
+    dropzone.classList.remove("is-dragging");
+    selectFile(event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files[0]);
+  };
 
   const analyze = async () => {
     try {
       repBox.textContent = "";
       setPreviewText("");
 
-      const f = fileEl.files?.[0];
+      const f = selectedFile;
       if (!f) {
         setReport(t("clients.import.err_no_file", "Choisis un fichier CSV."), true);
         runBtn.disabled = true;
@@ -5395,8 +5427,13 @@ async function handleAction(actionId, payload) {
         ].join("\n")
       );
 
-      setReport(t("clients.import.ok_analyzed", "Analyse OK. Vérifie le mapping puis clique Importer."));
-      runBtn.disabled = false;
+      const prepared = buildPayloadFromParsed();
+      const validCount = prepared.filter((client) => String(client.name || "").trim() || String(client.email || "").trim()).length;
+      const mappedCount = Object.values(mapping).filter(Boolean).length;
+      setReport(t("clients.import.analysis_summary", "Analyse terminée : {rows} ligne(s), {valid} importable(s), {mapped} colonne(s) associée(s), séparateur « {delimiter} ».")
+        .replace("{rows}", String(parsed.data.length)).replace("{valid}", String(validCount)).replace("{mapped}", String(mappedCount)).replace("{delimiter}", parsed.delimiter === "\t" ? "tab" : parsed.delimiter || "?"));
+      runBtn.textContent = t("clients.import.run_count", "Importer {count}").replace("{count}", String(validCount));
+      runBtn.disabled = validCount === 0;
     } catch (e) {
       setReport(e?.message || String(e), true);
       runBtn.disabled = true;
@@ -5443,7 +5480,10 @@ async function handleAction(actionId, payload) {
         setReport(`Imported: ${ok} | Failed: ${fail}`);
       } else {
         const res = await window.api.clients.importCsv({ rows: valid, updateExisting });
-        repBox.textContent = JSON.stringify(res, null, 2);
+        const imported = Number(res?.imported || 0);
+        const skipped = Number(res?.skipped || 0);
+        setReport(t("clients.import.complete", "Import terminé : {imported} client(s) importé(s), {skipped} ignoré(s).")
+          .replace("{imported}", String(imported)).replace("{skipped}", String(skipped)));
       }
 
       await refreshModule("clients");
@@ -5456,27 +5496,9 @@ async function handleAction(actionId, payload) {
   analyzeBtn.onclick = analyze;
   runBtn.onclick = runImport;
 
-  // reset UI on option changes
-  fileEl.onchange = () => {
-    parsed = null;
-    mapping = {};
-    mapBox.innerHTML = "";
-    setPreviewText("");
-    repBox.textContent = "";
-    runBtn.disabled = true;
-  };
-  delimEl.onchange = () => {
-    parsed = null;
-    setPreviewText("");
-    repBox.textContent = "";
-    runBtn.disabled = true;
-  };
-  headEl.onchange = () => {
-    parsed = null;
-    setPreviewText("");
-    repBox.textContent = "";
-    runBtn.disabled = true;
-  };
+  // Toute modification des options invalide l’analyse précédente.
+  delimEl.onchange = resetAnalysis;
+  headEl.onchange = resetAnalysis;
 
   // i18n modal (labels / placeholders)
   applyStaticI18n(document);

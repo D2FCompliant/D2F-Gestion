@@ -1226,5 +1226,16 @@
   "quotes.deposit_percent_value": "Deposit percentage",
   "quotes.deposit_amount_value": "Deposit amount incl. VAT",
   "quotes.deposit_percent_placeholder": "Enter a percentage",
-  "quotes.deposit_amount_placeholder": "Enter an amount"
+  "quotes.deposit_amount_placeholder": "Enter an amount",
+  "clients.import.choose_or_drop": "Click to choose a CSV file",
+  "clients.import.drop_hint": "or drop it here · 10 MB maximum",
+  "clients.import.recognized_columns": "Recognized columns",
+  "clients.import.recognized_columns_hint": "name, email, phone, country, VAT, legal ID, address and payment terms",
+  "clients.import.separator": "Separator",
+  "clients.import.mapping_waiting": "Select a file, then run the analysis.",
+  "clients.import.err_csv_only": "Use a CSV file.",
+  "clients.import.err_too_large": "The file exceeds the 10 MB maximum size.",
+  "clients.import.analysis_summary": "Analysis complete: {rows} row(s), {valid} importable, {mapped} mapped column(s), “{delimiter}” separator.",
+  "clients.import.run_count": "Import {count}",
+  "clients.import.complete": "Import complete: {imported} client(s) imported, {skipped} skipped."
 }

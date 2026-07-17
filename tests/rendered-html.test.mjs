@@ -26,7 +26,7 @@ test("server-renders the D2F Gestion cockpit", async () => {
   assert.doesNotMatch(html, /codex-preview|Your site is taking shape|react-loading-skeleton/i);
 
   const shell = await readFile(new URL("../app/session-shell.tsx", import.meta.url), "utf8");
-  assert.match(shell, /src="\/erp\/index\.html\?v=20260717-support-sync-v215"/);
+  assert.match(shell, /src="\/erp\/index\.html\?v=20260717-client-import-v215"/);
   assert.match(shell, /title="D2F Gestion"/);
 });
 
@@ -37,8 +37,8 @@ test("ships a touch-first smartphone layout", async () => {
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
     readFile(new URL("../public/erp/index.html", import.meta.url), "utf8"),
   ]);
-  assert.match(html, /styles\.css\?v=20260717-support-sync-v215/);
-  assert.match(html, /app\.js\?v=20260717-support-sync-v215/);
+  assert.match(html, /styles\.css\?v=20260717-client-import-v215/);
+  assert.match(html, /app\.js\?v=20260717-client-import-v215/);
   assert.match(styles, /@media \(max-width: 760px\)/);
   assert.match(styles, /position:fixed;\s*z-index:1000;\s*left:0;\s*right:0;\s*bottom:0/);
   assert.match(styles, /grid-template-columns:minmax\(0,1fr\) minmax\(0,1fr\) !important/);
@@ -405,6 +405,23 @@ test("wires every visible command and enforces the quote lifecycle", async () =>
   assert.match(route, /draft: \["sent", "accepted", "rejected"\]/);
   assert.match(route, /sent: \["accepted", "rejected"\]/);
   assert.match(route, /Transition de devis interdite/);
+});
+
+test("gives client CSV imports the same analysis workflow", async () => {
+  const [html, app, styles] = await Promise.all([
+    readFile(new URL("../public/erp/index.html", import.meta.url), "utf8"),
+    readFile(new URL("../public/erp/app.js", import.meta.url), "utf8"),
+    readFile(new URL("../public/erp/styles.css", import.meta.url), "utf8"),
+  ]);
+  assert.match(html, /id="clImportFile"[^>]*hidden/);
+  assert.match(html, /id="clientsImportDropzone" class="documentCsvDropzone"/);
+  assert.match(html, /class="clientsCsvMappingRow"|id="clImportMapping" class="clientsCsvMapping"/);
+  assert.match(html, /clients.import.recognized_columns/);
+  assert.match(app, /dropzone.ondrop/);
+  assert.match(app, /clients.import.analysis_summary/);
+  assert.match(app, /clients.import.complete/);
+  assert.match(styles, /.clientsCsvImportTop/);
+  assert.match(styles, /.clientsCsvMappingRow/);
 });
 
 test("supports click and drop CSV history imports for quotes and invoices", async () => {

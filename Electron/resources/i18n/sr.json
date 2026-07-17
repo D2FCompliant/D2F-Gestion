@@ -532,5 +532,16 @@
   "quotes.deposit_percent_value": "Procenat avansa",
   "quotes.deposit_amount_value": "Iznos avansa sa PDV-om",
   "quotes.deposit_percent_placeholder": "Unesite procenat",
-  "quotes.deposit_amount_placeholder": "Unesite iznos"
+  "quotes.deposit_amount_placeholder": "Unesite iznos",
+  "clients.import.choose_or_drop": "Kliknite da izaberete CSV datoteku",
+  "clients.import.drop_hint": "ili je prevucite ovde · najviše 10 MB",
+  "clients.import.recognized_columns": "Prepoznate kolone",
+  "clients.import.recognized_columns_hint": "naziv, e-pošta, telefon, zemlja, PDV, pravni ID, adresa i uslovi plaćanja",
+  "clients.import.separator": "Separator",
+  "clients.import.mapping_waiting": "Izaberite datoteku, zatim pokrenite analizu.",
+  "clients.import.err_csv_only": "Koristite CSV datoteku.",
+  "clients.import.err_too_large": "Datoteka prelazi maksimalnih 10 MB.",
+  "clients.import.analysis_summary": "Analiza završena: {rows} redova, {valid} za uvoz, {mapped} povezanih kolona, separator „{delimiter}“.",
+  "clients.import.run_count": "Uvezi {count}",
+  "clients.import.complete": "Uvoz završen: {imported} klijenata uvezeno, {skipped} preskočeno."
 }

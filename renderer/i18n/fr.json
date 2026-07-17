@@ -1171,5 +1171,16 @@
   "quotes.deposit_percent_value": "Pourcentage de l’acompte",
   "quotes.deposit_amount_value": "Montant TTC de l’acompte",
   "quotes.deposit_percent_placeholder": "Saisir un pourcentage",
-  "quotes.deposit_amount_placeholder": "Saisir un montant"
+  "quotes.deposit_amount_placeholder": "Saisir un montant",
+  "clients.import.choose_or_drop": "Cliquez pour choisir un fichier CSV",
+  "clients.import.drop_hint": "ou déposez-le ici · 10 Mo maximum",
+  "clients.import.recognized_columns": "Colonnes reconnues",
+  "clients.import.recognized_columns_hint": "nom, e-mail, téléphone, pays, TVA, identifiant légal, adresse et conditions de paiement",
+  "clients.import.separator": "Séparateur",
+  "clients.import.mapping_waiting": "Sélectionnez un fichier puis lancez l’analyse.",
+  "clients.import.err_csv_only": "Utilisez un fichier CSV.",
+  "clients.import.err_too_large": "Le fichier dépasse la taille maximale de 10 Mo.",
+  "clients.import.analysis_summary": "Analyse terminée : {rows} ligne(s), {valid} importable(s), {mapped} colonne(s) associée(s), séparateur « {delimiter} ».",
+  "clients.import.run_count": "Importer {count}",
+  "clients.import.complete": "Import terminé : {imported} client(s) importé(s), {skipped} ignoré(s)."
 }
