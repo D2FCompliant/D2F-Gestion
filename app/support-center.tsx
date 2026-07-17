@@ -32,7 +32,7 @@ function displayDate(value: string, language: SupportLanguage) {
   return new Intl.DateTimeFormat(locales[language], { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
 }
 
-export default function SupportCenter({ session, onClose, onAttentionCount, initialTicketId = "" }: { session: SupportSession; onClose: () => void; onAttentionCount: (count: number) => void; initialTicketId?: string }) {
+export default function SupportCenter({ session, onClose, onAttentionCount, onChanged, initialTicketId = "" }: { session: SupportSession; onClose: () => void; onAttentionCount: (count: number) => void; onChanged: () => void; initialTicketId?: string }) {
   const [language] = useState<SupportLanguage>(() => typeof window === "undefined"
     ? "fr"
     : supportLanguage(localStorage.getItem("d2f-portal-language") || navigator.language));
@@ -65,7 +65,7 @@ export default function SupportCenter({ session, onClose, onAttentionCount, init
   }, [load]);
 
   function acceptResult(result: SupportPayload, preferredId?: string) {
-    setPayload(result); onAttentionCount(result.attentionCount);
+    setPayload(result); onAttentionCount(result.attentionCount); onChanged();
     const next = preferredId || selectedId || result.tickets[0]?.id || "";
     setSelectedId(result.tickets.some((ticket) => ticket.id === next) ? next : result.tickets[0]?.id || "");
   }

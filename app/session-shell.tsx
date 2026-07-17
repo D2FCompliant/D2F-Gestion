@@ -632,6 +632,11 @@ export default function SessionShell({ monthlyPriceEur, annualPriceEur }: { mont
     return () => { cancelled = true; window.clearInterval(interval); };
   }, [session]);
 
+  const notifySupportChanged = useCallback(() => {
+    const frame = document.querySelector<HTMLIFrameElement>(".web-app-frame");
+    frame?.contentWindow?.postMessage({ type: "d2f-support-updated" }, location.origin);
+  }, []);
+
   const initials = useMemo(() => session?.user.fullName.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase() || "D2F", [session]);
 
   if (loading) return <main className="session-loading"><img src="/d2f-gestion-logo.png" alt="D2F Gestion" /><span>Ouverture sécurisée…</span></main>;
@@ -640,8 +645,8 @@ export default function SessionShell({ monthlyPriceEur, annualPriceEur }: { mont
 
   return <main className="app-session-shell">
     <header className="account-bar"><div className="account-brand"><img src="/d2f-gestion-logo.png" alt="" /><strong>D2F Gestion</strong><small className="app-build-badge">v2.1.5</small><span>{session.account.name}</span></div><div className="account-actions">{warning > 0 && <span className="idle-warning">Déconnexion dans {warning} s</span>}<button className="support-header-button" onClick={() => { setDrawer(false); setSupportTicketId(""); setSupportOpen(true); }} aria-label={`Support D2F · ${supportAttentionCount} ticket(s) à consulter`}><span>Support</span>{supportAttentionCount > 0 && <strong>{supportAttentionCount}</strong>}</button>{session.account.isPlatformAdmin && <button className="admin-request-button" onClick={() => { setSupportOpen(false); setDrawer(true); }} aria-label={`${adminPendingCount} demandes clients à traiter`}><span>Demandes</span><strong>{adminPendingCount}</strong></button>}<button className="account-button" onClick={() => { setSupportOpen(false); setDrawer(true); }}><span>{initials}</span><span><strong>{session.user.fullName}</strong><small>{accountStatusLabel(session.account)}</small></span></button><button className="logout-button" onClick={logout}>Déconnexion</button></div></header>
-    {session.account.canUseApplication ? <iframe className="web-app-frame" src="/erp/index.html?v=20260717-support-filters-v215" title="D2F Gestion" allow="clipboard-read; clipboard-write" /> : <LockedSubscription session={session} onOpen={() => setDrawer(true)} onSession={setSession} />}
+    {session.account.canUseApplication ? <iframe className="web-app-frame" src="/erp/index.html?v=20260717-support-sync-v215" title="D2F Gestion" allow="clipboard-read; clipboard-write" /> : <LockedSubscription session={session} onOpen={() => setDrawer(true)} onSession={setSession} />}
     {drawer && <AccountDrawer session={session} onSession={setSession} onClose={() => setDrawer(false)} onPendingCount={setAdminPendingCount} />}
-    {supportOpen && <SupportCenter session={session} initialTicketId={supportTicketId} onClose={() => { setSupportOpen(false); setSupportTicketId(""); }} onAttentionCount={setSupportAttentionCount} />}
+    {supportOpen && <SupportCenter session={session} initialTicketId={supportTicketId} onClose={() => { setSupportOpen(false); setSupportTicketId(""); }} onAttentionCount={setSupportAttentionCount} onChanged={notifySupportChanged} />}
   </main>;
 }

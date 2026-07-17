@@ -673,8 +673,16 @@ let _mo = null;
 let _unsubCompany = null;
 let _unsubInvalidate = null;
 let _unsubLocale = null;
+let _supportMessageHandler = null;
 
 function hookDashboardAutoRefresh() {
+  if (_supportMessageHandler) window.removeEventListener("message", _supportMessageHandler);
+  _supportMessageHandler = (event) => {
+    if (event.origin !== window.location.origin || event.data?.type !== "d2f-support-updated") return;
+    refreshDashboard({ force: true });
+  };
+  window.addEventListener("message", _supportMessageHandler);
+
   const nav = q("#navModules");
   if (nav) {
     nav.addEventListener("click", () => {
