@@ -83,6 +83,16 @@ export default function SupportCenter({ session, onClose, onAttentionCount, init
     finally { setBusy(false); }
   }
 
+  async function reanalyze() {
+    if (!selected) return;
+    setBusy(true); setError(""); setMessage("");
+    try {
+      const result = await supportApi("POST", { action: "reanalyze", ticketId: selected.id });
+      acceptResult(result, selected.id);
+    } catch (caught) { setError(caught instanceof Error ? caught.message : "Analyse impossible"); }
+    finally { setBusy(false); }
+  }
+
   async function reply(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); if (!selected) return;
     const formElement = event.currentTarget;
@@ -142,6 +152,7 @@ export default function SupportCenter({ session, onClose, onAttentionCount, init
             <button className="primary-action" disabled={busy}>{busy ? copy.creating : copy.create}</button>
           </form> : selected ? <article className="support-ticket">
             <header><div><div className="support-ticket__meta"><strong>{selected.number}</strong><span className={`support-status status-${selected.status}`}>{copy.statuses[selected.status] || selected.status}</span><span className={`support-priority priority-${selected.priority}`}>{copy.priorities[selected.priority] || selected.priority}</span><span className="support-priority">{copy.scopes[selected.ticketScope] || selected.ticketScope} · {copy.requestTypes[selected.requestType] || selected.requestType}</span></div><h3>{selected.subject}</h3><p>{copy.company}: <strong>{selected.companyName}</strong> · {copy.requester}: <strong>{selected.requesterName}</strong> · {selected.contactEmail}</p></div><time>{copy.updated}: {displayDate(selected.updatedAt, language)}</time></header>
+            {payload?.isAdmin && selected.status !== "closed" && <button type="button" className="support-reanalyze" onClick={reanalyze} disabled={busy}>{copy.reanalyze}</button>}
             <section className="support-timeline">{selected.messages.map((item) => <div className={`support-message author-${item.authorType} ${item.internal ? "is-internal" : ""}`} key={item.id}><header><strong>{item.authorName || copy.authors[item.authorType] || item.authorType}</strong><span>{item.internal ? copy.internalNote : copy.authors[item.authorType]}</span><time>{displayDate(item.createdAt, language)}</time></header><p>{item.body}</p></div>)}</section>
             {selected.status !== "closed" && <form className="support-reply" onSubmit={reply}><label>{copy.reply}<textarea name="body" rows={4} maxLength={8000} required /></label>{payload?.isAdmin && <label className="support-internal"><input type="checkbox" name="internal" /><span>{copy.internalNote}</span></label>}<button className="secondary-action" disabled={busy}>{copy.sendReply}</button></form>}
             {payload?.isAdmin && selected.status !== "closed" && <form className="support-admin-form" onSubmit={updateStatus}><label>{copy.status}<select name="status" defaultValue={selected.status}>{Object.entries(copy.statuses).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label><label>{copy.assignedTo}<input name="assignedTo" defaultValue={selected.assignedTo} placeholder="support@d2fcompliant.com" /></label><label className="span-2">{copy.resolution}<textarea name="resolution" rows={3} defaultValue={selected.resolution} /></label><button className="secondary-action span-2" disabled={busy}>{copy.apply}</button></form>}

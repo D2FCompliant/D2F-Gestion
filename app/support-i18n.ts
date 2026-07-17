@@ -7,7 +7,7 @@ type SupportCopy = {
   assistantTitle: string; assistantText: string; emailActive: string; emailPending: string; reply: string; sendReply: string;
   internalNote: string; status: string; assignedTo: string; resolution: string; apply: string; close: string; back: string;
   requester: string; company: string; updated: string; waiting: string; created: string; confirmedClose: string;
-  ticketScope: string; requestType: string;
+  ticketScope: string; requestType: string; reanalyze: string;
   categories: Record<string, string>; priorities: Record<string, string>; statuses: Record<string, string>; authors: Record<string, string>;
   scopes: Record<string, string>; requestTypes: Record<string, string>;
 };
@@ -20,7 +20,7 @@ export const supportCopies: Record<SupportLanguage, SupportCopy> = {
     assistantTitle: "Assistant niveau 1", assistantText: "Un pré-diagnostic immédiat sera ajouté. Il ne clôture jamais le ticket et D2F garde la décision finale.", emailActive: "Notifications e-mail actives", emailPending: "Suivi dans l’application actif ; raccordement d’envoi e-mail à finaliser.", reply: "Votre réponse", sendReply: "Envoyer la réponse",
     internalNote: "Note interne D2F (non visible par le client)", status: "Statut", assignedTo: "Attribué à", resolution: "Solution apportée", apply: "Mettre à jour", close: "Confirmer que le ticket est soldé", back: "Retour aux tickets",
     requester: "Demandeur", company: "Entreprise", updated: "Mis à jour", waiting: "Veuillez patienter…", created: "Ticket créé", confirmedClose: "Le ticket est soldé.",
-    ticketScope: "Visibilité", requestType: "Nature de la demande",
+    ticketScope: "Visibilité", requestType: "Nature de la demande", reanalyze: "Relancer l’analyse contextuelle N1",
     categories: { access: "Connexion et accès", billing: "Abonnement", invoice: "Factures et devis", payment: "Paiements", einvoicing: "Facturation électronique", reporting: "Déclarations", compliance: "Conformité et preuves", technical: "Problème technique", other: "Autre" },
     priorities: { low: "Faible", normal: "Normale", high: "Haute", urgent: "Urgente" },
     statuses: { open: "Ouvert", in_progress: "En cours", waiting_customer: "En attente du demandeur", resolved: "Résolu", closed: "Soldé" },
@@ -34,7 +34,7 @@ export const supportCopies: Record<SupportLanguage, SupportCopy> = {
     assistantTitle: "Level-1 assistant", assistantText: "An immediate guided diagnosis will be added. It never closes a ticket and D2F retains the final decision.", emailActive: "Email notifications active", emailPending: "In-app tracking is active; outbound email delivery still needs configuration.", reply: "Your reply", sendReply: "Send reply",
     internalNote: "Internal D2F note (not visible to customer)", status: "Status", assignedTo: "Assigned to", resolution: "Resolution", apply: "Update", close: "Confirm that the ticket is closed", back: "Back to tickets",
     requester: "Requester", company: "Company", updated: "Updated", waiting: "Please wait…", created: "Ticket created", confirmedClose: "The ticket is closed.",
-    ticketScope: "Visibility", requestType: "Request type",
+    ticketScope: "Visibility", requestType: "Request type", reanalyze: "Run contextual level-1 analysis",
     categories: { access: "Sign-in and access", billing: "Subscription", invoice: "Invoices and quotes", payment: "Payments", einvoicing: "E-invoicing", reporting: "Reporting", compliance: "Compliance and evidence", technical: "Technical issue", other: "Other" },
     priorities: { low: "Low", normal: "Normal", high: "High", urgent: "Urgent" },
     statuses: { open: "Open", in_progress: "In progress", waiting_customer: "Waiting for requester", resolved: "Resolved", closed: "Closed" },
@@ -48,7 +48,7 @@ export const supportCopies: Record<SupportLanguage, SupportCopy> = {
     assistantTitle: "Asistent nivoa 1", assistantText: "Odmah se dodaje vođena dijagnostika. Asistent ne zatvara tiket; D2F donosi konačnu odluku.", emailActive: "E-mail obaveštenja su aktivna", emailPending: "Praćenje u aplikaciji je aktivno; slanje e-pošte treba povezati.", reply: "Vaš odgovor", sendReply: "Pošalji odgovor",
     internalNote: "Interna D2F beleška (nije vidljiva klijentu)", status: "Status", assignedTo: "Dodeljeno", resolution: "Rešenje", apply: "Ažuriraj", close: "Potvrdi da je tiket zatvoren", back: "Nazad na tikete",
     requester: "Podnosilac", company: "Preduzeće", updated: "Ažurirano", waiting: "Sačekajte…", created: "Tiket je kreiran", confirmedClose: "Tiket je zatvoren.",
-    ticketScope: "Vidljivost", requestType: "Vrsta zahteva",
+    ticketScope: "Vidljivost", requestType: "Vrsta zahteva", reanalyze: "Ponovi kontekstualnu N1 analizu",
     categories: { access: "Prijava i pristup", billing: "Pretplata", invoice: "Fakture i ponude", payment: "Plaćanja", einvoicing: "E-fakture", reporting: "Izveštavanje", compliance: "Usklađenost i dokazi", technical: "Tehnički problem", other: "Drugo" },
     priorities: { low: "Nizak", normal: "Normalan", high: "Visok", urgent: "Hitan" },
     statuses: { open: "Otvoren", in_progress: "U radu", waiting_customer: "Čeka podnosioca", resolved: "Rešen", closed: "Zatvoren" },
@@ -62,7 +62,7 @@ export const supportCopies: Record<SupportLanguage, SupportCopy> = {
     assistantTitle: "Assistente di livello 1", assistantText: "Viene aggiunta subito una diagnosi guidata. Non chiude mai il ticket e D2F mantiene la decisione finale.", emailActive: "Notifiche e-mail attive", emailPending: "Il monitoraggio nell’app è attivo; l’invio e-mail deve essere configurato.", reply: "La vostra risposta", sendReply: "Invia risposta",
     internalNote: "Nota interna D2F (non visibile al cliente)", status: "Stato", assignedTo: "Assegnato a", resolution: "Soluzione", apply: "Aggiorna", close: "Conferma chiusura ticket", back: "Torna ai ticket",
     requester: "Richiedente", company: "Azienda", updated: "Aggiornato", waiting: "Attendere…", created: "Ticket creato", confirmedClose: "Il ticket è chiuso.",
-    ticketScope: "Visibilità", requestType: "Tipo di richiesta",
+    ticketScope: "Visibilità", requestType: "Tipo di richiesta", reanalyze: "Ripeti analisi contestuale L1",
     categories: { access: "Accesso", billing: "Abbonamento", invoice: "Fatture e preventivi", payment: "Pagamenti", einvoicing: "Fatturazione elettronica", reporting: "Dichiarazioni", compliance: "Conformità e prove", technical: "Problema tecnico", other: "Altro" },
     priorities: { low: "Bassa", normal: "Normale", high: "Alta", urgent: "Urgente" },
     statuses: { open: "Aperto", in_progress: "In corso", waiting_customer: "In attesa del richiedente", resolved: "Risolto", closed: "Chiuso" },
@@ -76,7 +76,7 @@ export const supportCopies: Record<SupportLanguage, SupportCopy> = {
     assistantTitle: "Asistente de nivel 1", assistantText: "Se añade inmediatamente un diagnóstico guiado. Nunca cierra el ticket y D2F conserva la decisión final.", emailActive: "Notificaciones por correo activas", emailPending: "El seguimiento en la aplicación está activo; falta configurar el envío de correo.", reply: "Su respuesta", sendReply: "Enviar respuesta",
     internalNote: "Nota interna D2F (no visible para el cliente)", status: "Estado", assignedTo: "Asignado a", resolution: "Solución", apply: "Actualizar", close: "Confirmar cierre del ticket", back: "Volver a tickets",
     requester: "Solicitante", company: "Empresa", updated: "Actualizado", waiting: "Espere…", created: "Ticket creado", confirmedClose: "El ticket está cerrado.",
-    ticketScope: "Visibilidad", requestType: "Tipo de solicitud",
+    ticketScope: "Visibilidad", requestType: "Tipo de solicitud", reanalyze: "Repetir análisis contextual N1",
     categories: { access: "Acceso", billing: "Suscripción", invoice: "Facturas y presupuestos", payment: "Pagos", einvoicing: "Facturación electrónica", reporting: "Declaraciones", compliance: "Cumplimiento y pruebas", technical: "Problema técnico", other: "Otro" },
     priorities: { low: "Baja", normal: "Normal", high: "Alta", urgent: "Urgente" },
     statuses: { open: "Abierto", in_progress: "En curso", waiting_customer: "Esperando al solicitante", resolved: "Resuelto", closed: "Cerrado" },

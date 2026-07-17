@@ -1,6 +1,6 @@
 import { readAppSession } from "../../../lib/auth/server";
 import { getAccountById, memberFor } from "../../../lib/saas/accounts";
-import { addSupportMessage, createSupportTicket, listSupport, updateSupportStatus } from "../../../lib/support";
+import { addSupportMessage, createSupportTicket, listSupport, reanalyzeSupportTicket, updateSupportStatus } from "../../../lib/support";
 import { json, messageFromError } from "../_shared";
 
 export const dynamic = "force-dynamic";
@@ -29,6 +29,7 @@ export async function POST(request: Request) {
     if (!current) return json("Session expirée", 401);
     const body = await request.json() as Record<string, unknown>;
     if (body.action === "reply") return json(await addSupportMessage(current.session, body));
+    if (body.action === "reanalyze") return json(await reanalyzeSupportTicket(current.session, body));
     return json(await createSupportTicket(current.session, current.account, body));
   } catch (error) {
     return json(messageFromError(error, "Création du ticket impossible"), 400);

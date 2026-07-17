@@ -144,13 +144,23 @@ function supportMessage(ticketId: string, authorType: string, authorName: string
 
 function l1Guidance(locale: SupportLocale, category: SupportCategory, subject: string, description: string) {
   const combined = `${subject} ${description}`.toLowerCase();
-  const kind = /pdf|imprimer|print|download|télécharg/i.test(combined) ? "pdf"
-    : /mot de passe|password|connexion|login|session/i.test(combined) ? "access"
-      : /avoir|credit note|annul|solde|balance/i.test(combined) ? "credit"
-        : /peppol|sef|sdi|verifactu|pa |plateforme|e-?report/i.test(combined) ? "regulatory"
-          : category;
+  const quoteContext = /devis|quote|preventiv|presupuest|ponud/i.test(combined);
+  const actionContext = /bouton|button|action|export|envoy|send|transmi|télécharg|download/i.test(combined);
+  const kind = quoteContext && actionContext ? "quote_actions"
+    : /csv|import|glisser|déposer|drag|drop/i.test(combined) ? "csv_import"
+      : /licen[cs]e|abonnement|subscription|réactiv|reactiv|suspend/i.test(combined) ? "license"
+        : /pdf|imprimer|print|download|télécharg/i.test(combined) ? "pdf"
+          : /mot de passe|password|connexion|login|session/i.test(combined) ? "access"
+            : /avoir|credit note|annul|solde|balance/i.test(combined) ? "credit"
+              : /peppol|sef|sdi|verifactu|pa |plateforme|e-?report/i.test(combined) ? "regulatory"
+                : actionContext ? "missing_action"
+                  : category;
   const guidance: Record<SupportLocale, Record<string, string>> = {
     fr: {
+      quote_actions: "J’ai compris : l’action Exporter ou Envoyer est attendue dans l’onglet Devis, mais elle n’y apparaît pas et vous la trouvez seulement dans Exports.\n\nDiagnostic probable : ce n’est pas un problème de navigateur. Le parcours actuel centralise ces actions dans Exports ; le ticket porte donc sur une action manquante ou une incohérence d’ergonomie dans Devis.\n\nSuite utile pour D2F : vérifier le devis sélectionné et son statut, puis décider quelles actions Exporter / Envoyer doivent être accessibles directement depuis la barre d’actions Devis. Inutile de recharger la page. Si un devis précis est concerné, ajoutez uniquement son numéro.",
+      csv_import: "J’ai compris : l’import CSV ne permet pas de sélectionner un fichier local ou de le glisser-déposer. Ce n’est pas un problème de format tant que le sélecteur de fichier ne s’ouvre pas. D2F doit d’abord vérifier le bouton de sélection et la zone de dépôt, puis seulement analyser le séparateur et les colonnes du fichier.",
+      license: "J’ai compris : la demande concerne la suspension ou la réactivation d’une licence ou d’un abonnement. D2F doit vérifier l’état exact du compte, la période d’essai et la date de suspension avant toute action. Ne recréez pas de compte et ne relancez pas un paiement pour contourner le statut.",
+      missing_action: "J’ai compris qu’une action attendue n’apparaît pas dans l’interface. Ce n’est pas utile de recharger par défaut. Indiquez l’onglet, le libellé exact de l’action et l’état du document concerné ; D2F vérifiera si l’action est masquée par le statut, déplacée dans un autre module ou réellement absente.",
       access: "Pré-diagnostic niveau 1 : vérifiez que vous utilisez gestion.d2fcompliant.org, puis essayez « Mot de passe oublié ». Après 30 minutes d’inactivité, une nouvelle authentification est normale. N’envoyez jamais votre mot de passe dans ce ticket.",
       pdf: "Pré-diagnostic niveau 1 : ouvrez le document concerné, vérifiez qu’un client et un numéro sont présents, enregistrez, puis relancez l’export PDF depuis le navigateur. Indiquez le numéro du document et le message exact si le problème persiste.",
       credit: "Pré-diagnostic niveau 1 : contrôlez le lien entre la facture et l’avoir, puis consultez la synthèse Paiements. Une facture entièrement annulée par avoir ne doit plus apparaître comme restant à encaisser.",
@@ -160,10 +170,14 @@ function l1Guidance(locale: SupportLocale, category: SupportCategory, subject: s
       invoice: "Pré-diagnostic niveau 1 : vérifiez la fiche client, la date, les lignes, la TVA et le statut de la facture. Indiquez son numéro et l’action exacte qui échoue.",
       reporting: "Pré-diagnostic niveau 1 : préparez la période, ouvrez les dossiers À contrôler, puis corrigez chaque anomalie avant transmission. Le connecteur national doit être validé.",
       compliance: "Pré-diagnostic niveau 1 : précisez le pays, l’opération et la preuve concernée. L’assistant peut guider le classement mais la validation réglementaire finale reste humaine.",
-      technical: "Pré-diagnostic niveau 1 : rechargez la page, notez l’heure, l’onglet, l’appareil et le navigateur, puis reproduisez une fois. Ajoutez le message exact sans donnée sensible.",
+      technical: "J’ai lu la demande « {subject} ». Je ne propose pas de recharger la page sans indice de panne temporaire. Pour qualifier le ticket, D2F doit distinguer une action absente, une action déplacée et une action bloquée par le statut du document. Ajoutez seulement le libellé de l’onglet, l’action attendue et ce qui apparaît à sa place ; l’heure et le navigateur ne sont utiles que si le comportement est intermittent.",
       other: "Pré-diagnostic niveau 1 : précisez l’onglet, le résultat attendu, le résultat observé, l’heure et les étapes de reproduction. Un membre D2F reprendra le ticket si nécessaire.",
     },
     en: {
+      quote_actions: "I understand that Export or Send is expected in the Quotes tab, but is missing there and only appears under Exports.\n\nLikely diagnosis: this is not a browser issue. The current workflow centralises these actions under Exports, so the ticket concerns a missing action or a navigation inconsistency in Quotes.\n\nUseful next step for D2F: check the selected quote and its status, then decide which Export / Send actions must also appear in the Quotes action bar. Reloading is not useful. If one quote is affected, add only its number.",
+      csv_import: "I understand that CSV import does not let you select a local file or drag and drop it. This is not a CSV-format issue while the file picker itself does not open. D2F should first check the picker and drop zone, then inspect delimiter and columns.",
+      license: "I understand that this concerns suspension or reactivation of a licence or subscription. D2F should check the exact account status, trial window and suspension date before taking action. Do not create another account or repeat payment to bypass the status.",
+      missing_action: "I understand that an expected action is missing from the interface. Reloading should not be the default answer. Provide the tab, exact action label and document status; D2F will check whether it is hidden by status, moved to another module or actually missing.",
       access: "Level-1 check: confirm that you use gestion.d2fcompliant.org, then try “Forgot password”. Re-authentication after 30 minutes of inactivity is expected. Never send a password in a ticket.",
       pdf: "Level-1 check: open the document, verify that its customer and number are present, save it, then retry the browser PDF export. Include the document number and exact error if it persists.",
       credit: "Level-1 check: verify the link between the invoice and credit note, then open the Payments overview. A fully credited invoice must no longer show an outstanding balance.",
@@ -173,10 +187,14 @@ function l1Guidance(locale: SupportLocale, category: SupportCategory, subject: s
       invoice: "Level-1 check: verify the customer, date, lines, VAT and invoice status. Include its number and the exact action that fails.",
       reporting: "Level-1 check: prepare the period, open the items to review, then resolve each issue before submission. The national connector must be validated.",
       compliance: "Level-1 check: specify the country, transaction and evidence concerned. The assistant can guide classification, but final regulatory validation remains human.",
-      technical: "Level-1 check: reload the page, record the time, tab, device and browser, then reproduce once. Include the exact message without sensitive data.",
+      technical: "I read the request “{subject}”. I will not suggest reloading without evidence of a temporary failure. D2F should distinguish a missing action, a moved action and one blocked by document status. Add only the tab, expected action and what appears instead; time and browser matter only for intermittent behaviour.",
       other: "Level-1 check: specify the tab, expected result, observed result, time and reproduction steps. A D2F team member will take over when needed.",
     },
     sr: {
+      quote_actions: "Razumem: radnje Izvoz ili Slanje očekuju se u modulu Ponude, ali se tamo ne vide i dostupne su samo u modulu Izvoz.\n\nVerovatna dijagnoza: ovo nije problem pregledača. Trenutni tok centralizuje radnje u modulu Izvoz, pa tiket opisuje nedostajuću radnju ili nedoslednu navigaciju u Ponudama.\n\nSledeći korak za D2F: proveriti izabranu ponudu i status, zatim odlučiti koje radnje treba dodati direktno u traku Ponude. Osvežavanje stranice nije korisno.",
+      csv_import: "Razumem: CSV uvoz ne omogućava izbor lokalne datoteke ili prevlačenje. Dok se izbor datoteke ne otvara, problem nije u CSV formatu. D2F prvo proverava birač i zonu za prevlačenje, zatim separator i kolone.",
+      license: "Razumem: zahtev se odnosi na suspenziju ili ponovno aktiviranje licence ili pretplate. D2F treba da proveri status naloga, probni period i datum suspenzije. Ne pravite drugi nalog i ne ponavljajte uplatu.",
+      missing_action: "Razumem da očekivana radnja nedostaje u interfejsu. Osvežavanje nije podrazumevani odgovor. Navedite modul, tačan naziv radnje i status dokumenta; D2F proverava da li je skrivena, premeštena ili zaista nedostaje.",
       access: "Nivo 1: proverite da koristite gestion.d2fcompliant.org, zatim pokušajte „Zaboravljena lozinka“. Nova prijava posle 30 minuta neaktivnosti je očekivana. Ne šaljite lozinku u tiketu.",
       pdf: "Nivo 1: otvorite dokument, proverite klijenta i broj, sačuvajte i ponovite PDF izvoz. Ako problem ostane, navedite broj dokumenta i tačnu poruku.",
       credit: "Nivo 1: proverite vezu fakture i knjižnog odobrenja, zatim pregled Plaćanja. Potpuno stornirana faktura ne sme imati preostali saldo.",
@@ -186,10 +204,14 @@ function l1Guidance(locale: SupportLocale, category: SupportCategory, subject: s
       invoice: "Nivo 1: proverite klijenta, datum, stavke, PDV i status fakture. Navedite broj i tačnu radnju koja ne uspeva.",
       reporting: "Nivo 1: pripremite period, otvorite stavke za proveru i ispravite greške pre slanja. Nacionalni konektor mora biti potvrđen.",
       compliance: "Nivo 1: navedite zemlju, transakciju i dokaz. Asistent pomaže klasifikaciji, ali konačna regulatorna potvrda ostaje ljudska.",
-      technical: "Nivo 1: osvežite stranicu, zabeležite vreme, karticu, uređaj i pregledač, pa ponovite jednom. Dodajte poruku bez osetljivih podataka.",
+      technical: "Pročitao sam zahtev „{subject}“. Ne predlažem osvežavanje bez znaka privremenog kvara. D2F treba da razlikuje radnju koja nedostaje, premeštenu radnju i radnju blokiranu statusom dokumenta. Dodajte modul, očekivanu radnju i ono što se prikazuje umesto nje.",
       other: "Nivo 1: navedite karticu, očekivani i dobijeni rezultat, vreme i korake. D2F tim preuzima tiket kada je potrebno.",
     },
     it: {
+      quote_actions: "Ho capito: le azioni Esporta o Invia sono attese nella scheda Preventivi, ma non compaiono e sono disponibili soltanto in Esportazioni.\n\nDiagnosi probabile: non è un problema del browser. Il flusso attuale centralizza queste azioni in Esportazioni; il ticket riguarda quindi un’azione mancante o un’incoerenza di navigazione nei Preventivi.\n\nPasso utile per D2F: verificare preventivo selezionato e stato, poi decidere quali azioni aggiungere direttamente alla barra Preventivi. Ricaricare la pagina non serve.",
+      csv_import: "Ho capito: l’importazione CSV non consente di scegliere un file locale o trascinarlo. Finché il selettore non si apre, non è un problema di formato CSV. D2F deve verificare prima selettore e area di rilascio, poi separatore e colonne.",
+      license: "Ho capito: la richiesta riguarda sospensione o riattivazione di una licenza o di un abbonamento. D2F deve controllare stato del conto, periodo di prova e data di sospensione. Non create un altro account e non ripetete il pagamento.",
+      missing_action: "Ho capito che manca un’azione attesa nell’interfaccia. Ricaricare non deve essere la risposta predefinita. Indicate scheda, etichetta esatta e stato del documento; D2F verificherà se l’azione è nascosta, spostata o assente.",
       access: "Controllo L1: verificate di usare gestion.d2fcompliant.org, poi provate “Password dimenticata”. Una nuova autenticazione dopo 30 minuti di inattività è normale. Non inviate mai la password.",
       pdf: "Controllo L1: aprite il documento, verificate cliente e numero, salvate e riprovate l’esportazione PDF. Se persiste, indicate numero e messaggio esatto.",
       credit: "Controllo L1: verificate il collegamento tra fattura e nota di credito e poi la sintesi Pagamenti. Una fattura totalmente stornata non deve avere saldo residuo.",
@@ -199,10 +221,14 @@ function l1Guidance(locale: SupportLocale, category: SupportCategory, subject: s
       invoice: "Controllo L1: verificate cliente, data, righe, IVA e stato della fattura. Indicate numero e azione esatta che non riesce.",
       reporting: "Controllo L1: preparate il periodo, aprite gli elementi da controllare e correggete gli errori prima dell’invio. Il connettore nazionale deve essere convalidato.",
       compliance: "Controllo L1: indicate paese, operazione e prova. L’assistente guida la classificazione, ma la convalida normativa finale resta umana.",
-      technical: "Controllo L1: ricaricate la pagina, annotate ora, scheda, dispositivo e browser, poi riproducete una volta. Inserite il messaggio senza dati sensibili.",
+      technical: "Ho letto la richiesta “{subject}”. Non propongo di ricaricare senza indizi di un errore temporaneo. D2F deve distinguere un’azione assente, spostata o bloccata dallo stato del documento. Aggiungete solo scheda, azione attesa e ciò che appare al suo posto.",
       other: "Controllo L1: indicate scheda, risultato atteso e osservato, ora e passaggi. Un operatore D2F prenderà in carico il ticket se necessario.",
     },
     es: {
+      quote_actions: "Entiendo que las acciones Exportar o Enviar deberían estar en Presupuestos, pero no aparecen allí y solo se encuentran en Exportaciones.\n\nDiagnóstico probable: no es un problema del navegador. El flujo actual centraliza estas acciones en Exportaciones; el ticket trata de una acción ausente o de una incoherencia de navegación en Presupuestos.\n\nSiguiente paso útil para D2F: comprobar el presupuesto seleccionado y su estado, y decidir qué acciones deben añadirse directamente a la barra de Presupuestos. Recargar la página no sirve.",
+      csv_import: "Entiendo que la importación CSV no permite seleccionar un archivo local ni arrastrarlo. Mientras no se abra el selector, no es un problema del formato CSV. D2F debe comprobar primero el selector y la zona de depósito, y después separador y columnas.",
+      license: "Entiendo que la solicitud se refiere a suspender o reactivar una licencia o suscripción. D2F debe comprobar el estado exacto, el periodo de prueba y la fecha de suspensión. No cree otra cuenta ni repita el pago.",
+      missing_action: "Entiendo que falta una acción esperada en la interfaz. Recargar no debe ser la respuesta predeterminada. Indique pestaña, etiqueta exacta y estado del documento; D2F comprobará si está oculta, trasladada o realmente ausente.",
       access: "Comprobación N1: confirme que usa gestion.d2fcompliant.org y pruebe «Contraseña olvidada». Una nueva autenticación tras 30 minutos es normal. Nunca envíe su contraseña.",
       pdf: "Comprobación N1: abra el documento, verifique cliente y número, guarde y repita la exportación PDF. Si continúa, indique el número y el mensaje exacto.",
       credit: "Comprobación N1: verifique el vínculo entre factura y abono y consulte Pagos. Una factura totalmente anulada no debe mostrar saldo pendiente.",
@@ -212,11 +238,12 @@ function l1Guidance(locale: SupportLocale, category: SupportCategory, subject: s
       invoice: "Comprobación N1: verifique cliente, fecha, líneas, IVA y estado. Indique el número y la acción exacta que falla.",
       reporting: "Comprobación N1: prepare el período, abra los elementos por revisar y corrija los errores antes del envío. El conector nacional debe estar validado.",
       compliance: "Comprobación N1: indique país, operación y prueba. El asistente orienta la clasificación; la validación normativa final sigue siendo humana.",
-      technical: "Comprobación N1: recargue la página, anote hora, pestaña, dispositivo y navegador, y reproduzca una vez. Añada el mensaje sin datos sensibles.",
+      technical: "He leído la solicitud «{subject}». No propongo recargar sin indicios de un fallo temporal. D2F debe distinguir una acción ausente, trasladada o bloqueada por el estado del documento. Añada solo pestaña, acción esperada y lo que aparece en su lugar.",
       other: "Comprobación N1: indique pestaña, resultado esperado y observado, hora y pasos. Un miembro de D2F retomará el ticket cuando sea necesario.",
     },
   };
-  return guidance[locale][kind] || guidance[locale][category] || guidance[locale].other;
+  const response = guidance[locale][kind] || guidance[locale][category] || guidance[locale].other;
+  return response.replaceAll("{subject}", text(subject, 120) || "ticket");
 }
 
 function publicMessage(row: JsonRecord) {
@@ -326,6 +353,25 @@ export async function createSupportTicket(session: AppSession, account: TenantAc
     queueNotification(ticket, configuration.supportEmail, `[${ticketNumber}] ${ticketScope === "internal" ? "Ticket interne" : "Nouveau ticket"} — ${subject}`, `Entreprise : ${account.name}\nDemandeur : ${session.fullName} <${contactEmail}>\nNature : ${requestType}\nPriorité : ${priority}\n\n${description}`),
     queueNotification(ticket, contactEmail, `[${ticketNumber}] Votre demande de support D2F`, `Votre ticket ${ticketNumber} est enregistré.\n\n${guidance}\n\nD2F vous informera à chaque réponse et changement de statut.`),
   ]);
+  return listSupport(session);
+}
+
+export async function reanalyzeSupportTicket(session: AppSession, input: JsonRecord) {
+  const admin = isPlatformAdminEmail(session.email);
+  if (!admin) throw new Error("Seul D2F peut relancer le diagnostic niveau 1");
+  const ticket = await ticketRow(session, text(input.ticketId, 80), true);
+  if (String(ticket.status) === "closed") throw new Error("Le diagnostic d’un ticket soldé ne peut pas être relancé");
+  const locale = locales.has(ticket.locale as SupportLocale) ? ticket.locale as SupportLocale : "fr";
+  const category = categories.has(ticket.category as SupportCategory) ? ticket.category as SupportCategory : "other";
+  const guidance = l1Guidance(locale, category, String(ticket.subject || ""), String(ticket.description || ""));
+  const updated = {
+    ...ticket,
+    l1_mode: "contextual",
+    l1_summary: guidance.slice(0, 1000),
+    updated_at: new Date().toISOString(),
+    messages: [...records(ticket.messages), supportMessage(String(ticket.id), "assistant", "Assistant D2F niveau 1", SUPPORT_EMAIL, guidance)],
+  };
+  await saveCompanySupportTicket(String(ticket.__owner_key || session.ownerKey), updated);
   return listSupport(session);
 }
 

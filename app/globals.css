@@ -478,6 +478,9 @@ button { cursor:pointer; }
 .support-ticket__meta{ display:flex; flex-wrap:wrap; align-items:center; gap:7px; }.support-ticket__meta>strong{ color:#075fae; font-size:13px; }
 .support-ticket>header h3{ margin:9px 0 5px; font-size:24px; line-height:1.15; }.support-ticket>header p{ margin:0; color:#687c8e; font-size:10px; line-height:1.5; }
 .support-ticket>header>time{ flex:0 0 auto; color:#748695; font-size:9px; }
+.support-reanalyze{ justify-self:start; padding:9px 12px; border:1px solid #86b9db; border-radius:9px; color:#145f91; background:#eef8ff; font-size:11px; font-weight:850; cursor:pointer; }
+.support-reanalyze:hover{ border-color:#1674c5; background:#e3f3ff; }
+.support-reanalyze:disabled{ cursor:wait; opacity:.6; }
 .support-timeline{ display:grid; gap:10px; }
 .support-message{ padding:14px 16px; border:1px solid #d9e3ea; border-radius:12px; background:#fff; }
 .support-message.author-requester{ margin-left:8%; border-color:#c7d9e7; background:#f2f8fc; }.support-message.author-support{ margin-right:8%; border-color:#a9d9c0; background:#f0faf5; }.support-message.author-assistant{ margin-right:12%; border-color:#b8d7ec; background:#edf7fd; }.support-message.author-system{ padding:9px 12px; border-style:dashed; background:#f6f8fa; }
