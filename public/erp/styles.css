@@ -5265,3 +5265,39 @@ button.dashManagementKpi:hover{border-color:rgba(99,102,241,.38);transform:trans
 .page[data-page="financial-reconciliation"] .platformTableWrap,
 .page[data-page="expenses-reports"] .platformTableWrap,
 .page[data-page="expenses-approvals"] .platformTableWrap{max-height:clamp(300px,55dvh,650px)}
+
+
+/* D2F Expenses 3.1 — complete desktop workspace and touch-first personal mobile view */
+.platformExpenseFilters{display:flex;align-items:end;gap:8px;flex-wrap:wrap}
+.platformExpenseFilters label{display:grid;gap:4px;color:var(--muted);font-size:10px;font-weight:800}
+.platformExpenseFilters input,.platformExpenseFilters select{min-width:128px;border:1px solid var(--stroke);border-radius:9px;background:#fff;padding:8px 9px;color:var(--text)}
+.expenseMobileReports{display:none}
+.expenseReportTotals{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;padding:12px 14px;border-bottom:1px solid var(--stroke);background:#fbfdfc}
+.expenseReportTotals span{display:grid;gap:3px;padding:10px 12px;border:1px solid #dce9e4;border-radius:12px;background:#fff}
+.expenseReportTotals small{color:var(--muted);font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.05em}
+.expenseReportTotals strong{font-size:16px;color:#12362d}
+.expenseEvidenceSection{display:grid;grid-template-columns:minmax(180px,.35fr) minmax(0,1fr);gap:14px;padding:14px;border-top:1px solid var(--stroke)}
+.expenseEvidenceSection h3{margin:0;font-size:15px}.expenseEvidenceSection p{margin:4px 0 0;color:var(--muted);font-size:11px;line-height:1.4}
+.expenseReceiptList{display:grid;gap:7px}
+.expenseReceiptList article{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 11px;border:1px solid #dde8e4;border-radius:11px;background:#fff}
+.expenseReceiptList article>div{min-width:0;display:grid;gap:2px}.expenseReceiptList article strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px}.expenseReceiptList article small{color:var(--muted);font-size:10px}
+.expenseSecurityChecklist{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin:12px 0 0;padding:0;list-style:none}
+.expenseSecurityChecklist li{padding:9px 10px 9px 30px;position:relative;border:1px solid #d8e9e3;border-radius:10px;background:#f5fcf9;color:#31584d;font-size:11px;line-height:1.35}
+.expenseSecurityChecklist li::before{content:"✓";position:absolute;left:10px;color:#0f9f75;font-weight:950}
+
+@media(max-width:760px){
+  .page[data-page="expenses-reports"].platformPage.is-active,.page[data-page="expenses-capture"].platformPage.is-active{padding:8px 8px 104px;gap:8px}
+  .page[data-page="expenses-reports"] .platformHero,.page[data-page="expenses-capture"] .platformHero{padding:14px}
+  .page[data-page="expenses-reports"] .platformCreatePanel .platformPanel__head{display:none}
+  .platformExpenseFilters{width:100%;display:grid;grid-template-columns:1fr 1fr}.platformExpenseFilters label:first-child{grid-column:1/-1}
+  .platformExpenseFilters input,.platformExpenseFilters select{min-width:0;width:100%}
+  .expenseDesktopTable{display:none!important}.expenseMobileReports{display:grid;gap:9px;padding:10px;background:#f4f8f6}
+  .expenseMobileCard{display:grid;gap:10px;padding:13px;border:1px solid #d7e5df;border-radius:15px;background:#fff;box-shadow:0 5px 16px rgba(24,74,58,.06)}
+  .expenseMobileCard header{display:flex;align-items:start;justify-content:space-between;gap:8px}.expenseMobileCard header>div{min-width:0;display:grid;gap:3px}.expenseMobileCard header strong{font-size:13px;color:#075e49}.expenseMobileCard header span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px}
+  .expenseMobileCard__stats{display:flex;gap:6px;flex-wrap:wrap}.expenseMobileCard__stats span{padding:5px 7px;border-radius:8px;background:#eef7f3;color:#41655b;font-size:10px;font-weight:750}
+  .expenseMobileCard footer{display:grid;grid-template-columns:1fr 1fr;gap:7px}.expenseMobileCard footer .btn{width:100%;min-height:40px}
+  .expenseReportTotals{grid-template-columns:1fr 1fr;padding:10px}.expenseReportTotals span{padding:9px}.expenseReportTotals strong{font-size:14px}
+  .expenseEvidenceSection{grid-template-columns:1fr;padding:11px}.expenseReceiptList article{align-items:flex-start}.expenseReceiptList .btn{flex:0 0 auto}
+  .expenseSecurityChecklist{grid-template-columns:1fr}.expenseCaptureDrop{min-height:180px}.expenseCaptureReady{position:sticky;bottom:8px;z-index:8;box-shadow:0 8px 26px rgba(15,76,60,.18)}
+  .page[data-page="expenses-reports"] .platformDetailPanel .platformTableWrap{max-height:42dvh}
+}

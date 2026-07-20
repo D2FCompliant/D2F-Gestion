@@ -13,7 +13,7 @@ import { accountAllowsApplication, getAccountById, memberFor } from "../../lib/s
 import { validateEstablishmentIdentifier } from "../../lib/company-identifiers";
 import { preflightInvoice } from "../../lib/country-compliance";
 import { issueInvoiceAtomically } from "../../lib/platform/issue-invoice";
-import { addExpenseLine, createExpenseReport, decideExpenseReport, listExpenseWorkspace, listFinancialWorkspace, refreshFinancialProjections, submitExpenseReport, uploadExpenseReceipt } from "../../lib/platform/financial-expense";
+import { addExpenseLine, createExpenseReport, decideExpenseReport, getExpenseReceiptAccess, listExpenseWorkspace, listFinancialWorkspace, refreshFinancialProjections, submitExpenseReport, uploadExpenseReceipt } from "../../lib/platform/financial-expense";
 import { registerCustomerPaymentAtomically } from "../../lib/platform/register-customer-payment";
 
 export const dynamic = "force-dynamic";
@@ -945,7 +945,11 @@ function previewResult(method: string) {
   if (method.endsWith(":get") || method.endsWith(":getFull")) return null;
   if (method === "platform:capabilities") return { applications: { internalD2F: true, gestion: true, financial: true, expenses: true }, countryPack: { country: "RS", packId: "country.rs.expense", version: "1.0.0-preview", status: "policy_validation_required" } };
   if (method === "financial:workspace") return { invoices: [], proposals: [], summary: { projectedInvoices: 0, proposalDrafts: 0, amountAwaitingValidation: 0 } };
-  if (method === "expenses:workspace") return { reports: [], lines: [], receipts: [], summary: { draft: 0, submitted: 0, approved: 0, totalApproved: 0 } };
+  if (method === "expenses:workspace") return {
+    reports: [], lines: [], receipts: [], claimants: [],
+    access: { actorId: "preview", role: "owner", scope: "tenant", canApprove: true },
+    summary: { draft: 0, submitted: 0, approvable: 0, approved: 0, totalApproved: 0 },
+  };
   return undefined;
 }
 
@@ -1310,10 +1314,11 @@ async function dispatch(ownerEmail: string, method: string, args: unknown[], ten
   if (method === "xpReject:load" || method === "rejectionReasons:load") return rejectionReasons;
   if (method === "financial:workspace") return listFinancialWorkspace(getSupabaseAdmin(), ownerEmail);
   if (method === "financial:refreshProjections") return refreshFinancialProjections(getSupabaseAdmin(), ownerEmail);
-  if (method === "expenses:workspace") return listExpenseWorkspace(getSupabaseAdmin(), ownerEmail);
+  if (method === "expenses:workspace") return listExpenseWorkspace(getSupabaseAdmin(), ownerEmail, actorId, actorRole);
   if (method === "expenses:createReport") return createExpenseReport(getSupabaseAdmin(), ownerEmail, tenantIdentity?.tenantId || ownerEmail, actorId, first(args));
-  if (method === "expenses:addLine") return addExpenseLine(getSupabaseAdmin(), ownerEmail, tenantIdentity?.country || "", first(args));
+  if (method === "expenses:addLine") return addExpenseLine(getSupabaseAdmin(), ownerEmail, tenantIdentity?.country || "", actorId, first(args));
   if (method === "expenses:uploadReceipt") return uploadExpenseReceipt(getSupabaseAdmin(), ownerEmail, actorId, first(args));
+  if (method === "expenses:receiptAccess") return getExpenseReceiptAccess(getSupabaseAdmin(), ownerEmail, actorId, actorRole, first(args));
   if (method === "expenses:submit") return submitExpenseReport(getSupabaseAdmin(), ownerEmail, tenantIdentity?.country || "", actorId, first(args));
   if (method === "expenses:decide") {
     if (actorRole !== "owner") throw new Error("Seul le proprietaire peut approuver ou refuser une note de frais dans cette premiere version");

@@ -208,3 +208,34 @@ test("implements Chapters 16-18 canonical ownership and settlement invariants", 
   assert.match(html, /expense-line-payment-method/);
   assert.match(html, /expense-line-personal/);
 });
+
+
+test("makes Expenses operational and secure for every supported country and device", async () => {
+  const [migration, service, route, html, ui, styles] = await Promise.all([
+    readFile(new URL("supabase/migrations/20260720180000_expenses_operational_all_countries.sql", root), "utf8"),
+    readFile(new URL("lib/platform/financial-expense.ts", root), "utf8"),
+    readFile(new URL("app/rpc/route.ts", root), "utf8"),
+    readFile(new URL("public/erp/index.html", root), "utf8"),
+    readFile(new URL("public/erp/financial-expense-ui.js", root), "utf8"),
+    readFile(new URL("public/erp/styles.css", root), "utf8"),
+  ]);
+  for (const country of ["FR", "RS", "IT", "ES"]) assert.match(migration, new RegExp("'" + country + "'"));
+  assert.match(migration, /legalThresholds.*human_validation_required/s);
+  assert.match(migration, /d2f_preserve_expense_receipt_original_v1/);
+  assert.match(migration, /verified_media_type/);
+  assert.match(migration, /claimant_id<>p_actor_id/);
+  assert.match(migration, /claimant_id=p_actor_id/);
+  assert.match(service, /actorRole !== "owner".*claimant_id/s);
+  assert.match(service, /verifiedReceiptMediaType/);
+  assert.match(service, /createSignedUrl.*120/);
+  assert.match(service, /Seul le demandeur peut ajouter un justificatif/);
+  assert.match(route, /expenses:receiptAccess/);
+  assert.match(html, /id="expense-mobile-reports"/);
+  assert.match(html, /id="expense-claimant-filter"/);
+  assert.match(html, /id="expense-receipts-list"/);
+  assert.match(ui, /report.can_edit/);
+  assert.match(ui, /report.can_approve/);
+  assert.match(ui, /expenses:viewReceipt/);
+  assert.match(styles, /.expenseMobileReports/);
+  assert.match(styles, /max-width:760px/);
+});

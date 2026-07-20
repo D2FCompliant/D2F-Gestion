@@ -105,41 +105,48 @@ export async function listFinancialWorkspace(supabase: SupabaseClient, ownerKey:
   };
 }
 
-export async function listExpenseWorkspace(supabase: SupabaseClient, ownerKey: string) {
-  const reports = await supabase
+export async function listExpenseWorkspace(
+  supabase: SupabaseClient,
+  ownerKey: string,
+  actorId: string,
+  actorRole: "owner" | "collaborator",
+) {
+  let reportsQuery = supabase
     .from("d2f_expense_reports")
     .select("id,report_number,claimant_id,claimant_name,title,currency,status,total_net,total_tax,total_gross,claimed_amount,eligible_amount,rejected_amount,personal_amount,reimbursable_amount,advance_amount,reimbursed_amount,remaining_amount,reimbursement_status,accounting_status,aggregate_version,submitted_at,decided_at,approver_id,decision_note,created_at,updated_at")
-    .eq("owner_key", ownerKey)
-    .order("updated_at", { ascending: false })
-    .limit(200);
+    .eq("owner_key", ownerKey);
+  if (actorRole !== "owner") reportsQuery = reportsQuery.eq("claimant_id", actorId);
+  const reports = await reportsQuery.order("updated_at", { ascending: false }).limit(500);
   throwDatabase(reports.error);
 
-  const ids = (reports.data || []).map((report) => report.id);
-  if (!ids.length) return { reports: [], lines: [], receipts: [], summary: { draft: 0, submitted: 0, approved: 0, totalApproved: 0 } };
+  const baseRows = reports.data || [];
+  const rows = baseRows.map((report) => ({
+    ...report,
+    is_mine: String(report.claimant_id) === actorId,
+    can_edit: String(report.claimant_id) === actorId && ["draft", "returned"].includes(report.status),
+    can_approve: actorRole === "owner" && String(report.claimant_id) !== actorId && report.status === "submitted",
+  }));
+  const access = { actorId, role: actorRole, scope: actorRole === "owner" ? "tenant" : "personal", canApprove: actorRole === "owner" };
+  const ids = rows.map((report) => report.id);
+  if (!ids.length) return { reports: [], lines: [], receipts: [], claimants: [], access, summary: { draft: 0, submitted: 0, approvable: 0, approved: 0, totalApproved: 0 } };
 
   const [lines, receipts] = await Promise.all([
-    supabase
-      .from("d2f_expense_lines")
+    supabase.from("d2f_expense_lines")
       .select("id,report_id,occurred_on,merchant,description,category,business_purpose,country,currency,net_amount,tax_amount,gross_amount,payment_method,original_currency,original_gross_amount,personal_amount,reimbursable_amount,reimbursable,vat_recoverability,receipt_required,policy_version,policy_evaluated_at,policy_result,created_at")
-      .in("report_id", ids)
-      .order("occurred_on", { ascending: false }),
-    supabase
-      .from("d2f_expense_receipts")
-      .select("id,report_id,expense_line_id,original_filename,media_type,byte_size,sha256,captured_at,uploaded_by,origin,extraction_status,capture_context,capture_location,created_at")
-      .in("report_id", ids)
-      .order("created_at", { ascending: false }),
+      .in("report_id", ids).order("occurred_on", { ascending: false }),
+    supabase.from("d2f_expense_receipts")
+      .select("id,report_id,expense_line_id,original_filename,media_type,verified_media_type,byte_size,sha256,captured_at,uploaded_by,origin,extraction_status,security_status,immutable_original,retention_until,capture_context,capture_location,created_at")
+      .in("report_id", ids).order("created_at", { ascending: false }),
   ]);
-  throwDatabase(lines.error);
-  throwDatabase(receipts.error);
-
-  const rows = reports.data || [];
+  throwDatabase(lines.error); throwDatabase(receipts.error);
+  const claimants = [...new Map(rows.map((report) => [String(report.claimant_id), { id: String(report.claimant_id), name: String(report.claimant_name || report.claimant_id) }])).values()]
+    .sort((left, right) => left.name.localeCompare(right.name));
   return {
-    reports: rows,
-    lines: lines.data || [],
-    receipts: receipts.data || [],
+    reports: rows, lines: lines.data || [], receipts: receipts.data || [], claimants, access,
     summary: {
       draft: rows.filter((item) => item.status === "draft" || item.status === "returned").length,
       submitted: rows.filter((item) => item.status === "submitted").length,
+      approvable: rows.filter((item) => item.can_approve).length,
       approved: rows.filter((item) => item.status === "approved").length,
       totalApproved: rows.filter((item) => item.status === "approved").reduce((sum, item) => sum + Number(item.total_gross || 0), 0),
     },
@@ -183,18 +190,20 @@ export async function addExpenseLine(
   supabase: SupabaseClient,
   ownerKey: string,
   establishmentCountry: string,
+  actorId: string,
   inputValue: unknown,
 ) {
   const input = object(inputValue);
   const reportId = text(input.reportId || input.report_id);
   const report = await supabase
     .from("d2f_expense_reports")
-    .select("id,status,currency")
+    .select("id,status,currency,claimant_id")
     .eq("id", reportId)
     .eq("owner_key", ownerKey)
     .maybeSingle();
   throwDatabase(report.error);
   if (!report.data) throw new Error("Note de frais introuvable");
+  if (String(report.data.claimant_id) !== actorId) throw new Error("Seul le demandeur peut modifier sa note de frais");
   if (!["draft", "returned"].includes(report.data.status)) throw new Error("Cette note de frais n'est plus modifiable");
 
   const net = amount(input.netAmount ?? input.net_amount);
@@ -261,6 +270,15 @@ function hex(bytes: ArrayBuffer) {
   return Array.from(new Uint8Array(bytes), (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
+function verifiedReceiptMediaType(bytes: Uint8Array) {
+  const starts = (...signature: number[]) => signature.every((value, index) => bytes[index] === value);
+  if (starts(0xff, 0xd8, 0xff)) return "image/jpeg";
+  if (starts(0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a)) return "image/png";
+  if (bytes.length >= 12 && String.fromCharCode(...bytes.slice(0, 4)) === "RIFF" && String.fromCharCode(...bytes.slice(8, 12)) === "WEBP") return "image/webp";
+  if (bytes.length >= 5 && String.fromCharCode(...bytes.slice(0, 5)) === "%PDF-") return "application/pdf";
+  return "";
+}
+
 function receiptFileName(value: unknown) {
   return text(value || "justificatif").normalize("NFD").replace(/[\u0300-\u036f]/g, "")
     .replace(/[^a-zA-Z0-9._-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 180) || "justificatif";
@@ -285,10 +303,11 @@ export async function uploadExpenseReceipt(
 ) {
   const input = object(inputValue);
   const reportId = text(input.reportId || input.report_id);
-  const report = await supabase.from("d2f_expense_reports").select("id,status")
+  const report = await supabase.from("d2f_expense_reports").select("id,status,claimant_id")
     .eq("id", reportId).eq("owner_key", ownerKey).maybeSingle();
   throwDatabase(report.error);
   if (!report.data) throw new Error("Note de frais introuvable");
+  if (String(report.data.claimant_id) !== actorId) throw new Error("Seul le demandeur peut ajouter un justificatif à cette note");
   if (!["draft", "returned"].includes(report.data.status)) throw new Error("Les justificatifs ne peuvent être ajoutés qu'à une note modifiable");
 
   const expenseLineId = text(input.expenseLineId || input.expense_line_id) || null;
@@ -304,6 +323,9 @@ export async function uploadExpenseReceipt(
   if (!content) throw new Error("Le justificatif est vide");
   const bytes = decodeBase64(content);
   if (!bytes.length || bytes.length > EXPENSE_RECEIPT_MAX_BYTES) throw new Error("Le justificatif doit être compris entre 1 octet et 10 Mo");
+  if (input.size != null && Number(input.size) !== bytes.length) throw new Error("La taille déclarée du justificatif ne correspond pas au fichier reçu");
+  const verifiedMediaType = verifiedReceiptMediaType(bytes);
+  if (!verifiedMediaType || verifiedMediaType !== mediaType) throw new Error("Le contenu réel du fichier ne correspond pas à son type déclaré");
 
   const filename = receiptFileName(input.filename || input.name);
   const sha256 = hex(await crypto.subtle.digest("SHA-256", bytes));
@@ -337,6 +359,10 @@ export async function uploadExpenseReceipt(
     expense_line_id: expenseLineId,
     original_filename: filename,
     media_type: mediaType,
+    verified_media_type: verifiedMediaType,
+    security_status: "verified",
+    immutable_original: true,
+    retention_until: null,
     byte_size: bytes.length,
     sha256,
     storage_reference: storageReference,
@@ -346,12 +372,35 @@ export async function uploadExpenseReceipt(
     extraction_status: "not_requested",
     capture_context: captureContext,
     capture_location: captureLocation,
-  }).select("id,report_id,expense_line_id,original_filename,media_type,byte_size,sha256,captured_at,uploaded_by,origin,extraction_status,capture_context,capture_location,created_at").single();
+  }).select("id,report_id,expense_line_id,original_filename,media_type,verified_media_type,byte_size,sha256,captured_at,uploaded_by,origin,extraction_status,security_status,immutable_original,retention_until,capture_context,capture_location,created_at").single();
   if (inserted.error) {
     await supabase.storage.from(EXPENSE_RECEIPT_BUCKET).remove([storageReference]).catch(() => undefined);
     throwDatabase(inserted.error);
   }
   return inserted.data;
+}
+
+export async function getExpenseReceiptAccess(
+  supabase: SupabaseClient,
+  ownerKey: string,
+  actorId: string,
+  actorRole: "owner" | "collaborator",
+  inputValue: unknown,
+) {
+  const input = object(inputValue); const receiptId = text(input.id || input.receiptId || input.receipt_id);
+  const receipt = await supabase.from("d2f_expense_receipts")
+    .select("id,report_id,original_filename,media_type,verified_media_type,sha256,storage_reference,security_status")
+    .eq("id", receiptId).maybeSingle();
+  throwDatabase(receipt.error); if (!receipt.data) throw new Error("Justificatif introuvable");
+  const report = await supabase.from("d2f_expense_reports").select("owner_key,claimant_id")
+    .eq("id", receipt.data.report_id).eq("owner_key", ownerKey).maybeSingle();
+  throwDatabase(report.error); if (!report.data) throw new Error("Accès au justificatif refusé");
+  if (actorRole !== "owner" && String(report.data.claimant_id) !== actorId) throw new Error("Accès au justificatif refusé");
+  if (receipt.data.security_status !== "verified") throw new Error("Ce justificatif n'a pas terminé ses contrôles de sécurité");
+  const signed = await supabase.storage.from(EXPENSE_RECEIPT_BUCKET).createSignedUrl(receipt.data.storage_reference, 120, { download: receipt.data.original_filename });
+  const signedUrl = signed.data?.signedUrl;
+  if (signed.error || !signedUrl) throwDatabase(signed.error || { message: "Lien temporaire indisponible" });
+  return { id: receipt.data.id, url: signedUrl, expiresIn: 120, filename: receipt.data.original_filename, mediaType: receipt.data.verified_media_type || receipt.data.media_type, sha256: receipt.data.sha256 };
 }
 
 export async function submitExpenseReport(
@@ -365,12 +414,13 @@ export async function submitExpenseReport(
   const reportId = text(input.id || input.reportId || input.report_id);
   const countryPolicy = await expenseCountryPolicy(supabase, establishmentCountry);
   if (countryPolicy.status === "not_qualified") throw new Error("Soumission bloquée : le Country Pack " + countryPolicy.country + " n'est pas qualifié");
-  const report = await supabase.from("d2f_expense_reports").select("id").eq("id", reportId).eq("owner_key", ownerKey).maybeSingle();
+  const report = await supabase.from("d2f_expense_reports").select("id,claimant_id").eq("id", reportId).eq("owner_key", ownerKey).maybeSingle();
   throwDatabase(report.error);
   if (!report.data) throw new Error("Note de frais introuvable");
+  if (String(report.data.claimant_id) !== actorId) throw new Error("Seul le demandeur peut soumettre sa note de frais");
   const [requiredLines, receipts] = await Promise.all([
     supabase.from("d2f_expense_lines").select("id").eq("report_id", reportId).eq("receipt_required", true),
-    supabase.from("d2f_expense_receipts").select("expense_line_id").eq("report_id", reportId),
+    supabase.from("d2f_expense_receipts").select("expense_line_id").eq("report_id", reportId).eq("security_status", "verified"),
   ]);
   throwDatabase(requiredLines.error);
   throwDatabase(receipts.error);

@@ -202,7 +202,7 @@
       const previous = String(local.selectedReportId || "");
       clear(select);
       const placeholder = document.createElement("option"); placeholder.value = ""; placeholder.textContent = tr("expenses.capture.no_report", "Sélectionnez une note"); select.append(placeholder);
-      for (const report of reports.filter((item) => ["draft", "returned"].includes(item.status))) {
+      for (const report of reports.filter((item) => item.can_edit === true)) {
         const option = document.createElement("option"); option.value = report.id; option.textContent = report.report_number + " · " + report.title; select.append(option);
       }
       if ([...select.options].some((option) => option.value === previous)) select.value = previous;
@@ -216,20 +216,25 @@
       if (title) title.textContent = tr("expenses.detail.select", "Sélectionnez une note de frais");
       if (detail) detail.textContent = tr("expenses.detail.empty", "Les lignes et justificatifs apparaîtront ici.");
       setText("expense-capture-report", tr("expenses.capture.no_report", "Sélectionnez d’abord une note de frais"));
-      if (lineForm) lineForm.hidden = true; if (submit) submit.hidden = true; clear(byId("expense-lines-body")); return;
+      if (lineForm) lineForm.hidden = true; if (submit) submit.hidden = true;
+      clear(byId("expense-lines-body")); clear(byId("expense-receipts-list")); return;
     }
+    const lines = reportLines(report.id), receipts = reportReceipts(report.id), missingReceipts = missingReceiptLines(report.id);
     if (title) title.textContent = report.report_number + " · " + report.title;
-    if (detail) detail.textContent = (report.claimant_name || report.claimant_id) + " · " + money(report.total_gross, report.currency) + " · " + reportLines(report.id).length + " " + tr("expenses.detail.lines", "ligne(s)") + " · " + reportReceipts(report.id).length + " " + tr("expenses.detail.receipts", "justificatif(s)");
+    if (detail) detail.textContent = (report.claimant_name || report.claimant_id) + " · " + statusLabel(report.status) + " · " + lines.length + " " + tr("expenses.detail.lines", "ligne(s)") + " · " + receipts.length + " " + tr("expenses.detail.receipts", "justificatif(s)");
+    setText("expense-total-claimed", money(report.claimed_amount || report.total_gross, report.currency));
+    setText("expense-total-personal", money(report.personal_amount, report.currency));
+    setText("expense-total-eligible", money(report.eligible_amount || Math.max(0, number(report.total_gross) - number(report.personal_amount)), report.currency));
+    setText("expense-total-reimbursable", money(report.reimbursable_amount, report.currency));
     setText("expense-capture-report", report.report_number + " · " + report.title);
     const receiptLine = byId("expense-receipt-line");
     if (receiptLine) {
-      const selectedLine = receiptLine.value; clear(receiptLine); const lines = reportLines(report.id);
+      const selectedLine = receiptLine.value; clear(receiptLine);
       if (!lines.length) { const option = document.createElement("option"); option.value = ""; option.textContent = tr("expenses.capture.line_empty", "Ajoutez d’abord une ligne à la note"); receiptLine.append(option); }
       for (const line of lines) { const option = document.createElement("option"); option.value = line.id; option.textContent = line.occurred_on + " · " + line.merchant + " · " + money(line.gross_amount, line.currency); receiptLine.append(option); }
       if (lines.some((line) => String(line.id) === String(selectedLine))) receiptLine.value = selectedLine;
     }
-    const editable = ["draft", "returned"].includes(report.status);
-    const lines = reportLines(report.id); const missingReceipts = missingReceiptLines(report.id);
+    const editable = report.can_edit === true;
     if (lineForm) lineForm.hidden = !editable;
     if (submit) {
       submit.hidden = !editable; submit.dataset.reportId = report.id;
@@ -237,10 +242,23 @@
       else if (missingReceipts.length) { submit.dataset.platformAction = "expenses:openCapture"; submit.textContent = tr("expenses.action.add_receipts", "Ajouter " + missingReceipts.length + " justificatif(s)"); }
       else { submit.dataset.platformAction = "expenses:submit"; submit.textContent = tr("expenses.action.submit", "Soumettre pour approbation"); }
     }
+    const proofByLine = new Map(receipts.filter((receipt) => receipt.expense_line_id).map((receipt) => [String(receipt.expense_line_id), receipt]));
     const body = byId("expense-lines-body"); clear(body);
-    for (const line of reportLines(report.id)) {
-      const row = document.createElement("tr"); row.append(cell(line.occurred_on), cell(line.merchant), cell(line.category), cell(line.business_purpose), cell(money(line.gross_amount, line.currency), "numeric")); body?.append(row);
+    for (const line of lines) {
+      const row = document.createElement("tr");
+      row.append(cell(line.occurred_on), cell(line.merchant), cell(line.category), cell(line.payment_method || "—"), cell(line.business_purpose), cell(money(line.gross_amount, line.currency), "numeric"), cell(money(line.personal_amount, line.currency), "numeric"));
+      const proof = document.createElement("td"); const receipt = proofByLine.get(String(line.id));
+      if (receipt) proof.append(actionButton("Voir", "expenses:viewReceipt", receipt.id, "secondary"));
+      else proof.append(badge(line.receipt_required === false ? "approved" : "returned"));
+      row.append(proof); body?.append(row);
     }
+    const receiptList = byId("expense-receipts-list"); clear(receiptList);
+    for (const receipt of receipts) {
+      const card = document.createElement("article"); const meta = document.createElement("div"); const name = document.createElement("strong"); const info = document.createElement("small");
+      name.textContent = receipt.original_filename; info.textContent = Math.max(1, Math.round(number(receipt.byte_size) / 1024)) + " Ko · " + String(receipt.sha256 || "").slice(0, 12) + "… · " + (receipt.security_status === "verified" ? "vérifié" : "en contrôle"); meta.append(name, info);
+      card.append(meta, actionButton("Consulter", "expenses:viewReceipt", receipt.id, "secondary")); receiptList?.append(card);
+    }
+    if (!receipts.length) { const empty = document.createElement("p"); empty.className = "platformEmpty"; empty.textContent = "Aucun justificatif enregistré."; receiptList?.append(empty); }
   }
 
   function reportNumberButton(report) {
@@ -250,45 +268,57 @@
 
   function renderExpenses(data) {
     local.expenses = data;
-    const reports = data.reports || [];
-    if (!reports.some((item) => String(item.id) === String(local.selectedReportId))) local.selectedReportId = reports[0]?.id || "";
+    const allReports = data.reports || [];
+    const claimantSelect = byId("expense-claimant-filter");
+    if (claimantSelect) {
+      const value = claimantSelect.value; clear(claimantSelect); const all = document.createElement("option"); all.value = ""; all.textContent = data.access?.scope === "personal" ? "Mes notes" : "Tous les utilisateurs"; claimantSelect.append(all);
+      for (const claimant of data.claimants || []) { const option = document.createElement("option"); option.value = claimant.id; option.textContent = claimant.name; claimantSelect.append(option); }
+      claimantSelect.value = [...claimantSelect.options].some((option) => option.value === value) ? value : ""; claimantSelect.disabled = data.access?.scope === "personal";
+    }
+    const search = String(byId("expense-report-search")?.value || "").trim().toLowerCase();
+    const claimant = String(byId("expense-claimant-filter")?.value || ""); const statusFilter = String(byId("expense-status-filter")?.value || "");
+    const reports = allReports.filter((report) => (!search || [report.report_number, report.title, report.claimant_name, report.claimant_id].some((value) => String(value || "").toLowerCase().includes(search))) && (!claimant || String(report.claimant_id) === claimant) && (!statusFilter || report.status === statusFilter));
+    if (!allReports.some((item) => String(item.id) === String(local.selectedReportId))) local.selectedReportId = allReports[0]?.id || "";
     setText("expense-draft-count", data.summary?.draft || 0); setText("expense-submitted-count", data.summary?.submitted || 0);
     setText("expense-approved-count", data.summary?.approved || 0); setText("expense-approved-total", money(data.summary?.totalApproved || 0));
-    const submitted = reports.filter((report) => report.status === "submitted");
-    setText("expense-approval-count", submitted.length);
-    setText("expense-approval-findings", submitted.filter((report) => (report.findings || []).length).length);
+    const submitted = allReports.filter((report) => report.can_approve === true);
+    setText("expense-approval-count", submitted.length); setText("expense-approval-findings", submitted.filter((report) => (report.findings || []).length).length);
 
-    const body = byId("expense-reports-body"); clear(body);
+    const body = byId("expense-reports-body"); clear(body); const mobile = byId("expense-mobile-reports"); clear(mobile);
     for (const report of reports) {
+      const lines = reportLines(report.id), receipts = reportReceipts(report.id), missing = missingReceiptLines(report.id);
       const row = document.createElement("tr"); if (String(report.id) === String(local.selectedReportId)) row.classList.add("is-selected");
-      row.append(reportNumberButton(report), cell(report.title), cell(money(report.total_gross, report.currency), "numeric"));
+      row.append(reportNumberButton(report), cell(report.claimant_name || report.claimant_id), cell(report.title), cell(String(report.updated_at || "").slice(0, 10)), cell(money(report.total_gross, report.currency), "numeric"), cell(money(report.personal_amount, report.currency), "numeric"), cell(money(report.reimbursable_amount, report.currency), "numeric"), cell(receipts.length + "/" + lines.filter((line) => line.receipt_required !== false).length));
       const status = document.createElement("td"); status.append(badge(report.status)); row.append(status);
       const actions = document.createElement("td"); actions.className = "platformActions";
-      const lines = reportLines(report.id), missing = missingReceiptLines(report.id);
-      if (["draft", "returned"].includes(report.status) && !lines.length) actions.append(actionButton(tr("expenses.action.add_expense", "Ajouter une dépense"), "expenses:select", report.id, "primary"));
-      else if (["draft", "returned"].includes(report.status) && missing.length) actions.append(actionButton(tr("expenses.action.add_receipt", "Ajouter un justificatif"), "expenses:openCapture", report.id, "primary"));
-      else if (["draft", "returned"].includes(report.status)) actions.append(actionButton(tr("expenses.action.submit", "Soumettre"), "expenses:submit", report.id, "primary"));
-      else if (report.status === "submitted") actions.append(actionButton(tr("expenses.action.review", "Examiner"), "expenses:openApproval", report.id, "secondary"));
+      if (report.can_edit && !lines.length) actions.append(actionButton(tr("expenses.action.add_expense", "Ajouter une dépense"), "expenses:select", report.id, "primary"));
+      else if (report.can_edit && missing.length) actions.append(actionButton(tr("expenses.action.add_receipt", "Ajouter un justificatif"), "expenses:openCapture", report.id, "primary"));
+      else if (report.can_edit) actions.append(actionButton(tr("expenses.action.submit", "Soumettre"), "expenses:submit", report.id, "primary"));
+      else if (report.can_approve) actions.append(actionButton(tr("expenses.action.review", "Examiner"), "expenses:openApproval", report.id, "secondary"));
       else actions.append(actionButton(tr("expenses.action.open", "Ouvrir"), "expenses:select", report.id, "secondary"));
       row.append(actions); body?.append(row);
+
+      const card = document.createElement("article"); card.className = "expenseMobileCard"; const head = document.createElement("header"); const headText = document.createElement("div"); const numberLabel = document.createElement("strong"); const purpose = document.createElement("span");
+      numberLabel.textContent = report.report_number; purpose.textContent = report.title; headText.append(numberLabel, purpose); head.append(headText, badge(report.status));
+      const stats = document.createElement("div"); stats.className = "expenseMobileCard__stats"; stats.append(Object.assign(document.createElement("span"), { textContent: money(report.total_gross, report.currency) }), Object.assign(document.createElement("span"), { textContent: receipts.length + " preuve(s)" }), Object.assign(document.createElement("span"), { textContent: String(report.updated_at || "").slice(0, 10) }));
+      const mobileActions = document.createElement("footer"); mobileActions.append(actionButton("Ouvrir", "expenses:select", report.id, "secondary")); if (report.can_edit) mobileActions.append(actionButton(missing.length ? "Ajouter une preuve" : "Compléter", missing.length ? "expenses:openCapture" : "expenses:select", report.id, "primary"));
+      card.append(head, stats, mobileActions); mobile?.append(card);
     }
     toggleEmpty("expense-reports-empty", reports.length);
 
     const approvals = byId("expense-approvals-body"); clear(approvals);
     for (const report of submitted) {
-      const row = document.createElement("tr"); row.append(reportNumberButton(report), cell(report.title), cell(report.claimant_name || report.claimant_id), cell(money(report.total_gross, report.currency), "numeric"));
-      row.append(cell((report.findings || []).length ? tr("expenses.approvals.finding_count", "{count} constat(s)", { count: (report.findings || []).length }).replace("{count}", (report.findings || []).length) : tr("expenses.approvals.no_finding", "Aucun constat")));
-      const actions = document.createElement("td"); actions.className = "platformActions";
-      actions.append(actionButton(tr("expenses.action.approve", "Approuver"), "expenses:approve", report.id, "primary"), actionButton(tr("expenses.action.return", "À corriger"), "expenses:return", report.id, "secondary"), actionButton(tr("expenses.action.reject", "Refuser"), "expenses:reject", report.id, "danger")); row.append(actions); approvals?.append(row);
+      const row = document.createElement("tr"); row.append(reportNumberButton(report), cell(report.title), cell(report.claimant_name || report.claimant_id), cell(money(report.eligible_amount || report.total_gross, report.currency), "numeric"));
+      row.append(cell((report.findings || []).length ? (report.findings || []).length + " constat(s)" : tr("expenses.approvals.no_finding", "Aucun constat")));
+      const actions = document.createElement("td"); actions.className = "platformActions"; actions.append(actionButton(tr("expenses.action.approve", "Approuver"), "expenses:approve", report.id, "primary"), actionButton(tr("expenses.action.return", "À corriger"), "expenses:return", report.id, "secondary"), actionButton(tr("expenses.action.reject", "Refuser"), "expenses:reject", report.id, "danger")); row.append(actions); approvals?.append(row);
     }
     toggleEmpty("expense-approvals-empty", submitted.length);
-    const queue = byId("expenses-action-queue"); clear(queue);
-    const incomplete = reports.filter((report) => ["draft", "returned"].includes(report.status) && (!reportLines(report.id).length || missingReceiptLines(report.id).length));
+    const queue = byId("expenses-action-queue"); clear(queue); const incomplete = allReports.filter((report) => report.can_edit && (!reportLines(report.id).length || missingReceiptLines(report.id).length));
     if (!local.expenseFoundationReady && !local.lifetimeLicense) queue?.append(taskButton(tr("expenses.task.activate", "Activer D2F Expenses"), tr("expenses.task.activate_hint", "Créer une demande suivie pour activer l’enregistrement"), "platform:requestActivation", { label: tr("platform.action.request", "Demander →"), application: "expenses" }));
     if (incomplete.length) queue?.append(taskButton(incomplete.length + " " + tr("expenses.task.incomplete", "note(s) à compléter"), tr("expenses.task.incomplete_hint", "Ajoutez les lignes ou justificatifs manquants"), "", { go: "expenses-reports" }));
     if (submitted.length) queue?.append(taskButton(submitted.length + " " + tr("expenses.task.approval", "note(s) à approuver"), tr("expenses.task.approval_hint", "Examiner les contrôles puis prendre une décision"), "", { go: "expenses-approvals", urgent: true }));
     if (!queue?.children.length) queue?.append(taskButton(tr("platform.task.clear", "Aucun traitement urgent"), tr("expenses.task.clear_hint", "Créez une note ou consultez l’historique."), "", { go: "expenses-reports", label: tr("expenses.action.create", "Créer une note →") }));
-    renderCaptureSelection(reports); renderExpenseDetail(); renderPackState();
+    renderCaptureSelection(allReports); renderExpenseDetail(); renderPackState();
   }
 
   function renderPackState() {
@@ -353,6 +383,7 @@
       return;
     }
     if (action === "expenses:pickReceipt") { byId("expense-receipt-file")?.click(); return; }
+    if (action === "expenses:viewReceipt") { const access = await window.api.expenses.receiptAccess({ id: reportId }); const opened = window.open(access.url, "_blank", "noopener,noreferrer"); if (!opened) setText("appStatus", "Autorisez l’ouverture du justificatif dans un nouvel onglet."); return; }
     if (action === "expenses:openCapture") { renderExpenses(local.expenses || { reports: [], lines: [], receipts: [], summary: {} }); window.D2FShowPage?.("expenses-capture"); return; }
     if (action === "expenses:openApproval") { window.D2FShowPage?.("expenses-approvals"); return; }
     if (action === "expenses:focusLine") { byId("expense-line-merchant")?.focus(); return; }
@@ -390,6 +421,8 @@
   for (const name of ["dragenter", "dragover"]) drop?.addEventListener(name, (event) => { event.preventDefault(); drop.classList.add("is-dragging"); });
   for (const name of ["dragleave", "drop"]) drop?.addEventListener(name, (event) => { event.preventDefault(); drop.classList.remove("is-dragging"); });
   drop?.addEventListener("drop", (event) => selectReceiptFile(event.dataTransfer?.files?.[0]).catch((error) => setText("appStatus", error.message)));
+
+  for (const id of ["expense-report-search", "expense-claimant-filter", "expense-status-filter"]) byId(id)?.addEventListener(id === "expense-report-search" ? "input" : "change", () => { if (local.expenses) renderExpenses(local.expenses); });
 
   document.addEventListener("click", async (event) => {
     const go = event.target.closest("[data-platform-go]");
