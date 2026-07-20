@@ -118,7 +118,20 @@ export function clearSessionCookie(request: Request) {
 
 export async function authenticatePassword(email: string, password: string) {
   const { data, error } = await createPasswordAuthClient().auth.signInWithPassword({ email, password });
-  if (error || !data.user) throw new Error("Adresse e-mail ou mot de passe incorrect");
+  if (error) {
+    const code = String((error as { code?: string }).code || "");
+    const status = Number((error as { status?: number }).status || 0);
+    const message = String(error.message || "");
+    if (code === "invalid_credentials" || (status === 400 && /invalid login credentials/i.test(message))) {
+      throw new Error("Adresse e-mail ou mot de passe incorrect");
+    }
+    console.error("[auth] Supabase authentication unavailable", { code, status });
+    if (status === 401 || /api key|jwt/i.test(message)) {
+      throw new Error("Configuration du service d’authentification incohérente. Contactez le support D2F.");
+    }
+    throw new Error("Service d’authentification temporairement indisponible. Réessayez dans quelques instants.");
+  }
+  if (!data.user) throw new Error("Adresse e-mail ou mot de passe incorrect");
   return data.user;
 }
 
