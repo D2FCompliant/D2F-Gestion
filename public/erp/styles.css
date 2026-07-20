@@ -5301,3 +5301,126 @@ button.dashManagementKpi:hover{border-color:rgba(99,102,241,.38);transform:trans
   .expenseSecurityChecklist{grid-template-columns:1fr}.expenseCaptureDrop{min-height:180px}.expenseCaptureReady{position:sticky;bottom:8px;z-index:8;box-shadow:0 8px 26px rgba(15,76,60,.18)}
   .page[data-page="expenses-reports"] .platformDetailPanel .platformTableWrap{max-height:42dvh}
 }
+
+
+/* D2F Platform 3.3.5 — resilient layout at laptop, tablet and mobile sizes */
+html,
+body{
+  width:100%;
+  max-width:100%;
+  overflow:hidden;
+}
+
+.shell{
+  height:calc(100dvh - 52px);
+  min-height:0;
+}
+
+.workspace,
+.workspace__header,
+.workspace__header>div,
+.page,
+.page>*,
+.card,
+.platformPage,
+.platformPage>*,
+.platformHero>div,
+.platformPanel,
+.platformPanel__head,
+.platformPanel__head>div,
+.platformFormRow>*,
+.platformExpenseForm>*,
+.platformExpenseFilters>*,
+.platformActionItem,
+.platformJourney button,
+.expenseReportTotals>*,
+.expenseEvidenceSection>*{
+  min-width:0;
+  max-width:100%;
+}
+
+.workspace__title,
+.workspace__desc,
+.platformHero h2,
+.platformHero p,
+.platformPanel__head h2,
+.platformPanel__head p,
+.platformActionItem span,
+.platformActionItem small,
+.platformJourney strong,
+.platformJourney small,
+.platformNotice strong,
+.platformNotice span,
+.expenseCaptureTarget strong,
+.expenseReceiptList article strong,
+.expenseReceiptList article small,
+.platformTable th,
+.platformTable td,
+.btn{
+  overflow-wrap:anywhere;
+  word-break:normal;
+}
+
+.platformPage.is-active{
+  width:100%;
+  height:100%;
+  max-height:100%;
+  padding:10px 12px max(110px,calc(24px + env(safe-area-inset-bottom)));
+  overflow-x:hidden;
+  overflow-y:auto;
+  scrollbar-gutter:stable;
+  overscroll-behavior:contain;
+}
+
+.platformPanel{ overflow:visible; }
+.platformTableWrap{
+  min-width:0;
+  max-width:100%;
+  overflow:auto;
+  scrollbar-gutter:stable both-edges;
+}
+.platformTable{ max-width:none; }
+.platformTable th,.platformTable td{ white-space:normal; }
+.platformTable td .btn,.platformTable td .platformStatus{ white-space:normal; }
+
+.platformFormRow input,
+.platformFormRow select,
+.platformExpenseForm input,
+.platformExpenseForm select,
+.platformDecisionNote,
+.platformExpenseFilters input,
+.platformExpenseFilters select{
+  min-width:0;
+  max-width:100%;
+}
+
+@media(max-width:1440px) and (min-width:761px){
+  .shell{grid-template-columns:minmax(218px,244px) minmax(0,1fr);gap:10px;padding:10px}
+  .platformExpenseForm{grid-template-columns:repeat(3,minmax(0,1fr));padding:14px;gap:10px}
+  .platformFieldWide{grid-column:span 2}
+  .platformFormRow{grid-template-columns:minmax(0,1fr) 100px minmax(132px,auto);padding:14px 14px 0}
+  .platformPanel__head{flex-wrap:wrap}
+  .platformExpenseFilters{width:100%;display:grid;grid-template-columns:minmax(160px,1.35fr) repeat(2,minmax(130px,1fr))}
+  .platformExpenseFilters label,.platformExpenseFilters input,.platformExpenseFilters select{width:100%}
+  .platformTable{min-width:820px}
+}
+
+@media(max-width:1050px) and (min-width:761px){
+  .shell{grid-template-columns:200px minmax(0,1fr)}
+  .platformHero{display:grid}
+  .platformGuardrail{justify-self:start;white-space:normal}
+  .platformExpenseForm{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .platformFormRow{grid-template-columns:minmax(0,1fr) 92px}
+  .platformFormRow>.btn{grid-column:1/-1;justify-self:start}
+  .expenseEvidenceSection{grid-template-columns:1fr}
+}
+
+@media(max-width:760px){
+  .shell{height:calc(100dvh - 44px)}
+  .platformPage.is-active{height:100%;max-height:100%;padding:8px 8px calc(118px + env(safe-area-inset-bottom))}
+  .platformPanel__head,.platformNotice,.expenseReceiptList article{align-items:stretch}
+  .platformPanel__head .btn,.platformNotice .btn{width:100%;white-space:normal}
+  .platformFormRow,.platformExpenseForm{grid-template-columns:minmax(0,1fr)!important}
+  .platformFieldWide{grid-column:auto}
+  .platformTableWrap{max-height:min(52dvh,520px)!important}
+}

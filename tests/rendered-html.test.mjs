@@ -26,7 +26,7 @@ test("server-renders the D2F Platform cockpit", async () => {
   assert.doesNotMatch(html, /codex-preview|Your site is taking shape|react-loading-skeleton/i);
 
   const shell = await readFile(new URL("../app/session-shell.tsx", import.meta.url), "utf8");
-  assert.match(shell, /src="\/erp\/index\.html\?v=20260720-support-governance-sort-v215"/);
+  assert.match(shell, /src="\/erp\/index\.html\?v=20260720-responsive-v335"/);
   assert.match(shell, /title="D2F Platform"/);
 });
 
@@ -37,8 +37,8 @@ test("ships a touch-first smartphone layout", async () => {
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
     readFile(new URL("../public/erp/index.html", import.meta.url), "utf8"),
   ]);
-  assert.match(html, /styles\.css\?v=20260720-support-governance-sort-v215/);
-  assert.match(html, /app\.js\?v=20260720-support-governance-sort-v215/);
+  assert.match(html, /styles\.css\?v=20260720-responsive-v335/);
+  assert.match(html, /app\.js\?v=20260720-responsive-v335/);
   assert.match(styles, /@media \(max-width: 760px\)/);
   assert.match(styles, /platformPage\.is-active\{[^}]*overflow-y:auto[^}]*scrollbar-gutter:stable/s);
   assert.match(styles, /compact workspaces by default/);
@@ -74,8 +74,8 @@ test("makes the quote deposit unit explicit with no preset value", async () => {
   assert.match(app, /syncQuoteDepositModeUi\(\{ clearValue: true \}\)/);
   assert.match(styles, /\.depositModeOption input:checked \+ span/);
   assert.match(shell, /app-build-badge">\{D2F_PLATFORM_VERSION_LABEL\}/);
-  assert.match(platformVersion, /D2F_PLATFORM_VERSION = "3\.3\.4"/);
-  assert.equal(JSON.parse(pkg).version, "3.3.4");
+  assert.match(platformVersion, /D2F_PLATFORM_VERSION = "3\.3\.5"/);
+  assert.equal(JSON.parse(pkg).version, "3.3.5");
 });
 
 test("renders human-readable document lists on desktop and smartphone", async () => {
@@ -817,4 +817,21 @@ test("provides a translated workflow companion on every application module", asy
     assert.ok(dictionary["companion.conformity.step2"]);
     assert.ok(dictionary["companion.audit.expected"]);
   }
+});
+
+
+test("keeps every workspace scrollable and text contained on 13-inch screens", async () => {
+  const [styles, html, shell] = await Promise.all([
+    readFile(new URL("../public/erp/styles.css", import.meta.url), "utf8"),
+    readFile(new URL("../public/erp/index.html", import.meta.url), "utf8"),
+    readFile(new URL("../app/session-shell.tsx", import.meta.url), "utf8"),
+  ]);
+  assert.match(styles, /height:calc\(100dvh - 52px\)/);
+  assert.match(styles, /\.platformPage\.is-active\{[\s\S]*overflow-y:auto/);
+  assert.match(styles, /@media\(max-width:1440px\) and \(min-width:761px\)/);
+  assert.match(styles, /\.platformExpenseForm\{grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
+  assert.match(styles, /overflow-wrap:anywhere/);
+  assert.match(styles, /\.platformTableWrap\{[\s\S]*overflow:auto/);
+  assert.match(html, /styles\.css\?v=20260720-responsive-v335/);
+  assert.match(shell, /erp\/index\.html\?v=20260720-responsive-v335/);
 });
