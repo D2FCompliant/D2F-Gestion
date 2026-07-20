@@ -5880,6 +5880,32 @@ case "company:save": {
   break;
 }
 
+case "company:testSmtp": {
+  const button = $("company-smtp-test");
+  const status = $("company-smtp-test-status");
+  const payload = companyPayloadFromForm();
+  if (button) button.disabled = true;
+  if (status) status.textContent = t("company.smtp.testing", "Test de la connexion SMTP…");
+  try {
+    await window.api.company.testSmtp({
+      smtp_host: payload.smtp_host,
+      smtp_port: payload.smtp_port,
+      smtp_user: payload.smtp_user,
+      smtp_password: payload.smtp_password,
+    });
+    const message = t("company.smtp.test_success", "Connexion SMTP et authentification réussies. Vous pouvez enregistrer.");
+    if (status) status.textContent = message;
+    setStatus(message);
+  } catch (error) {
+    const message = t("company.smtp.test_failure", "Échec du test SMTP") + ": " + (error?.message || error);
+    if (status) status.textContent = message;
+    throw new Error(message);
+  } finally {
+    if (button) button.disabled = false;
+  }
+  break;
+}
+
 case "company:chooseLogo": {
   if (!window.api?.files?.pickImage)
     throw new Error("Fonction fichiers non disponible (files:pickImage).");

@@ -15,7 +15,7 @@
                  object-src 'none';
                  base-uri 'none'">
 
-  <link rel="stylesheet" href="./styles.css?v=20260720-responsive-v335" />
+  <link rel="stylesheet" href="./styles.css?v=20260720-smtp-v337" />
 </head>
 
 <body>
@@ -312,6 +312,10 @@
                 <span data-i18n="company.smtp.from_name">Nom expéditeur</span>
                 <input id="company-smtp-from-name" type="text" placeholder="D2F Compliant">
               </label>
+              <div class="companySmtpActions">
+                <button id="company-smtp-test" class="btn btn--secondary" type="button" data-action="company:testSmtp" data-i18n="company.smtp.test">Tester la connexion</button>
+                <span id="company-smtp-test-status" class="hint" role="status" aria-live="polite"></span>
+              </div>
             </div>
           </details>
 
@@ -1714,13 +1718,13 @@
   </aside>
 
   <script src="./xp-z12-012.js"></script>
-  <script src="./receivables.js?v=20260720-responsive-v335"></script>
-  <script src="./audit-ui.js?v=20260720-responsive-v335"></script>
-  <script src="./renderer/web-electron-shim.js?v=20260720-responsive-v335"></script>
-  <script src="./renderer/web-api-shim.js?v=20260720-responsive-v335"></script>
-  <script src="./dashboard-ui.js?v=20260720-responsive-v335"></script>
-  <script src="./financial-expense-ui.js?v=20260720-responsive-v335"></script>
-  <script src="./app.js?v=20260720-responsive-v335"></script>
+  <script src="./receivables.js?v=20260720-smtp-v337"></script>
+  <script src="./audit-ui.js?v=20260720-smtp-v337"></script>
+  <script src="./renderer/web-electron-shim.js?v=20260720-smtp-v337"></script>
+  <script src="./renderer/web-api-shim.js?v=20260720-smtp-v337"></script>
+  <script src="./dashboard-ui.js?v=20260720-smtp-v337"></script>
+  <script src="./financial-expense-ui.js?v=20260720-smtp-v337"></script>
+  <script src="./app.js?v=20260720-smtp-v337"></script>
 
   <div id="clientsImportModal" class="modal" aria-hidden="true">
     <div class="modal__backdrop" data-modal-close></div>

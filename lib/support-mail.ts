@@ -1,11 +1,14 @@
 import { once } from "node:events";
 import { connect as tlsConnect, type TLSSocket } from "node:tls";
 
-type SmtpConfiguration = {
+export type SmtpConnectionConfiguration = {
   host: string;
   port: number;
   user: string;
   password: string;
+};
+
+type SmtpConfiguration = SmtpConnectionConfiguration & {
   senderEmail: string;
   senderName: string;
 };
@@ -92,6 +95,44 @@ export function smtpConfiguration(): SmtpConfiguration | null {
   const senderName = cleanHeader(String(process.env.D2F_SUPPORT_SMTP_SENDER_NAME || "D2F Support"), 120);
   if (!host || !Number.isInteger(port) || port < 1 || port > 65535 || !user || !password || !senderEmail) return null;
   return { host, port, user, password, senderEmail, senderName };
+}
+
+function validatedSmtpConnection(input: SmtpConnectionConfiguration): SmtpConnectionConfiguration {
+  const host = cleanHeader(input.host, 253).toLowerCase();
+  const port = Number(input.port);
+  const user = validEmail(input.user);
+  const password = String(input.password || "");
+  const publicHostname = /^(?=.{4,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/.test(host)
+    && !/(?:^|\.)(?:localhost|local|internal|lan|home|invalid)$/.test(host);
+  if (!publicHostname) throw new Error("Serveur SMTP public invalide");
+  if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error("Port SMTP invalide");
+  if (!user) throw new Error("Utilisateur SMTP invalide");
+  if (!password || password.length > 2048) throw new Error("Mot de passe SMTP requis");
+  return { host, port, user, password };
+}
+
+export async function testSmtpConnection(input: SmtpConnectionConfiguration) {
+  const configuration = validatedSmtpConnection(input);
+  const socket = tlsConnect({ host: configuration.host, port: configuration.port, servername: configuration.host, rejectUnauthorized: true });
+  socket.setNoDelay(true);
+  const readResponse = smtpReader(socket);
+  try {
+    await timeout(Promise.race([
+      once(socket, "secureConnect").then(() => undefined),
+      once(socket, "error").then(([error]) => Promise.reject(error)),
+    ]), socket);
+    assertResponse(await timeout(readResponse(), socket), [220]);
+    await writeLine(socket, "EHLO gestion.d2fcompliant.org");
+    assertResponse(await timeout(readResponse(), socket), [250]);
+    const credentials = Buffer.from(`\u0000${configuration.user}\u0000${configuration.password}`, "utf8").toString("base64");
+    await writeLine(socket, `AUTH PLAIN ${credentials}`);
+    assertResponse(await timeout(readResponse(), socket), [235]);
+    await writeLine(socket, "QUIT");
+    assertResponse(await timeout(readResponse(), socket).catch(() => ({ code: 221, lines: [] })), [221]);
+    return { ok: true, host: configuration.host, port: configuration.port };
+  } finally {
+    socket.destroy();
+  }
 }
 
 export async function sendSmtpMessage(configuration: SmtpConfiguration, message: SmtpMessage) {

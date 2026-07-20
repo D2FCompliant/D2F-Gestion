@@ -15,6 +15,7 @@ import { preflightInvoice } from "../../lib/country-compliance";
 import { issueInvoiceAtomically } from "../../lib/platform/issue-invoice";
 import { addExpenseLine, createExpenseReport, decideExpenseReport, getExpenseReceiptAccess, listExpenseWorkspace, listFinancialWorkspace, refreshFinancialProjections, submitExpenseReport, uploadExpenseReceipt } from "../../lib/platform/financial-expense";
 import { registerCustomerPaymentAtomically } from "../../lib/platform/register-customer-payment";
+import { testSmtpConnection } from "../../lib/support-mail";
 
 export const dynamic = "force-dynamic";
 
@@ -1325,6 +1326,16 @@ async function dispatch(ownerEmail: string, method: string, args: unknown[], ten
     return decideExpenseReport(getSupabaseAdmin(), ownerEmail, actorId, first(args));
   }
   if (method === "company:get") return getCompany(ownerEmail);
+  if (method === "company:testSmtp") {
+    if (actorRole !== "owner") throw new Error("Seul le propriétaire peut tester la configuration SMTP");
+    const input = object(first(args));
+    return testSmtpConnection({
+      host: String(input.smtp_host || ""),
+      port: numberValue(input.smtp_port || 465),
+      user: String(input.smtp_user || ""),
+      password: String(input.smtp_password || ""),
+    });
+  }
   if (method === "company:save") {
     const payload = object(first(args));
     const identity = validateEstablishmentIdentifier(payload.country, payload.legal_id);
