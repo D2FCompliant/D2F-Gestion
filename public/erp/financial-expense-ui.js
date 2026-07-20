@@ -347,9 +347,13 @@
     if (window.D2FPlatformPreview) { local.expenseFoundationReady = false; showFoundation("expenses", false); renderExpenses({ reports: [], lines: [], receipts: [], summary: {} }); return; }
     try { local.expenseFoundationReady = true; showFoundation("expenses", true); renderExpenses(await window.api.expenses.workspace()); }
     catch (error) {
-      local.expenseFoundationReady = false; showFoundation("expenses", false); console.info("[expenses] foundation not active", error?.message || error);
+      const message = String(error?.message || error || "");
+      const foundationMissing = /socle .*Expenses|relation .*d2f_expense_reports.*does not exist|d2f_expense_reports.*introuvable/i.test(message);
+      local.expenseFoundationReady = !foundationMissing; showFoundation("expenses", !foundationMissing); console.info("[expenses] workspace unavailable", message);
       renderExpenses({ reports: [], lines: [], receipts: [], summary: {} });
-      const status = byId("appStatus"); if (status) status.textContent = tr("expenses.foundation.pending", "Interface prête · activation de la base Expenses requise pour enregistrer");
+      const status = byId("appStatus"); if (status) status.textContent = foundationMissing
+        ? tr("expenses.foundation.pending", "Interface prête · activation de la base Expenses requise pour enregistrer")
+        : tr("expenses.workspace.error", "Expenses indisponible : ") + message;
     }
   }
 

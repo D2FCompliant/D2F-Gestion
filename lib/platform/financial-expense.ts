@@ -20,9 +20,8 @@ function amount(value: unknown) {
 function missingFoundation(error: { code?: string; message?: string } | null) {
   return Boolean(error && (
     error.code === "42P01" ||
-    error.code === "PGRST202" ||
     error.code === "PGRST205" ||
-    /d2f_(expense|financial)|d2f_expense_|d2f_financial_/i.test(error.message || "")
+    /relation ["\x27]?public\.d2f_(expense|financial)|relation ["\x27]?d2f_(expense|financial).*does not exist/i.test(error.message || "")
   ));
 }
 
