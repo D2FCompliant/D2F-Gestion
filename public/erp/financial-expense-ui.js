@@ -1,5 +1,5 @@
 (function () {
-  const local = { financial: null, expenses: null, selectedReportId: "", pendingReceipt: null, expenseFoundationReady: true, financialFoundationReady: true, financialFilter: "all" };
+  const local = { financial: null, expenses: null, selectedReportId: "", pendingReceipt: null, expenseFoundationReady: true, financialFoundationReady: true, financialFilter: "all", lifetimeLicense: false };
   const tr = (key, fallback, vars) => window.__d2fT?.(key, fallback, vars) || fallback;
   const byId = (id) => document.getElementById(id);
   const money = (value, currency = "EUR") => new Intl.NumberFormat(document.documentElement.lang || "fr", {
@@ -43,13 +43,28 @@
     return button;
   }
   function showFoundation(application, ready) {
-    document.querySelectorAll("." + application + "-foundation-banner").forEach((banner) => { banner.hidden = ready; });
+    document.querySelectorAll("." + application + "-foundation-banner").forEach((banner) => {
+      banner.hidden = ready;
+      banner.classList.toggle("platformActivationBanner--included", !ready && local.lifetimeLicense);
+      const title = banner.querySelector("strong");
+      const detail = banner.querySelector("span");
+      const button = banner.querySelector('[data-platform-action="platform:requestActivation"]');
+      if (local.lifetimeLicense) {
+        if (title) title.textContent = tr("platform.activation.included", "Module inclus dans votre licence D2F à vie");
+        if (detail) detail.textContent = tr("platform.activation.technical", "Aucune demande commerciale n’est nécessaire. Le socle technique doit seulement être initialisé.");
+        if (button) button.hidden = true;
+      } else if (button) button.hidden = false;
+    });
   }
   function missingReceiptLines(reportId) {
     const receipts = new Set(reportReceipts(reportId).map((receipt) => String(receipt.expense_line_id || "")).filter(Boolean));
     return reportLines(reportId).filter((line) => line.receipt_required !== false && !receipts.has(String(line.id)));
   }
   async function requestActivation(application) {
+    if (local.lifetimeLicense && application !== "country-pack") {
+      setText("appStatus", tr("platform.activation.lifetime", "Inclus dans la licence D2F à vie · aucun ticket support créé"));
+      return null;
+    }
     const isCountryPack = application === "country-pack";
     const applicationLabel = isCountryPack ? "Country Pack " + (window.D2FPlatformCapabilities?.countryPack?.country || "") : (application === "expenses" ? "D2F Expenses" : "D2F Financial");
     const response = await fetch("/auth/support", {
@@ -162,7 +177,7 @@
     }
     toggleEmpty("financial-proposals-empty", (data.proposals || []).length);
     const activationButton = byId("financial-proposals-empty")?.querySelector("[data-platform-action=\"platform:requestActivation\"]");
-    if (activationButton) activationButton.hidden = local.financialFoundationReady;
+    if (activationButton) activationButton.hidden = local.financialFoundationReady || local.lifetimeLicense;
 
     const reconciliationBody = byId("financial-reconciliation-body"); clear(reconciliationBody);
     const today = new Date().toISOString().slice(0, 10);
@@ -182,7 +197,7 @@
     const open = (data.reconciliation || []).filter((invoice) => invoice.remaining_amount > .005);
     if (overdue.length) queue?.append(taskButton(overdue.length + " " + tr("financial.task.overdue", "facture(s) échue(s)"), money(overdue.reduce((sum, invoice) => sum + invoice.remaining_amount, 0)) + " · " + tr("financial.task.payment", "enregistrer ou vérifier le règlement"), "financial:filterOverdue", { urgent: true }));
     if (open.length) queue?.append(taskButton(open.length + " " + tr("financial.task.open", "créance(s) ouverte(s)"), tr("financial.task.open_hint", "Rapprocher le solde ou enregistrer l’encaissement"), "financial:filterOpen"));
-    if (!local.financialFoundationReady) queue?.append(taskButton(tr("financial.task.activate", "Activer les propositions comptables"), tr("financial.task.activate_hint", "Créer une demande suivie auprès de D2F"), "platform:requestActivation", { label: tr("platform.action.request", "Demander →") }));
+    if (!local.financialFoundationReady && !local.lifetimeLicense) queue?.append(taskButton(tr("financial.task.activate", "Activer les propositions comptables"), tr("financial.task.activate_hint", "Créer une demande suivie auprès de D2F"), "platform:requestActivation", { label: tr("platform.action.request", "Demander →") }));
     if (!queue?.children.length) queue?.append(taskButton(tr("platform.task.clear", "Aucun traitement urgent"), tr("platform.task.clear_hint", "Tous les soldes visibles sont rapprochés."), "financial:refresh", { label: tr("action.refresh", "Actualiser") }));
     renderPackState();
   }
@@ -278,7 +293,7 @@
     toggleEmpty("expense-approvals-empty", submitted.length);
     const queue = byId("expenses-action-queue"); clear(queue);
     const incomplete = reports.filter((report) => ["draft", "returned"].includes(report.status) && (!reportLines(report.id).length || missingReceiptLines(report.id).length));
-    if (!local.expenseFoundationReady) queue?.append(taskButton(tr("expenses.task.activate", "Activer D2F Expenses"), tr("expenses.task.activate_hint", "Créer une demande suivie pour activer l’enregistrement"), "platform:requestActivation", { label: tr("platform.action.request", "Demander →"), application: "expenses" }));
+    if (!local.expenseFoundationReady && !local.lifetimeLicense) queue?.append(taskButton(tr("expenses.task.activate", "Activer D2F Expenses"), tr("expenses.task.activate_hint", "Créer une demande suivie pour activer l’enregistrement"), "platform:requestActivation", { label: tr("platform.action.request", "Demander →"), application: "expenses" }));
     if (incomplete.length) queue?.append(taskButton(incomplete.length + " " + tr("expenses.task.incomplete", "note(s) à compléter"), tr("expenses.task.incomplete_hint", "Ajoutez les lignes ou justificatifs manquants"), "", { go: "expenses-reports" }));
     if (submitted.length) queue?.append(taskButton(submitted.length + " " + tr("expenses.task.approval", "note(s) à approuver"), tr("expenses.task.approval_hint", "Examiner les contrôles puis prendre une décision"), "", { go: "expenses-approvals", urgent: true }));
     if (!queue?.children.length) queue?.append(taskButton(tr("platform.task.clear", "Aucun traitement urgent"), tr("expenses.task.clear_hint", "Créez une note ou consultez l’historique."), "", { go: "expenses-reports", label: tr("expenses.action.create", "Créer une note →") }));
@@ -391,6 +406,16 @@
     const button = event.target.closest("[data-platform-action]"); if (!button) return; event.preventDefault();
     try { button.disabled = true; await handleAction(button.dataset.platformAction, button.dataset.reportId, button.dataset.application); if (button.dataset.platformAction !== "platform:requestActivation") setText("appStatus", tr("platform.status.updated", "D2F Platform actualisée")); }
     catch (error) { setText("appStatus", error?.message || String(error)); } finally { button.disabled = false; }
+  });
+
+  window.addEventListener("message", (event) => {
+    if (event.origin !== location.origin || event.data?.type !== "d2f-platform-license") return;
+    local.lifetimeLicense = event.data.account?.plan === "lifetime" || event.data.account?.billingTerm === "lifetime";
+    document.documentElement.dataset.d2fLicense = local.lifetimeLicense ? "lifetime" : "subscription";
+    showFoundation("financial", local.financialFoundationReady);
+    showFoundation("expenses", local.expenseFoundationReady);
+    if (local.financial) renderFinancial(local.financial);
+    if (local.expenses) renderExpenses(local.expenses);
   });
 
   window.D2FFinancialExpenseUI = { refreshFinancial, refreshExpenses, handleAction };
