@@ -1,0 +1,198 @@
+{
+  "schemaVersion": "1.0.0",
+  "packId": "country.es.expenses",
+  "country": "ES",
+  "module": "expenses",
+  "version": "2026.1.0",
+  "lifecycleStatus": "regulatory_review",
+  "effectiveFrom": "2026-01-01",
+  "verifiedAt": "2026-07-20",
+  "currency": "EUR",
+  "languages": [
+    "es",
+    "en"
+  ],
+  "automaticPublication": false,
+  "expense": {
+    "allowedCategories": [
+      "meal",
+      "accommodation",
+      "fuel",
+      "toll",
+      "parking",
+      "train",
+      "flight",
+      "taxi",
+      "ride_hailing",
+      "public_transport",
+      "vehicle_rental",
+      "mileage",
+      "per_diem",
+      "telecommunications",
+      "office_supplies",
+      "representation",
+      "training",
+      "conference",
+      "home_working",
+      "miscellaneous"
+    ],
+    "receiptRequiredDefault": true,
+    "evidenceRequirements": [
+      "original_receipt",
+      "business_purpose",
+      "merchant",
+      "expense_date",
+      "payment_method"
+    ],
+    "rules": [
+      {
+        "id": "es.mileage.2026",
+        "kind": "per_unit_limit",
+        "category": "mileage",
+        "effect": "income_tax_exemption_limit",
+        "sourceIds": [
+          "es-irpf"
+        ],
+        "requirements": [
+          "distanceKm",
+          "businessTripEvidence"
+        ],
+        "limit": {
+          "currency": "EUR",
+          "amount": 0.26,
+          "unit": "km",
+          "extras": [
+            "toll",
+            "parking"
+          ]
+        }
+      },
+      {
+        "id": "es.perdiem.domestic.false",
+        "kind": "allowance_limit",
+        "category": "per_diem",
+        "effect": "income_tax_exemption_limit",
+        "sourceIds": [
+          "es-irpf"
+        ],
+        "conditions": {
+          "tripScope": "domestic",
+          "overnight": false
+        },
+        "requirements": [
+          "differentMunicipality"
+        ],
+        "limit": {
+          "currency": "EUR",
+          "amount": 26.67
+        }
+      },
+      {
+        "id": "es.perdiem.foreign.false",
+        "kind": "allowance_limit",
+        "category": "per_diem",
+        "effect": "income_tax_exemption_limit",
+        "sourceIds": [
+          "es-irpf"
+        ],
+        "conditions": {
+          "tripScope": "foreign",
+          "overnight": false
+        },
+        "requirements": [
+          "differentMunicipality"
+        ],
+        "limit": {
+          "currency": "EUR",
+          "amount": 48.08
+        }
+      },
+      {
+        "id": "es.perdiem.domestic.true",
+        "kind": "allowance_limit",
+        "category": "per_diem",
+        "effect": "income_tax_exemption_limit",
+        "sourceIds": [
+          "es-irpf"
+        ],
+        "conditions": {
+          "tripScope": "domestic",
+          "overnight": true
+        },
+        "requirements": [
+          "differentMunicipality"
+        ],
+        "limit": {
+          "currency": "EUR",
+          "amount": 53.34
+        }
+      },
+      {
+        "id": "es.perdiem.foreign.true",
+        "kind": "allowance_limit",
+        "category": "per_diem",
+        "effect": "income_tax_exemption_limit",
+        "sourceIds": [
+          "es-irpf"
+        ],
+        "conditions": {
+          "tripScope": "foreign",
+          "overnight": true
+        },
+        "requirements": [
+          "differentMunicipality"
+        ],
+        "limit": {
+          "currency": "EUR",
+          "amount": 91.35
+        }
+      },
+      {
+        "id": "es.vat.travel",
+        "kind": "vat_treatment",
+        "category": "*",
+        "effect": "manual_review",
+        "sourceIds": [
+          "es-vat"
+        ]
+      }
+    ]
+  },
+  "retention": {
+    "mode": "dual_period",
+    "minimumYears": 4,
+    "commercialYears": 6,
+    "requiresLegalReview": true
+  },
+  "sources": [
+    {
+      "id": "es-irpf",
+      "authority": "BOE",
+      "title": "RD 439/2007 IRPF article 9",
+      "url": "https://www.boe.es/buscar/act.php?id=BOE-A-2007-6820&p=20231228&tn=1",
+      "verifiedAt": "2026-07-20"
+    },
+    {
+      "id": "es-vat",
+      "authority": "BOE",
+      "title": "Law 37/1992 VAT articles 95-96",
+      "url": "https://boe.es/buscar/act.php?id=BOE-A-1992-28740&p=20260228&tn=0",
+      "verifiedAt": "2026-07-20"
+    },
+    {
+      "id": "es-retention",
+      "authority": "AEAT",
+      "title": "Invoice retention",
+      "url": "https://sede.agenciatributaria.gob.es/",
+      "verifiedAt": "2026-07-20"
+    }
+  ],
+  "unresolvedDecisions": [
+    "Foral territories and Canary Islands require subpacks"
+  ],
+  "governance": {
+    "regulatoryApprovalRequired": true,
+    "technicalApprovalRequired": true,
+    "securityApprovalRequired": true
+  }
+}

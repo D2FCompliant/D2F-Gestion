@@ -1,0 +1,172 @@
+{
+  "schemaVersion": "1.0.0",
+  "packId": "country.rs.expenses",
+  "country": "RS",
+  "module": "expenses",
+  "version": "2026.1.0",
+  "lifecycleStatus": "regulatory_review",
+  "effectiveFrom": "2026-01-01",
+  "verifiedAt": "2026-07-20",
+  "currency": "RSD",
+  "languages": [
+    "sr",
+    "en"
+  ],
+  "automaticPublication": false,
+  "expense": {
+    "allowedCategories": [
+      "meal",
+      "accommodation",
+      "fuel",
+      "toll",
+      "parking",
+      "train",
+      "flight",
+      "taxi",
+      "ride_hailing",
+      "public_transport",
+      "vehicle_rental",
+      "mileage",
+      "per_diem",
+      "telecommunications",
+      "office_supplies",
+      "representation",
+      "training",
+      "conference",
+      "home_working",
+      "miscellaneous"
+    ],
+    "receiptRequiredDefault": true,
+    "evidenceRequirements": [
+      "original_receipt",
+      "business_purpose",
+      "merchant",
+      "expense_date",
+      "payment_method"
+    ],
+    "rules": [
+      {
+        "id": "rs.perdiem.domestic.2026",
+        "kind": "allowance_limit",
+        "category": "per_diem",
+        "effect": "salary_tax_exemption_limit",
+        "sourceIds": [
+          "rs-income"
+        ],
+        "conditions": {
+          "tripScope": "domestic"
+        },
+        "requirements": [
+          "tripOrder",
+          "durationHours"
+        ],
+        "limit": {
+          "currency": "RSD",
+          "amount": 3380,
+          "halfDayAmount": 1690
+        }
+      },
+      {
+        "id": "rs.perdiem.foreign.2026",
+        "kind": "allowance_limit",
+        "category": "per_diem",
+        "effect": "salary_tax_exemption_limit",
+        "sourceIds": [
+          "rs-income"
+        ],
+        "conditions": {
+          "tripScope": "foreign"
+        },
+        "requirements": [
+          "tripOrder",
+          "durationHours"
+        ],
+        "limit": {
+          "currency": "EUR",
+          "amount": 90,
+          "conversion": "NBS_middle_rate"
+        }
+      },
+      {
+        "id": "rs.lodging.invoice",
+        "kind": "actual_cost",
+        "category": "accommodation",
+        "effect": "documented_exemption",
+        "sourceIds": [
+          "rs-income"
+        ],
+        "requirements": [
+          "lodgingInvoice"
+        ]
+      },
+      {
+        "id": "rs.personal.car.2026",
+        "kind": "fuel_formula_monthly_cap",
+        "category": "mileage",
+        "effect": "salary_tax_exemption_limit",
+        "sourceIds": [
+          "rs-income"
+        ],
+        "requirements": [
+          "authorisation",
+          "distanceKm",
+          "fuelUnitPrice"
+        ],
+        "limit": {
+          "factorOfFuelUnitPrice": 0.3,
+          "monthlyCap": {
+            "currency": "RSD",
+            "amount": 9855
+          }
+        }
+      },
+      {
+        "id": "rs.vat.business",
+        "kind": "vat_treatment",
+        "category": "*",
+        "effect": "manual_review",
+        "sourceIds": [
+          "rs-vat"
+        ]
+      }
+    ]
+  },
+  "retention": {
+    "mode": "fixed_by_document_type",
+    "sourceDocumentsYears": 5,
+    "ledgerYears": 10,
+    "requiresLegalReview": false
+  },
+  "sources": [
+    {
+      "id": "rs-income",
+      "authority": "PIS RS",
+      "title": "Personal income tax law article 18",
+      "url": "https://reg.pravno-informacioni-sistem.rs/api/viewdoc?doctype=reg&regactid=438284&uuid=8d7c110b-252e-41b2-bff9-35a15a22dc37",
+      "verifiedAt": "2026-07-20"
+    },
+    {
+      "id": "rs-vat",
+      "authority": "PIS RS",
+      "title": "VAT law",
+      "url": "https://reg.pravno-informacioni-sistem.rs/api/viewdoc?doctype=reg&regactid=439341&uuid=4fabbd92-1c61-4b59-b707-1158c8957e92",
+      "verifiedAt": "2026-07-20"
+    },
+    {
+      "id": "rs-accounting",
+      "authority": "Ministry Finance RS",
+      "title": "Accounting law",
+      "url": "https://mfin.gov.rs/propisi/-zakon-o-racunovodstvu-sluzbeni-glasnik-rs-br-732019",
+      "verifiedAt": "2026-07-20"
+    }
+  ],
+  "unresolvedDecisions": [
+    "Collective agreements may reimburse above tax-free limit",
+    "2026 draft law excluded"
+  ],
+  "governance": {
+    "regulatoryApprovalRequired": true,
+    "technicalApprovalRequired": true,
+    "securityApprovalRequired": true
+  }
+}

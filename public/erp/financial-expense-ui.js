@@ -318,13 +318,24 @@
     if (incomplete.length) queue?.append(taskButton(incomplete.length + " " + tr("expenses.task.incomplete", "note(s) à compléter"), tr("expenses.task.incomplete_hint", "Ajoutez les lignes ou justificatifs manquants"), "", { go: "expenses-reports" }));
     if (submitted.length) queue?.append(taskButton(submitted.length + " " + tr("expenses.task.approval", "note(s) à approuver"), tr("expenses.task.approval_hint", "Examiner les contrôles puis prendre une décision"), "", { go: "expenses-approvals", urgent: true }));
     if (!queue?.children.length) queue?.append(taskButton(tr("platform.task.clear", "Aucun traitement urgent"), tr("expenses.task.clear_hint", "Créez une note ou consultez l’historique."), "", { go: "expenses-reports", label: tr("expenses.action.create", "Créer une note →") }));
-    renderCaptureSelection(allReports); renderExpenseDetail(); renderPackState();
+    renderCaptureSelection(allReports); renderExpenseDetail(); renderCountryPack(data.countryPack); renderPackState(data.countryPack);
   }
 
-  function renderPackState() {
-    const pack = window.D2FPlatformCapabilities?.countryPack || {};
+  function renderCountryPack(pack = {}) {
+    const rules = byId("expenses-country-rules"), sources = byId("expenses-country-sources"); clear(rules); clear(sources);
+    for (const rule of pack.rules || []) {
+      const card = document.createElement("article"); card.className = "platformRuleCard" + (pack.status === "qualified" ? "" : " platformRuleCard--pending");
+      const title = document.createElement("strong"); title.textContent = rule.id || "rule";
+      const detail = document.createElement("p"); const limit = rule.limit || {}; detail.textContent = [rule.kind, rule.effect, limit.amount != null ? limit.amount + " " + (limit.currency || pack.currency || "") : ""].filter(Boolean).join(" · ");
+      card.append(title, detail); rules?.append(card);
+    }
+    for (const source of pack.sources || []) { const row=document.createElement("div"); row.className="expenseReceiptItem"; const text=document.createElement("span"); const strong=document.createElement("strong"); strong.textContent=source.authority || "Source"; const small=document.createElement("small"); small.textContent=source.title || source.id || ""; text.append(strong,small); const link=document.createElement("a"); link.className="btn btn--secondary btn--compact"; link.href=source.url; link.target="_blank"; link.rel="noopener noreferrer"; link.textContent="Source officielle"; row.append(text,link); sources?.append(row); }
+  }
+
+  function renderPackState(workspacePack) {
+    const pack = workspacePack || window.D2FPlatformCapabilities?.countryPack || {};
     const country = pack.country || "—", version = pack.version || "preview";
-    const label = country + " · " + (pack.status === "not_qualified" ? tr("expenses.country_pack.unqualified", "Règles pays non qualifiées") : tr("expenses.country_pack.validation", "Validation des règles pays requise"));
+    const label = country + " · " + (pack.status === "qualified" ? tr("expenses.country_pack.qualified", "Country Pack qualifié") : pack.status === "not_qualified" ? tr("expenses.country_pack.unqualified", "Règles pays non qualifiées") : tr("expenses.country_pack.validation", "Validation des règles pays requise"));
     for (const id of ["expense-country-pack", "expenses-rules-pack", "financial-country-pack"]) setText(id, label);
     setText("financial-pack-rule", "country." + String(country).toLowerCase() + ".accounting"); setText("expenses-pack-rule", "country." + String(country).toLowerCase() + ".expense");
     setText("financial-pack-version", version + " · " + (pack.status || "policy_validation_required")); setText("expenses-pack-version", version + " · " + (pack.status || "policy_validation_required"));
@@ -345,7 +356,7 @@
   function expenseInput() {
     return { reportId: local.selectedReportId, occurredOn: byId("expense-line-date")?.value, merchant: byId("expense-line-merchant")?.value, description: byId("expense-line-description")?.value,
       category: byId("expense-line-category")?.value, paymentMethod: byId("expense-line-payment-method")?.value, personalAmount: byId("expense-line-personal")?.value, businessPurpose: byId("expense-line-purpose")?.value, netAmount: byId("expense-line-net")?.value, taxAmount: byId("expense-line-tax")?.value,
-      grossAmount: number(byId("expense-line-net")?.value) + number(byId("expense-line-tax")?.value), country: byId("expense-line-country")?.value, currency: byId("expense-report-currency")?.value || "EUR" };
+      grossAmount: number(byId("expense-line-net")?.value) + number(byId("expense-line-tax")?.value), country: byId("expense-line-country")?.value, currency: byId("expense-report-currency")?.value || "EUR", tripScope: byId("expense-trip-scope")?.value, mealContext: byId("expense-meal-context")?.value, distanceKm: byId("expense-distance-km")?.value, vehicleFiscalPower: byId("expense-vehicle-power")?.value, annualBusinessKm: byId("expense-annual-km")?.value, durationHours: byId("expense-duration-hours")?.value, overnight: Boolean(byId("expense-overnight")?.checked), differentMunicipality: Boolean(byId("expense-different-municipality")?.checked), expenseTerritory: byId("expense-line-country")?.value, traceablePayment: !String(byId("expense-line-payment-method")?.value || "").includes("cash") };
   }
   async function receiptPayload(file) {
     if (!file) return null;

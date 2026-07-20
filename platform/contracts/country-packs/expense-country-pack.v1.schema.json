@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.d2fcompliant.org/country-packs/expenses.v1.schema.json",
+  "title": "D2F Expenses Country Pack",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "packId",
+    "country",
+    "module",
+    "version",
+    "lifecycleStatus",
+    "effectiveFrom",
+    "verifiedAt",
+    "currency",
+    "languages",
+    "automaticPublication",
+    "expense",
+    "retention",
+    "sources",
+    "unresolvedDecisions",
+    "governance"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "1.0.0"
+    },
+    "packId": {
+      "type": "string"
+    },
+    "country": {
+      "type": "string"
+    },
+    "module": {
+      "const": "expenses"
+    },
+    "version": {
+      "type": "string"
+    },
+    "lifecycleStatus": {
+      "type": "string"
+    },
+    "effectiveFrom": {
+      "type": "string"
+    },
+    "verifiedAt": {
+      "type": "string"
+    },
+    "currency": {
+      "type": "string"
+    },
+    "languages": {
+      "type": "array"
+    },
+    "automaticPublication": {
+      "const": false
+    },
+    "expense": {
+      "type": "object"
+    },
+    "retention": {
+      "type": "object"
+    },
+    "sources": {
+      "type": "array"
+    },
+    "unresolvedDecisions": {
+      "type": "array"
+    },
+    "governance": {
+      "type": "object"
+    }
+  }
+}

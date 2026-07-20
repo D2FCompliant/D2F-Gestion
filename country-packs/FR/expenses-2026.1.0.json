@@ -1,0 +1,216 @@
+{
+  "schemaVersion": "1.0.0",
+  "packId": "country.fr.expenses",
+  "country": "FR",
+  "module": "expenses",
+  "version": "2026.1.0",
+  "lifecycleStatus": "regulatory_review",
+  "effectiveFrom": "2026-01-01",
+  "verifiedAt": "2026-07-20",
+  "currency": "EUR",
+  "languages": [
+    "fr",
+    "en"
+  ],
+  "automaticPublication": false,
+  "expense": {
+    "allowedCategories": [
+      "meal",
+      "accommodation",
+      "fuel",
+      "toll",
+      "parking",
+      "train",
+      "flight",
+      "taxi",
+      "ride_hailing",
+      "public_transport",
+      "vehicle_rental",
+      "mileage",
+      "per_diem",
+      "telecommunications",
+      "office_supplies",
+      "representation",
+      "training",
+      "conference",
+      "home_working",
+      "miscellaneous"
+    ],
+    "receiptRequiredDefault": true,
+    "evidenceRequirements": [
+      "original_receipt",
+      "business_purpose",
+      "merchant",
+      "expense_date",
+      "payment_method"
+    ],
+    "rules": [
+      {
+        "id": "fr.meal.workplace.2026",
+        "kind": "allowance_limit",
+        "category": "meal",
+        "effect": "social_exemption_limit",
+        "sourceIds": [
+          "fr-meals"
+        ],
+        "conditions": {
+          "mealContext": "workplace"
+        },
+        "limit": {
+          "currency": "EUR",
+          "amount": 7.5
+        }
+      },
+      {
+        "id": "fr.meal.travel.nonrestaurant.2026",
+        "kind": "allowance_limit",
+        "category": "meal",
+        "effect": "social_exemption_limit",
+        "sourceIds": [
+          "fr-meals"
+        ],
+        "conditions": {
+          "mealContext": "travel_non_restaurant"
+        },
+        "limit": {
+          "currency": "EUR",
+          "amount": 10.4
+        }
+      },
+      {
+        "id": "fr.meal.travel.restaurant.2026",
+        "kind": "allowance_limit",
+        "category": "meal",
+        "effect": "social_exemption_limit",
+        "sourceIds": [
+          "fr-meals"
+        ],
+        "conditions": {
+          "mealContext": "travel_restaurant"
+        },
+        "limit": {
+          "currency": "EUR",
+          "amount": 21.4
+        }
+      },
+      {
+        "id": "fr.mileage.car.2026",
+        "kind": "mileage_matrix",
+        "category": "mileage",
+        "effect": "social_exemption_limit",
+        "sourceIds": [
+          "fr-mileage"
+        ],
+        "requirements": [
+          "distanceKm",
+          "vehicleFiscalPower",
+          "annualBusinessKm"
+        ],
+        "limit": {
+          "currency": "EUR",
+          "bands": [
+            {
+              "maxKm": 5000,
+              "rates": {
+                "3": 0.529,
+                "4": 0.606,
+                "5": 0.636,
+                "6": 0.665,
+                "7": 0.697
+              }
+            },
+            {
+              "minKm": 5001,
+              "maxKm": 20000,
+              "rates": {
+                "3": 0.316,
+                "4": 0.34,
+                "5": 0.357,
+                "6": 0.374,
+                "7": 0.394
+              },
+              "fixed": {
+                "3": 1065,
+                "4": 1330,
+                "5": 1395,
+                "6": 1457,
+                "7": 1515
+              }
+            },
+            {
+              "minKm": 20001,
+              "rates": {
+                "3": 0.37,
+                "4": 0.407,
+                "5": 0.427,
+                "6": 0.447,
+                "7": 0.47
+              }
+            }
+          ],
+          "electricMultiplier": 1.2
+        }
+      },
+      {
+        "id": "fr.vat.context",
+        "kind": "vat_treatment",
+        "category": [
+          "meal",
+          "accommodation",
+          "public_transport"
+        ],
+        "effect": "manual_review",
+        "sourceIds": [
+          "fr-vat"
+        ]
+      }
+    ]
+  },
+  "retention": {
+    "mode": "fixed_minimum",
+    "minimumYears": 10,
+    "requiresLegalReview": false,
+    "sourceIds": [
+      "fr-retention"
+    ]
+  },
+  "sources": [
+    {
+      "id": "fr-meals",
+      "authority": "URSSAF",
+      "title": "Professional expenses 2026 meals",
+      "url": "https://www.urssaf.fr/accueil/outils-documentation/taux-baremes/frais-professionnels.html",
+      "verifiedAt": "2026-07-20"
+    },
+    {
+      "id": "fr-mileage",
+      "authority": "URSSAF",
+      "title": "Mileage allowances 2026",
+      "url": "https://www.urssaf.fr/accueil/outils-documentation/taux-baremes/indemnites-kilometriques.html",
+      "verifiedAt": "2026-07-20"
+    },
+    {
+      "id": "fr-vat",
+      "authority": "DGFiP BOFiP",
+      "title": "VAT deduction restrictions",
+      "url": "https://bofip.impots.gouv.fr/export/pdf/1440",
+      "verifiedAt": "2026-07-20"
+    },
+    {
+      "id": "fr-retention",
+      "authority": "DILA",
+      "title": "Accounting evidence retention",
+      "url": "https://entreprendre.service-public.fr/vosdroits/F10029",
+      "verifiedAt": "2026-07-20"
+    }
+  ],
+  "unresolvedDecisions": [
+    "VAT depends on invoice and beneficiary",
+    "Long trips require extra context"
+  ],
+  "governance": {
+    "regulatoryApprovalRequired": true,
+    "technicalApprovalRequired": true,
+    "securityApprovalRequired": true
+  }
+}

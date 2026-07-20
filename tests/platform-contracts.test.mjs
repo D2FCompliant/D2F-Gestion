@@ -149,7 +149,7 @@ test("separates product menus, gates optional applications and captures smartpho
   assert.match(service, /d2f-expense-receipts/);
   assert.match(service, /capture_context/);
   assert.match(service, /SHA-256/);
-  assert.match(policy, /pending_human_validation/);
+  assert.match(policy, /manual_review_required/);
   assert.match(migration, /primary key \(tenant_id, application\)/);
   assert.match(migration, /capture_location jsonb/);
 });
@@ -238,4 +238,26 @@ test("makes Expenses operational and secure for every supported country and devi
   assert.match(ui, /expenses:viewReceipt/);
   assert.match(styles, /.expenseMobileReports/);
   assert.match(styles, /max-width:760px/);
+});
+
+
+test("ships four sourced Country Packs without automatic publication", async () => {
+  const countries = ["FR", "RS", "IT", "ES"];
+  const schema = await json("platform/contracts/country-packs/expense-country-pack.v1.schema.json");
+  assert.equal(schema.properties.automaticPublication.const, false);
+  for (const country of countries) {
+    const pack = await json("country-packs/" + country + "/expenses-2026.1.0.json");
+    assert.equal(pack.country, country);
+    assert.equal(pack.lifecycleStatus, "regulatory_review");
+    assert.equal(pack.automaticPublication, false);
+    assert.ok(pack.expense.rules.length >= 4);
+    assert.ok(pack.sources.length >= 3);
+    assert.ok(pack.sources.every((source) => /^https:\/\//.test(source.url)));
+    assert.equal(pack.governance.securityApprovalRequired, true);
+  }
+  const migration = await readFile(new URL("supabase/migrations/20260720193000_expense_country_packs_2026_1.sql", root), "utf8");
+  assert.match(migration, /Regulatory, technical and security approvals are required/);
+  assert.match(migration, /Every Country Pack evidence item must be verified/);
+  assert.match(migration, /Automatic Country Pack publication is forbidden/);
+  assert.doesNotMatch(migration, /perform public\.d2f_publish_country_pack_v1/);
 });

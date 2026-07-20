@@ -110,7 +110,9 @@ export async function listExpenseWorkspace(
   ownerKey: string,
   actorId: string,
   actorRole: "owner" | "collaborator",
+  establishmentCountry: string,
 ) {
+  const countryPack = await expenseCountryPolicy(supabase, establishmentCountry);
   let reportsQuery = supabase
     .from("d2f_expense_reports")
     .select("id,report_number,claimant_id,claimant_name,title,currency,status,total_net,total_tax,total_gross,claimed_amount,eligible_amount,rejected_amount,personal_amount,reimbursable_amount,advance_amount,reimbursed_amount,remaining_amount,reimbursement_status,accounting_status,aggregate_version,submitted_at,decided_at,approver_id,decision_note,created_at,updated_at")
@@ -128,7 +130,7 @@ export async function listExpenseWorkspace(
   }));
   const access = { actorId, role: actorRole, scope: actorRole === "owner" ? "tenant" : "personal", canApprove: actorRole === "owner" };
   const ids = rows.map((report) => report.id);
-  if (!ids.length) return { reports: [], lines: [], receipts: [], claimants: [], access, summary: { draft: 0, submitted: 0, approvable: 0, approved: 0, totalApproved: 0 } };
+  if (!ids.length) return { reports: [], lines: [], receipts: [], claimants: [], access, countryPack, summary: { draft: 0, submitted: 0, approvable: 0, approved: 0, totalApproved: 0 } };
 
   const [lines, receipts] = await Promise.all([
     supabase.from("d2f_expense_lines")
@@ -142,7 +144,7 @@ export async function listExpenseWorkspace(
   const claimants = [...new Map(rows.map((report) => [String(report.claimant_id), { id: String(report.claimant_id), name: String(report.claimant_name || report.claimant_id) }])).values()]
     .sort((left, right) => left.name.localeCompare(right.name));
   return {
-    reports: rows, lines: lines.data || [], receipts: receipts.data || [], claimants, access,
+    reports: rows, lines: lines.data || [], receipts: receipts.data || [], claimants, access, countryPack,
     summary: {
       draft: rows.filter((item) => item.status === "draft" || item.status === "returned").length,
       submitted: rows.filter((item) => item.status === "submitted").length,
@@ -413,7 +415,7 @@ export async function submitExpenseReport(
   const input = object(inputValue);
   const reportId = text(input.id || input.reportId || input.report_id);
   const countryPolicy = await expenseCountryPolicy(supabase, establishmentCountry);
-  if (countryPolicy.status === "not_qualified") throw new Error("Soumission bloquée : le Country Pack " + countryPolicy.country + " n'est pas qualifié");
+  if (countryPolicy.status !== "qualified") throw new Error("Soumission bloquée : le Country Pack " + countryPolicy.country + " n’est pas encore publié après validation réglementaire, technique et sécurité");
   const report = await supabase.from("d2f_expense_reports").select("id,claimant_id").eq("id", reportId).eq("owner_key", ownerKey).maybeSingle();
   throwDatabase(report.error);
   if (!report.data) throw new Error("Note de frais introuvable");

@@ -1314,7 +1314,7 @@ async function dispatch(ownerEmail: string, method: string, args: unknown[], ten
   if (method === "xpReject:load" || method === "rejectionReasons:load") return rejectionReasons;
   if (method === "financial:workspace") return listFinancialWorkspace(getSupabaseAdmin(), ownerEmail);
   if (method === "financial:refreshProjections") return refreshFinancialProjections(getSupabaseAdmin(), ownerEmail);
-  if (method === "expenses:workspace") return listExpenseWorkspace(getSupabaseAdmin(), ownerEmail, actorId, actorRole);
+  if (method === "expenses:workspace") return listExpenseWorkspace(getSupabaseAdmin(), ownerEmail, actorId, actorRole, tenantIdentity?.country || "");
   if (method === "expenses:createReport") return createExpenseReport(getSupabaseAdmin(), ownerEmail, tenantIdentity?.tenantId || ownerEmail, actorId, first(args));
   if (method === "expenses:addLine") return addExpenseLine(getSupabaseAdmin(), ownerEmail, tenantIdentity?.country || "", actorId, first(args));
   if (method === "expenses:uploadReceipt") return uploadExpenseReceipt(getSupabaseAdmin(), ownerEmail, actorId, first(args));
