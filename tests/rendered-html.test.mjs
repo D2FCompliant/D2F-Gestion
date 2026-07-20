@@ -74,8 +74,8 @@ test("makes the quote deposit unit explicit with no preset value", async () => {
   assert.match(app, /syncQuoteDepositModeUi\(\{ clearValue: true \}\)/);
   assert.match(styles, /\.depositModeOption input:checked \+ span/);
   assert.match(shell, /app-build-badge">\{D2F_PLATFORM_VERSION_LABEL\}/);
-  assert.match(platformVersion, /D2F_PLATFORM_VERSION = "3\.3\.5"/);
-  assert.equal(JSON.parse(pkg).version, "3.3.5");
+  assert.match(platformVersion, /D2F_PLATFORM_VERSION = "3\.3\.6"/);
+  assert.equal(JSON.parse(pkg).version, "3.3.6");
 });
 
 test("renders human-readable document lists on desktop and smartphone", async () => {
@@ -782,6 +782,8 @@ test("provides tenant-scoped support tickets with guided level-1 triage and trac
   assert.match(center, /name="contactEmail"/);
   assert.match(center, /name="ticketScope"/);
   assert.match(center, /name="requestType"/);
+  assert.match(center, /defaultValue="customer" disabled aria-disabled="true"/);
+  assert.match(center, /value="customer" \/><\/label>}\s*<label>{copy\.requestType}/);
   assert.match(shell, /className="support-header-button"/);
   assert.match(shell, /window\.setInterval\(refreshSupport, 60000\)/);
   assert.match(styles, /\.support-layout\{ min-height:0; display:grid; grid-template-columns:360px/);
