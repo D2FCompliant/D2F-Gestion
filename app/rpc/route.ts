@@ -555,7 +555,8 @@ function creditSourceId(creditNote: JsonRecord) {
 function invoiceGrossAmount(invoice: JsonRecord) {
   const totalTtc = Math.max(0, numberValue(invoice.total_ttc));
   const prepaid = invoiceType(invoice) === "final" ? Math.max(0, numberValue(invoice.prepaid_amount)) : 0;
-  if (totalTtc > 0) return Math.max(0, round2(totalTtc - prepaid));
+  const allocated = invoiceType(invoice) === "final" ? Math.max(0, numberValue(invoice.deposit_allocated_amount)) : 0;
+  if (totalTtc > 0) return Math.max(0, round2(totalTtc - prepaid - allocated));
   return Math.max(0, round2(numberValue(invoice.amount_due)));
 }
 
@@ -772,7 +773,7 @@ function isMutationMethod(method: string) {
   const [, action = ""] = method.split(":");
   return [
     "save", "upsert", "create", "update", "record", "remove", "delete", "importCsv", "duplicate",
-    "setStatus", "issue", "createFromQuote", "createDeposit", "createCreditNote", "setInboundConfig",
+    "setStatus", "issue", "createFromQuote", "createDeposit", "createCreditNote", "createPartialCreditNote", "attachDeposit", "setInboundConfig",
     "setConformityConfig", "saveConfig", "setLogo", "clearLogo", "accept", "reject", "dispute",
     "send", "sendInvoice", "sendNow", "archive", "importFile", "uploadEvidence", "deleteEvidence", "archiveEvidence",
     "createReport", "addLine", "uploadReceipt", "submit", "decide", "refreshProjections",
@@ -1553,6 +1554,55 @@ async function dispatch(ownerEmail: string, method: string, args: unknown[], ten
     if (entity === "invoices" && action === "createDeposit") {
       const payload = object(first(args));
       return saveRecord(ownerEmail, "invoices", { ...payload, id: crypto.randomUUID(), type: "deposit", status: "draft" });
+    }
+    if (entity === "invoices" && action === "attachDeposit") {
+      const payload = object(first(args));
+      const invoiceId = String(payload.invoiceId || payload.invoice_id || "");
+      const depositInvoiceId = String(payload.depositInvoiceId || payload.deposit_invoice_id || "");
+      const [invoice, deposit, invoices, payments] = await Promise.all([
+        getRecord(ownerEmail, "invoices", invoiceId), getRecord(ownerEmail, "invoices", depositInvoiceId),
+        listRecords(ownerEmail, "invoices"), listRecords(ownerEmail, "payments"),
+      ]);
+      if (!invoice || invoiceStatus(invoice) !== "issued" || invoiceType(invoice) !== "final") throw new Error("Sélectionnez une facture finale émise");
+      if (!deposit || invoiceStatus(deposit) !== "issued" || invoiceType(deposit) !== "deposit") throw new Error("Sélectionnez une facture d’acompte émise");
+      if (String(invoice.client_id || invoice.clientId || "") !== String(deposit.client_id || deposit.clientId || "")) throw new Error("L’acompte et la facture finale doivent appartenir au même client");
+      const invoiceQuoteId = String(invoice.quote_id || invoice.source_quote_id || object(invoice.meta).quote_id || object(invoice.meta_json).quote_id || "");
+      const depositQuoteId = String(deposit.quote_id || deposit.source_quote_id || object(deposit.meta).quote_id || object(deposit.meta_json).quote_id || "");
+      if (invoiceQuoteId && depositQuoteId && invoiceQuoteId !== depositQuoteId) throw new Error("La facture d’acompte ne provient pas du même devis");
+      if (numberValue(invoice.prepaid_amount) > .001) throw new Error("Cette facture finale intègre déjà un acompte");
+      const allocations = Array.isArray(invoice.deposit_allocations) ? invoice.deposit_allocations.map(object) : [];
+      if (allocations.some((item) => String(item.deposit_invoice_id || "") === depositInvoiceId)) throw new Error("Cette facture d’acompte est déjà rattachée");
+      const alreadyUsed = invoices.some((candidate) => String(candidate.id || "") !== invoiceId && Array.isArray(candidate.deposit_allocations) && candidate.deposit_allocations.map(object).some((item) => String(item.deposit_invoice_id || "") === depositInvoiceId));
+      if (alreadyUsed) throw new Error("Cette facture d’acompte est déjà rattachée à une autre facture finale");
+      const rows = receivableRows(invoices, payments);
+      const depositRow = rows.find((row) => String(row.invoice.id || "") === depositInvoiceId);
+      const finalRow = rows.find((row) => String(row.invoice.id || "") === invoiceId);
+      const amount = Math.min(depositRow?.paid || 0, depositRow?.netDue || 0, finalRow?.remaining || 0);
+      if (amount <= .001) throw new Error("Aucun acompte encaissé n’est disponible pour ce rattachement");
+      return saveRecord(ownerEmail, "invoices", {
+        ...invoice, id: invoiceId, deposit_allocated_amount: round2(numberValue(invoice.deposit_allocated_amount) + amount),
+        deposit_allocations: [...allocations, { deposit_invoice_id: depositInvoiceId, deposit_invoice_number: deposit.invoice_number || deposit.number || depositInvoiceId, amount: round2(amount), allocated_at: new Date().toISOString() }],
+      });
+    }
+    if (entity === "invoices" && action === "createPartialCreditNote") {
+      const payload = object(first(args));
+      const source = await getRecord(ownerEmail, "invoices", String(payload.invoiceId || payload.invoice_id || ""));
+      if (!source || invoiceStatus(source) !== "issued" || invoiceType(source) === "credit_note") throw new Error("La facture source doit être émise");
+      const [invoices, payments] = await Promise.all([listRecords(ownerEmail, "invoices"), listRecords(ownerEmail, "payments")]);
+      const row = receivableRows(invoices, payments).find((candidate) => String(candidate.invoice.id || "") === String(source.id || ""));
+      const amount = round2(Math.abs(numberValue(payload.amount)));
+      if (!row || amount <= .001 || amount > row.remaining + .001) throw new Error(`Le montant de l’avoir doit être compris entre 0,01 et ${(row?.remaining || 0).toFixed(2)} EUR`);
+      const sourceTtc = Math.abs(numberValue(source.total_ttc || source.amount_due));
+      const ratio = sourceTtc > .001 ? amount / sourceTtc : 1;
+      const totalHt = round2(Math.abs(numberValue(source.total_ht)) * ratio);
+      const totalTva = round2(Math.max(0, amount - totalHt));
+      const reason = String(payload.reason || "Annulation partielle du contrat").trim();
+      return saveRecord(ownerEmail, "invoices", {
+        ...source, id: crypto.randomUUID(), source_invoice_id: source.id, source_invoice_number: source.invoice_number || source.number || source.id,
+        invoice_number: "", number: "", type: "credit_note", status: "draft", date: today(), reason, partial_credit: true,
+        lines: [{ description: reason, quantity: 1, unit_price_ht: totalHt, tva_percent: totalHt > .001 ? round2((totalTva / totalHt) * 100) : 0 }],
+        total_ht: -totalHt, total_tva: -totalTva, total_ttc: -amount, amount_due: -amount, prepaid_amount: 0, deposit_allocated_amount: 0, deposit_allocations: [],
+      });
     }
     if (entity === "invoices" && action === "createCreditNote") {
       const source = await getRecord(ownerEmail, "invoices", idFrom(first(args)));

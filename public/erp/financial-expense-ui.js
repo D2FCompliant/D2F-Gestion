@@ -20,6 +20,7 @@
       returned: tr("expenses.status.returned", "À corriger"), validated: tr("financial.status.validated", "Validée"),
       posted: tr("financial.status.posted", "Comptabilisée"), matched: tr("financial.status.matched", "Rapproché"),
       partial: tr("financial.status.partial", "Partiel"), open: tr("financial.status.open", "À rapprocher"),
+      credited: tr("payments.status.credited", "Annulée par avoir"),
     })[status] || status || tr("expenses.status.draft", "Brouillon");
   }
   function badge(status) {
@@ -105,24 +106,20 @@
       foundationReady = false;
       console.info("[financial] foundation not active; Gestion cockpit remains available", error?.message || error);
     }
-    const clients = new Map((clientsRaw || []).map((client) => [String(client.id || ""), client.legal_name || client.name || client.company_name || "—"]));
-    const paymentsByInvoice = new Map();
-    for (const payment of paymentsRaw || []) {
-      const invoiceId = String(payment.invoice_id || payment.invoiceId || "");
-      if (invoiceId) paymentsByInvoice.set(invoiceId, (paymentsByInvoice.get(invoiceId) || 0) + paymentAmount(payment));
-    }
-    const invoices = (invoicesRaw || []).filter(issuedInvoice).map((invoice) => {
+    const clients = new Map((clientsRaw || []).map((client) => [String(client.id || ""), client]));
+    const receivables = window.D2FReceivables.buildReceivableRows(invoicesRaw || [], paymentsRaw || []);
+    const invoices = receivables.map((entry) => {
+      const invoice = entry.invoice || {};
+      const client = clients.get(String(invoice.client_id || invoice.clientId || "")) || {};
       const id = String(invoice.id || "");
-      const gross = number(invoice.total_ttc || invoice.amount_due || invoice.gross_amount);
-      const paid = Math.max(0, paymentsByInvoice.get(id) || 0);
-      const remaining = Math.max(0, gross - paid);
       return {
-        id, invoice_number: invoice.invoice_number || invoice.number || "—", customer_name: customerName(invoice, clients),
-        issue_date: invoice.date || invoice.issue_date || "", due_date: invoice.due_date || invoice.dueDate || "",
-        gross_amount: gross, paid_amount: paid, remaining_amount: remaining, currency: invoice.currency || "EUR",
-        match_status: remaining <= 0.005 ? "matched" : paid > 0.005 ? "partial" : "open",
+        id, invoice_number: invoice.invoice_number || invoice.number || "—", customer_name: customerName(invoice, new Map([[String(invoice.client_id || invoice.clientId || ""), client.legal_name || client.name || client.company_name || "—"]])),
+        issue_date: invoice.date || invoice.issue_date || "", due_date: window.D2FReceivables.effectiveDueDate(invoice, client),
+        gross_amount: entry.grossDue, credited_amount: entry.credited, credit_numbers: entry.creditNumbers || [],
+        paid_amount: entry.paid, remaining_amount: entry.remaining, currency: invoice.currency || "EUR",
+        match_status: entry.paymentStatus === "credited" ? "credited" : entry.remaining <= window.D2FReceivables.EPSILON ? "matched" : (entry.paid > window.D2FReceivables.EPSILON || entry.credited > window.D2FReceivables.EPSILON) ? "partial" : "open",
       };
-    }).sort((a, b) => String(b.issue_date).localeCompare(String(a.issue_date)));
+    }).sort((left, right) => String(right.issue_date).localeCompare(String(left.issue_date)));
     return {
       invoices, reconciliation: invoices, proposals: workspace.proposals || [], foundationReady,
       summary: {
@@ -178,11 +175,11 @@
     const reconciliations = (data.reconciliation || []).filter((invoice) => local.financialFilter === "all" || (local.financialFilter === "open" && invoice.remaining_amount > .005) || (local.financialFilter === "overdue" && invoice.remaining_amount > .005 && invoice.due_date && invoice.due_date < today));
     for (const invoice of reconciliations) {
       const row = document.createElement("tr");
-      row.append(cell(invoice.invoice_number), cell(invoice.customer_name), cell(money(invoice.gross_amount, invoice.currency), "numeric"), cell(money(invoice.paid_amount, invoice.currency), "numeric"), cell(money(invoice.remaining_amount, invoice.currency), "numeric"));
+      row.append(cell(invoice.invoice_number), cell(invoice.customer_name), cell(money(invoice.gross_amount, invoice.currency), "numeric"), cell(invoice.credited_amount > .005 ? "-" + money(invoice.credited_amount, invoice.currency) : "—", "numeric"), cell(money(invoice.paid_amount, invoice.currency), "numeric"), cell(money(invoice.remaining_amount, invoice.currency), "numeric"));
       const status = document.createElement("td"); status.append(badge(invoice.match_status)); row.append(status);
       const action = document.createElement("td"); action.className = "platformActions";
       if (invoice.remaining_amount > .005) action.append(actionButton(tr("financial.action.record_payment", "Enregistrer un règlement"), "financial:recordPayment", invoice.id, "primary"));
-      else action.append(actionButton(tr("financial.action.view_payments", "Voir les règlements"), "financial:viewPayments", invoice.id, "secondary"));
+      else action.append(actionButton(invoice.match_status === "credited" ? tr("financial.action.view_credits", "Voir les avoirs") : tr("financial.action.view_payments", "Voir les règlements"), "financial:viewPayments", invoice.id, "secondary"));
       row.append(action); reconciliationBody?.append(row);
     }
     toggleEmpty("financial-reconciliation-empty", reconciliations.length);

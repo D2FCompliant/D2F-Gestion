@@ -26,7 +26,7 @@ test("server-renders the D2F Platform cockpit", async () => {
   assert.doesNotMatch(html, /codex-preview|Your site is taking shape|react-loading-skeleton/i);
 
   const shell = await readFile(new URL("../app/session-shell.tsx", import.meta.url), "utf8");
-  assert.match(shell, /src="\/erp\/index\.html\?v=20260720-account-license-only-v215"/);
+  assert.match(shell, /src="\/erp\/index\.html\?v=20260720-reconciliation-adjustments-v215"/);
   assert.match(shell, /title="D2F Platform"/);
 });
 
@@ -37,8 +37,8 @@ test("ships a touch-first smartphone layout", async () => {
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
     readFile(new URL("../public/erp/index.html", import.meta.url), "utf8"),
   ]);
-  assert.match(html, /styles\.css\?v=20260720-account-license-only-v215/);
-  assert.match(html, /app\.js\?v=20260720-account-license-only-v215/);
+  assert.match(html, /styles\.css\?v=20260720-reconciliation-adjustments-v215/);
+  assert.match(html, /app\.js\?v=20260720-reconciliation-adjustments-v215/);
   assert.match(styles, /@media \(max-width: 760px\)/);
   assert.match(styles, /platformPage\.is-active\{[^}]*overflow-y:auto[^}]*scrollbar-gutter:stable/s);
   assert.match(styles, /compact workspaces by default/);
@@ -362,6 +362,10 @@ test("ships a global payment overview and complete screen translations", async (
   assert.match(html, /id="p-payment-status"/);
   assert.match(app, /payments\.listAll/);
   assert.match(app, /D2FReceivables\.summarize/);
+  assert.match(html, /id="p-operation-type"/);
+  assert.match(html, /id="p-deposit-invoice"/);
+  assert.match(app, /invoices\.attachDeposit/);
+  assert.match(app, /invoices\.createPartialCreditNote/);
 
   const source = [html, app, dashboard].join("\n");
   const keys = new Set([
@@ -541,6 +545,31 @@ test("removes issued credit notes from invoice balances", async () => {
   assert.equal(partial.credited, 50);
   assert.equal(partial.paid, 0);
   assert.equal(partial.remaining, 150);
+
+  const finalWithDeposit = receivables.buildReceivableRows([
+    { id: "f7", invoice_number: "F2026-0007", type: "final", status: "issued", total_ttc: 4500, prepaid_amount: 1500 },
+  ], [{ id: "balance", invoice_id: "f7", amount: 3000, status: "posted" }])[0];
+  assert.equal(finalWithDeposit.grossDue, 3000);
+  assert.equal(finalWithDeposit.remaining, 0);
+  assert.equal(finalWithDeposit.paymentStatus, "paid");
+
+  const finalWithAllocatedDeposit = receivables.buildReceivableRows([
+    { id: "final", type: "final", status: "issued", total_ttc: 4500, deposit_allocated_amount: 1500 },
+  ], [{ id: "balance2", invoice_id: "final", amount: 3000, status: "posted" }])[0];
+  assert.equal(finalWithAllocatedDeposit.remaining, 0);
+});
+
+test("uses the shared receivable engine in Financial and secures deposit and partial-credit operations", async () => {
+  const [financial, route] = await Promise.all([
+    readFile(new URL("../public/erp/financial-expense-ui.js", import.meta.url), "utf8"),
+    readFile(new URL("../app/rpc/route.ts", import.meta.url), "utf8"),
+  ]);
+  assert.match(financial, /D2FReceivables\.buildReceivableRows/);
+  assert.match(financial, /entry\.credited/);
+  assert.match(route, /action === "attachDeposit"/);
+  assert.match(route, /action === "createPartialCreditNote"/);
+  assert.match(route, /alreadyUsed/);
+  assert.match(route, /amount > row\.remaining/);
 });
 
 test("ships an immutable Supabase audit trail instead of an empty web stub", async () => {

@@ -48,7 +48,8 @@
   function invoiceGrossAmount(invoice) {
     const totalTtc = Math.max(0, numberValue(invoice?.total_ttc));
     const prepaid = invoiceType(invoice) === "final" ? Math.max(0, numberValue(invoice?.prepaid_amount)) : 0;
-    if (totalTtc > 0) return Math.max(0, round2(totalTtc - prepaid));
+    const allocated = invoiceType(invoice) === "final" ? Math.max(0, numberValue(invoice?.deposit_allocated_amount)) : 0;
+    if (totalTtc > 0) return Math.max(0, round2(totalTtc - prepaid - allocated));
     return Math.max(0, round2(numberValue(invoice?.amount_due)));
   }
 

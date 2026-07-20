@@ -15,7 +15,7 @@
                  object-src 'none';
                  base-uri 'none'">
 
-  <link rel="stylesheet" href="./styles.css?v=20260720-account-license-only-v215" />
+  <link rel="stylesheet" href="./styles.css?v=20260720-reconciliation-adjustments-v215" />
 </head>
 
 <body>
@@ -995,7 +995,7 @@
         <div class="platformLegend"><span><i class="legendDot legendDot--ok"></i><span data-i18n="financial.reconciliation.matched">Rapproché</span></span><span><i class="legendDot legendDot--warn"></i><span data-i18n="financial.reconciliation.partial">Partiel</span></span><span><i class="legendDot legendDot--open"></i><span data-i18n="financial.reconciliation.open">À rapprocher</span></span></div>
         <article class="card platformPanel">
           <div class="platformPanel__head"><div><h2 data-i18n="financial.reconciliation.receivables">Factures et règlements</h2><p class="platformSubtitle" data-i18n="financial.reconciliation.source_hint">Données opérationnelles de D2F Gestion ; aucune écriture comptable n’est générée ici.</p></div></div>
-          <div class="platformTableWrap"><table class="platformTable"><thead><tr><th data-i18n="common.invoice">Facture</th><th data-i18n="common.client">Client</th><th class="numeric" data-i18n="financial.reconciliation.gross">TTC</th><th class="numeric" data-i18n="financial.reconciliation.paid">Réglé</th><th class="numeric" data-i18n="financial.reconciliation.remaining">Reste</th><th data-i18n="common.status">Statut</th><th data-i18n="common.actions">Action</th></tr></thead><tbody id="financial-reconciliation-body"></tbody></table><p class="platformEmpty" id="financial-reconciliation-empty" data-i18n="financial.reconciliation.empty">Aucune facture à rapprocher.</p></div>
+          <div class="platformTableWrap"><table class="platformTable"><thead><tr><th data-i18n="common.invoice">Facture</th><th data-i18n="common.client">Client</th><th class="numeric" data-i18n="financial.reconciliation.gross">TTC</th><th class="numeric" data-i18n="payments.col.credited">Avoirs</th><th class="numeric" data-i18n="financial.reconciliation.paid">Réglé</th><th class="numeric" data-i18n="financial.reconciliation.remaining">Reste</th><th data-i18n="common.status">Statut</th><th data-i18n="common.actions">Action</th></tr></thead><tbody id="financial-reconciliation-body"></tbody></table><p class="platformEmpty" id="financial-reconciliation-empty" data-i18n="financial.reconciliation.empty">Aucune facture à rapprocher.</p></div>
         </article>
       </section>
 
@@ -1165,11 +1165,26 @@
 
             <div class="form u-mt">
               <label>
+                <span data-i18n="payments.operation">Opération</span>
+                <select id="p-operation-type">
+                  <option value="payment" data-i18n="payments.operation.payment">Enregistrer un règlement</option>
+                  <option value="deposit" data-i18n="payments.operation.deposit">Rattacher une facture d’acompte</option>
+                  <option value="partial_credit" data-i18n="payments.operation.partial_credit">Annulation partielle par avoir</option>
+                </select>
+              </label>
+
+              <label>
                 <span data-i18n="payments.invoice">Facture</span>
                 <select id="p-invoice"></select>
               </label>
 
-              <div class="row2">
+              <label id="p-deposit-field" hidden>
+                <span data-i18n="payments.deposit_invoice">Facture d’acompte encaissée</span>
+                <select id="p-deposit-invoice"></select>
+              </label>
+              <div class="hint" id="p-operation-hint" data-i18n="payments.operation.payment_hint">Le règlement réduit le solde de la facture sélectionnée.</div>
+
+              <div class="row2" id="p-payment-details-row1">
                 <label>
                   <span data-i18n="payments.date">Date encaissement</span>
                   <input id="p-date" type="date" />
@@ -1180,7 +1195,7 @@
                 </label>
               </div>
 
-              <div class="row2">
+              <div class="row2" id="p-payment-details-row2">
                 <label>
                   <span data-i18n="payments.method">Mode</span>
                   <select id="p-method">
@@ -1203,7 +1218,7 @@
               </label>
 
               <div class="u-mt">
-                <button class="btn" type="button" data-action="payments:record" data-i18n="action.record_payment">Enregistrer l’encaissement</button>
+                <button class="btn" id="p-operation-submit" type="button" data-action="payments:record" data-i18n="action.record_payment">Enregistrer l’encaissement</button>
               </div>
 
               <div class="u-mt hint" id="p-invoiceHint" data-i18n="payments.select_invoice_hint_none">Toutes les opérations sont visibles à droite. Sélectionnez une facture pour saisir un paiement.</div>
@@ -1690,13 +1705,13 @@
   </aside>
 
   <script src="./xp-z12-012.js"></script>
-  <script src="./receivables.js?v=20260717-client-import-v215"></script>
-  <script src="./audit-ui.js?v=20260717-client-import-v215"></script>
-  <script src="./renderer/web-electron-shim.js?v=20260717-client-import-v215"></script>
-  <script src="./renderer/web-api-shim.js?v=20260717-client-import-v215"></script>
-  <script src="./dashboard-ui.js?v=20260717-client-import-v215"></script>
-  <script src="./financial-expense-ui.js?v=20260720-account-license-only-v215"></script>
-  <script src="./app.js?v=20260720-account-license-only-v215"></script>
+  <script src="./receivables.js?v=20260720-reconciliation-adjustments-v215"></script>
+  <script src="./audit-ui.js?v=20260720-reconciliation-adjustments-v215"></script>
+  <script src="./renderer/web-electron-shim.js?v=20260720-reconciliation-adjustments-v215"></script>
+  <script src="./renderer/web-api-shim.js?v=20260720-reconciliation-adjustments-v215"></script>
+  <script src="./dashboard-ui.js?v=20260720-reconciliation-adjustments-v215"></script>
+  <script src="./financial-expense-ui.js?v=20260720-reconciliation-adjustments-v215"></script>
+  <script src="./app.js?v=20260720-reconciliation-adjustments-v215"></script>
 
   <div id="clientsImportModal" class="modal" aria-hidden="true">
     <div class="modal__backdrop" data-modal-close></div>

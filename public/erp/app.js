@@ -4168,6 +4168,64 @@ function renderPaymentOverview(invoices, payments) {
   };
 }
 
+function paymentOperationType() {
+  return String($("p-operation-type")?.value || "payment");
+}
+
+function paymentQuoteId(invoice) {
+  const meta = invoice?.meta && typeof invoice.meta === "object" ? invoice.meta : {};
+  const metaJson = invoice?.meta_json && typeof invoice.meta_json === "object" ? invoice.meta_json : {};
+  return String(invoice?.quote_id || invoice?.source_quote_id || meta.quote_id || metaJson.quote_id || "");
+}
+
+function refreshPaymentOperationFields({ rebuildInvoices = true } = {}) {
+  const operation = paymentOperationType();
+  const rows = window.D2FReceivables.buildReceivableRows(state.invoices || [], state.payments.all || []);
+  const current = String($("p-invoice")?.value || state.payments.selectedInvoiceId || "");
+  let targets = rows.filter((row) => row.remaining > window.D2FReceivables.EPSILON);
+  if (operation !== "payment") targets = targets.filter((row) => invoiceKind(row.invoice) === "final");
+  if (operation === "deposit") targets = targets.filter((row) => Number(row.invoice?.prepaid_amount || 0) <= window.D2FReceivables.EPSILON);
+  if (rebuildInvoices) {
+    setSelectOptions($("p-invoice"), targets.map((row) => ({
+      id: row.invoice.id,
+      label: `${row.invoice.invoice_number || row.invoice.id} — ${row.invoice.client_name || "—"} • ${money(row.remaining)} € ${t("payments.col.remaining", "reste")}`,
+    })), current);
+  }
+  const invoiceId = String($("p-invoice")?.value || "");
+  state.payments.selectedInvoiceId = invoiceId || null;
+  const selected = (state.invoices || []).find((invoice) => String(invoice.id || "") === invoiceId);
+  const usedDepositIds = new Set((state.invoices || []).flatMap((invoice) => Array.isArray(invoice.deposit_allocations) ? invoice.deposit_allocations : []).map((allocation) => String(allocation?.deposit_invoice_id || "")).filter(Boolean));
+  const selectedQuoteId = paymentQuoteId(selected);
+  const deposits = rows.filter((row) => {
+    const deposit = row.invoice || {};
+    const sameClient = String(deposit.client_id || deposit.clientId || "") === String(selected?.client_id || selected?.clientId || "");
+    const depositQuoteId = paymentQuoteId(deposit);
+    const sameQuote = !selectedQuoteId || !depositQuoteId || selectedQuoteId === depositQuoteId;
+    return invoiceKind(deposit) === "deposit" && row.paid > window.D2FReceivables.EPSILON && sameClient && sameQuote && !usedDepositIds.has(String(deposit.id || ""));
+  });
+  setSelectOptions($("p-deposit-invoice"), deposits.map((row) => ({ id: row.invoice.id, label: `${row.invoice.invoice_number || row.invoice.id} • ${money(Math.min(row.paid, row.netDue))} € encaissé` })), $("p-deposit-invoice")?.value);
+
+  const depositField = $("p-deposit-field");
+  if (depositField) depositField.hidden = operation !== "deposit";
+  const dateLabel = $("p-date")?.closest("label");
+  const amountLabel = $("p-amount")?.closest("label");
+  if (dateLabel) dateLabel.hidden = operation !== "payment";
+  if (amountLabel) amountLabel.hidden = operation === "deposit";
+  if ($("p-payment-details-row2")) $("p-payment-details-row2").hidden = operation !== "payment";
+  const hint = $("p-operation-hint");
+  const button = $("p-operation-submit");
+  if (operation === "deposit") {
+    if (hint) hint.textContent = deposits.length ? t("payments.operation.deposit_hint", "Sélectionnez un acompte encaissé du même client et, si disponible, du même devis.") : t("payments.error.no_deposit", "Aucune facture d’acompte encaissée disponible pour cette facture.");
+    if (button) button.textContent = t("payments.action.attach_deposit", "Rattacher l’acompte");
+  } else if (operation === "partial_credit") {
+    if (hint) hint.textContent = t("payments.operation.partial_credit_hint", "Saisissez le montant TTC à annuler. Un avoir brouillon sera créé pour contrôle avant émission.");
+    if (button) button.textContent = t("payments.action.prepare_partial_credit", "Préparer l’avoir partiel");
+  } else {
+    if (hint) hint.textContent = t("payments.operation.payment_hint", "Le règlement réduit le solde de la facture sélectionnée.");
+    if (button) button.textContent = t("action.record_payment", "Enregistrer l’encaissement");
+  }
+}
+
 async function renderPaymentsPage() {
   const invoiceId = String(document.getElementById("p-invoice")?.value || state.payments.selectedInvoiceId || "").trim();
   state.payments.selectedInvoiceId = invoiceId || null;
@@ -4196,6 +4254,7 @@ async function renderPaymentsPage() {
     if (!unique.has(key)) unique.set(key, payment);
   }
   state.payments.all = Array.from(unique.values());
+  refreshPaymentOperationFields({ rebuildInvoices: false });
   renderPaymentOverview(state.invoices || [], state.payments.all);
 
   const invoiceMap = new Map((state.invoices || []).map((invoice) => [String(invoice.id || ""), invoice]));
@@ -5060,20 +5119,7 @@ renderQuoteDraft();
   state.invoices = (await window.api.invoices.list({})).map(normalizeInvoice);
   state.payments.all = (await window.api.payments.listAll({})) || [];
 
-  const sel = $("p-invoice");
-  const cur = String(sel?.value || state.payments.selectedInvoiceId || "").trim();
-  const payableInvoices = window.D2FReceivables
-    .buildReceivableRows(state.invoices || [], state.payments.all || [])
-    .filter((row) => row.remaining > window.D2FReceivables.EPSILON);
-
-  setSelectOptions(
-    $("p-invoice"),
-    payableInvoices.map((row) => ({
-      id: row.invoice.id,
-      label: `${row.invoice.invoice_number || row.invoice.id} — ${row.invoice.client_name || "—"} • ${money(row.remaining)} € ${t("payments.col.remaining", "reste")}`,
-    })),
-    cur || null
-  );
+  refreshPaymentOperationFields({ rebuildInvoices: true });
 
   if ($("p-date")) $("p-date").value = $("p-date").value || new Date().toISOString().slice(0, 10);
 
@@ -5087,9 +5133,19 @@ renderQuoteDraft();
   if (pSel && !pSel._boundPaymentsChange) {
     pSel.addEventListener("change", async () => {
       state.payments.selectedInvoiceId = String(pSel.value || "").trim() || null;
+      refreshPaymentOperationFields({ rebuildInvoices: false });
       await renderPaymentsPage();
     });
     pSel._boundPaymentsChange = true;
+  }
+
+  const operationSel = $("p-operation-type");
+  if (operationSel && !operationSel._boundPaymentOperationChange) {
+    operationSel.addEventListener("change", async () => {
+      refreshPaymentOperationFields({ rebuildInvoices: true });
+      await renderPaymentsPage();
+    });
+    operationSel._boundPaymentOperationChange = true;
   }
 
   const statusSel = $("p-payment-status");
@@ -5643,8 +5699,8 @@ case "payments:refresh":
   break;
 
 case "payments:record": {
-  const invoiceId = $("p-invoice")?.value || state.selectedInvoiceId;
-  if (!invoiceId) throw new Error("Sélectionner une facture.");
+  const invoiceId = $("p-invoice")?.value || state.payments.selectedInvoiceId;
+  if (!invoiceId) throw new Error(t("payments.error.select_invoice", "Sélectionner une facture."));
 
   const receivable = window.D2FReceivables
     .buildReceivableRows(state.invoices || [], state.payments.all || [])
@@ -5653,16 +5709,32 @@ case "payments:record": {
     throw new Error(t("payments.error.no_balance", "Cette facture ne présente plus de solde à encaisser."));
   }
 
-  const full = await window.api.invoices.getFull(invoiceId);
-  const st = String(full?.invoice?.status || "draft").toLowerCase();
-  if (st === "draft") {
-    await window.api.invoices.issue(invoiceId);
+  const operation = paymentOperationType();
+  if (operation === "deposit") {
+    const depositInvoiceId = String($("p-deposit-invoice")?.value || "");
+    if (!depositInvoiceId) throw new Error(t("payments.error.no_deposit", "Sélectionnez une facture d’acompte encaissée."));
+    await window.api.invoices.attachDeposit({ invoiceId, depositInvoiceId });
+    await refreshModule("payments");
+    await refreshModule("dashboard").catch(() => {});
+    setStatus(t("payments.status.deposit_attached", "Facture d’acompte rattachée."));
+    break;
   }
 
   const amount = Number($("p-amount")?.value || 0);
-  if (!(amount > 0)) throw new Error("Montant > 0 requis.");
+  if (!(amount > 0)) throw new Error(t("payments.error.amount_required", "Un montant supérieur à 0 est requis."));
+  if (amount > receivable.remaining + window.D2FReceivables.EPSILON) throw new Error(t("payments.error.amount_exceeds", "Le montant dépasse le solde restant."));
 
-  const payload = {
+  if (operation === "partial_credit") {
+    const created = await window.api.invoices.createPartialCreditNote({ invoiceId, amount, reason: $("p-notes")?.value || "" });
+    const newId = created?.id || created?.invoice_id || null;
+    if (!newId) throw new Error(t("payments.error.credit_missing_id", "Avoir créé mais identifiant non retourné."));
+    state.selectedInvoiceId = newId;
+    showPage("invoices");
+    setStatus(t("payments.status.partial_credit_created", "Avoir partiel créé en brouillon pour contrôle."));
+    break;
+  }
+
+  await recordPaymentAutoIssue({
     invoice_id: invoiceId,
     date: $("p-date")?.value || new Date().toISOString().slice(0, 10),
     amount,
@@ -5670,12 +5742,10 @@ case "payments:record": {
     reference: $("p-reference")?.value || "",
     notes: $("p-notes")?.value || "",
     currency: "EUR",
-  };
-
-  await recordPaymentAutoIssue(payload);
+  });
 
   await refreshModule("payments");
-  if (state.currentModule === "dashboard") await refreshModule("dashboard");
+  await refreshModule("dashboard").catch(() => {});
   setStatusKey("status.payment_recorded", "Payment recorded");
   break;
 }

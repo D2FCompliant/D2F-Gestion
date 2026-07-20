@@ -5112,7 +5112,7 @@ button.dashManagementKpi:hover{border-color:rgba(99,102,241,.38);transform:trans
 .platformNotice{display:flex;gap:12px;align-items:flex-start;justify-content:space-between;border:1px dashed rgba(245,158,11,.45);background:rgba(245,158,11,.08);border-radius:16px;padding:17px 18px}
 .platformNotice strong{white-space:nowrap}.platformNotice span{color:var(--muted);line-height:1.5}
 .platformEmpty--rich{display:grid;justify-items:center;gap:5px;padding:42px 18px}.platformEmpty--rich strong{color:var(--text);font-size:15px}.platformEmpty--rich span{max-width:620px}
-.platformStatus--matched{background:rgba(16,185,129,.12);color:#047857}.platformStatus--partial{background:rgba(245,158,11,.15);color:#92400e}.platformStatus--open{background:rgba(59,130,246,.12);color:#1d4ed8}
+.platformStatus--matched,.platformStatus--credited{background:rgba(16,185,129,.12);color:#047857}.platformStatus--partial{background:rgba(245,158,11,.15);color:#92400e}.platformStatus--open{background:rgba(59,130,246,.12);color:#1d4ed8}
 @media(max-width:1100px){.platformJourney--expenses{grid-template-columns:repeat(2,minmax(0,1fr))}.platformRuleGrid{grid-template-columns:1fr}.platformSimulation{grid-template-columns:1fr auto}.platformSimulation__result{grid-column:1/-1}}
 @media(max-width:720px){.platformHero{padding:19px;flex-direction:column}.platformHero .platformGuardrail{align-self:flex-start}.platformJourney,.platformJourney--expenses{grid-template-columns:1fr}.platformSimulation{grid-template-columns:1fr}.platformSimulation .btn{width:100%}.platformNotice{flex-direction:column}.platformNotice strong{white-space:normal}}
 
