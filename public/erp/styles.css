@@ -5222,3 +5222,41 @@ button.dashManagementKpi:hover{border-color:rgba(99,102,241,.38);transform:trans
 @media (max-width:1280px) and (min-width:761px){
   .platformKpis--four{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
+
+
+/* D2F Platform — explicit scroll areas for long Financial and Expenses lists */
+.platformPage.is-active{
+  flex:1 1 0;
+  height:auto;
+  max-height:none;
+  min-height:0;
+  overflow-x:hidden;
+  overflow-y:auto;
+  scrollbar-gutter:stable;
+  -webkit-overflow-scrolling:touch;
+}
+.platformPage .platformPanel{min-height:0}
+.platformPage .platformTableWrap{
+  max-height:clamp(280px,52dvh,620px);
+  overflow-x:auto;
+  overflow-y:scroll;
+  overscroll-behavior:contain;
+  scrollbar-gutter:stable both-edges;
+  scrollbar-width:auto;
+  scrollbar-color:#7891aa #edf2f7;
+}
+.platformPage .platformTable thead th{
+  position:sticky;
+  top:0;
+  z-index:3;
+  background:#f3f6fb;
+  box-shadow:0 1px 0 rgba(11,18,32,.09);
+}
+.platformPage .platformTableWrap::-webkit-scrollbar{width:13px;height:13px}
+.platformPage .platformTableWrap::-webkit-scrollbar-track{background:#edf2f7;border-radius:999px}
+.platformPage .platformTableWrap::-webkit-scrollbar-thumb{background:#7891aa;border:3px solid #edf2f7;border-radius:999px}
+.platformPage .platformTableWrap::-webkit-scrollbar-thumb:hover{background:#526f8d}
+.page[data-page="financial-overview"] .platformTableWrap{max-height:300px}
+.page[data-page="financial-reconciliation"] .platformTableWrap,
+.page[data-page="expenses-reports"] .platformTableWrap,
+.page[data-page="expenses-approvals"] .platformTableWrap{max-height:clamp(300px,55dvh,650px)}
