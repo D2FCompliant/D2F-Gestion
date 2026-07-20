@@ -78,6 +78,7 @@ test("creates separated Financial projections and Expense aggregates", async () 
   assert.match(sql, /'ExpenseApproved'/);
   assert.match(sql, /enable row level security/g);
   assert.match(sql, /revoke all .* from anon, authenticated/g);
+  assert.doesNotMatch(sql, /^as \$$|^\$;$/m);
 });
 
 test("routes the legacy issue command through the atomic platform boundary", async () => {

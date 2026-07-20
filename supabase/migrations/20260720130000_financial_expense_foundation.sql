@@ -381,7 +381,7 @@ returns jsonb
 language plpgsql
 security definer
 set search_path = public
-as $
+as $$
 declare
   source_event public.d2f_event_outbox%rowtype;
   payload jsonb;
@@ -453,7 +453,7 @@ begin
     'accountingProposalId', proposal_id
   );
 end;
-$;
+$$;
 
 create or replace function public.d2f_financial_consume_expense_approved_v1(
   p_event_id uuid
@@ -462,7 +462,7 @@ returns jsonb
 language plpgsql
 security definer
 set search_path = public
-as $
+as $$
 declare
   source_event public.d2f_event_outbox%rowtype;
   payload jsonb;
@@ -512,7 +512,7 @@ begin
     'accountingProposalId', proposal_id
   );
 end;
-$;
+$$;
 
 revoke all on function public.d2f_financial_consume_invoice_issued_v1(uuid) from public;
 grant execute on function public.d2f_financial_consume_invoice_issued_v1(uuid) to service_role;
