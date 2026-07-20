@@ -15,7 +15,7 @@
                  object-src 'none';
                  base-uri 'none'">
 
-  <link rel="stylesheet" href="./styles.css?v=20260720-laptop-comfort-v215" />
+  <link rel="stylesheet" href="./styles.css?v=20260720-compact-platform-v215" />
 </head>
 
 <body>
@@ -969,11 +969,11 @@
           <button type="button" data-platform-go="financial-reconciliation"><span>2</span><strong data-i18n="financial.journey.match">Rapprocher les flux</strong><small data-i18n="financial.journey.match_hint">Factures, règlements et soldes</small></button>
           <button type="button" data-platform-go="financial-rules"><span>3</span><strong data-i18n="financial.journey.rules">Contrôler les règles</strong><small data-i18n="financial.journey.rules_hint">Version, effet et explication</small></button>
         </div>
+        <article class="card platformTaskPanel"><div class="platformPanel__head"><div><p class="platformEyebrow" data-i18n="platform.todo">À TRAITER</p><h2 data-i18n="financial.tasks.title">Prochaines actions financières</h2></div></div><div id="financial-action-queue" class="platformActionQueue"></div></article>
         <article class="card platformPanel">
           <div class="platformPanel__head"><div><p class="platformEyebrow" data-i18n="financial.invoices.eyebrow">PROJECTION GESTION</p><h2 data-i18n="financial.invoices.title">Dernières factures clients émises</h2></div><span class="platformGuardrail" data-i18n="financial.invoices.guardrail">Source : D2F Gestion</span></div>
           <div class="platformTableWrap"><table class="platformTable"><thead><tr><th data-i18n="common.invoice">Facture</th><th data-i18n="common.client">Client</th><th data-i18n="common.issued_at">Émission</th><th data-i18n="common.due_at">Échéance</th><th class="numeric">TTC</th></tr></thead><tbody id="financial-invoices-body"></tbody></table><p class="platformEmpty" id="financial-invoices-empty" data-i18n="financial.invoices.empty">Aucune facture émise pour le moment.</p></div>
         </article>
-        <article class="card platformTaskPanel"><div class="platformPanel__head"><div><p class="platformEyebrow" data-i18n="platform.todo">À TRAITER</p><h2 data-i18n="financial.tasks.title">Prochaines actions financières</h2></div></div><div id="financial-action-queue" class="platformActionQueue"></div></article>
       </section>
 
       <section class="page platformPage" data-page="financial-proposals">
@@ -1695,8 +1695,8 @@
   <script src="./renderer/web-electron-shim.js?v=20260717-client-import-v215"></script>
   <script src="./renderer/web-api-shim.js?v=20260717-client-import-v215"></script>
   <script src="./dashboard-ui.js?v=20260717-client-import-v215"></script>
-  <script src="./financial-expense-ui.js?v=20260720-laptop-comfort-v215"></script>
-  <script src="./app.js?v=20260720-laptop-comfort-v215"></script>
+  <script src="./financial-expense-ui.js?v=20260720-compact-platform-v215"></script>
+  <script src="./app.js?v=20260720-compact-platform-v215"></script>
 
   <div id="clientsImportModal" class="modal" aria-hidden="true">
     <div class="modal__backdrop" data-modal-close></div>

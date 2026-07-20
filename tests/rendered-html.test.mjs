@@ -26,7 +26,7 @@ test("server-renders the D2F Platform cockpit", async () => {
   assert.doesNotMatch(html, /codex-preview|Your site is taking shape|react-loading-skeleton/i);
 
   const shell = await readFile(new URL("../app/session-shell.tsx", import.meta.url), "utf8");
-  assert.match(shell, /src="\/erp\/index\.html\?v=20260720-laptop-comfort-v215"/);
+  assert.match(shell, /src="\/erp\/index\.html\?v=20260720-compact-platform-v215"/);
   assert.match(shell, /title="D2F Platform"/);
 });
 
@@ -37,10 +37,13 @@ test("ships a touch-first smartphone layout", async () => {
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
     readFile(new URL("../public/erp/index.html", import.meta.url), "utf8"),
   ]);
-  assert.match(html, /styles\.css\?v=20260720-laptop-comfort-v215/);
-  assert.match(html, /app\.js\?v=20260720-laptop-comfort-v215/);
+  assert.match(html, /styles\.css\?v=20260720-compact-platform-v215/);
+  assert.match(html, /app\.js\?v=20260720-compact-platform-v215/);
   assert.match(styles, /@media \(max-width: 760px\)/);
   assert.match(styles, /platformPage\.is-active\{[^}]*overflow-y:auto[^}]*scrollbar-gutter:stable/s);
+  assert.match(styles, /compact workspaces by default/);
+  assert.match(styles, /platformPage\.is-active\{[^}]*height:100%[^}]*overflow-y:scroll/s);
+  assert.ok(html.indexOf("financial-action-queue") < html.indexOf("financial-invoices-body"));
   assert.match(styles, /max-height:900px[^}]*min-width:761px/s);
   assert.match(styles, /position:fixed;\s*z-index:1000;\s*left:0;\s*right:0;\s*bottom:0/);
   assert.match(styles, /grid-template-columns:minmax\(0,1fr\) minmax\(0,1fr\) !important/);
