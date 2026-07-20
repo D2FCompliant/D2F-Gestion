@@ -5127,3 +5127,56 @@ button.dashManagementKpi:hover{border-color:rgba(99,102,241,.38);transform:trans
 @media(max-width:900px){.platformActionQueue{grid-template-columns:1fr}.platformActivationBanner{align-items:flex-start;flex-direction:column}.platformActivationBanner .btn{width:100%}}
 
 .platformNotice>div{display:grid;gap:5px}.platformNotice .btn{flex:0 0 auto}
+
+
+/* D2F Platform — 13-inch laptop comfort and complete scrolling */
+.platformPage.is-active{
+  min-height:0;
+  overflow-y:auto;
+  overscroll-behavior:contain;
+  scrollbar-gutter:stable;
+  padding-bottom:86px;
+  scroll-padding-bottom:86px;
+}
+.platformPage .platformKpis{margin-bottom:0}
+.platformKpi{min-width:0}
+.platformKpi strong{font-variant-numeric:tabular-nums;white-space:nowrap}
+
+@media (max-height:900px) and (min-width:761px){
+  .platformPage{gap:11px}
+  .platformPage.is-active{padding:9px 11px 72px}
+  .platformHero{padding:15px 18px;border-radius:16px;gap:16px}
+  .platformHero h2{font-size:clamp(25px,2vw,31px);margin:2px 0 4px}
+  .platformHero p:not(.platformEyebrow){font-size:12.5px;line-height:1.4}
+  .platformKpis{gap:10px}
+  .platformKpi{min-height:96px;padding:13px 15px;gap:5px;border-radius:14px}
+  .platformKpi span{font-size:11.5px}
+  .platformKpi strong{font-size:clamp(23px,2vw,31px)}
+  .platformKpi small{font-size:11px;line-height:1.25}
+  .platformJourney{gap:9px}
+  .platformJourney button{padding:11px 13px;border-radius:14px;grid-template-columns:29px 1fr;column-gap:10px}
+  .platformJourney button>span{width:28px;height:28px;border-radius:9px}
+  .platformJourney button strong{font-size:12.5px}
+  .platformJourney button small{font-size:10.5px}
+  .platformPanel__head{min-height:58px;padding:11px 15px}
+  .platformPanel__head h2{font-size:17px}
+  .platformEyebrow{font-size:9.5px}
+  .platformTable th,.platformTable td{padding:9px 13px}
+  .platformTable td{font-size:12px}
+  .platformActionQueue{gap:9px;padding:11px}
+  .platformActionItem{gap:4px;padding:11px 13px;border-radius:12px}
+  .platformActionItem span{font-size:12.5px}
+  .platformActionItem small,.platformActionItem strong{font-size:10.5px}
+  .footer{display:none}
+  .workflowCompanionToggle{right:12px;bottom:12px}
+}
+
+@media (max-width:1280px) and (min-width:761px){
+  .platformKpis--four{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .platformKpi strong{font-size:clamp(24px,3vw,32px)}
+}
+
+@media (max-width:760px){
+  .platformPage.is-active{padding-bottom:calc(112px + env(safe-area-inset-bottom));scroll-padding-bottom:calc(112px + env(safe-area-inset-bottom))}
+  .platformKpi strong{white-space:normal;overflow-wrap:anywhere}
+}
