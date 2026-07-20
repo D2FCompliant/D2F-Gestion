@@ -78,6 +78,7 @@ test("creates separated Financial projections and Expense aggregates", async () 
   assert.match(sql, /'ExpenseApproved'/);
   assert.match(sql, /enable row level security/g);
   assert.match(sql, /revoke all .* from anon, authenticated/g);
+  assert.match(sql, /drop constraint if exists d2f_event_outbox_envelope_version_chk/);
   assert.doesNotMatch(sql, /^as \$$|^\$;$/m);
 });
 
@@ -228,6 +229,7 @@ test("implements Chapters 16-18 canonical ownership and settlement invariants", 
   assert.match(migration, /d2f_financial_customer_payment_projections/);
   assert.match(migration, /d2f_financial_settlement_projections/);
   assert.match(migration, /d2f_enforce_expense_segregation_v1/);
+  assert.match(migration, /drop constraint if exists d2f_financial_invoice_snapshot_hash_chk/);
   assert.match(route, /registerCustomerPaymentAtomically/);
   assert.match(paymentService, /d2f_register_customer_payment_v1/);
   assert.match(financeService, /d2f_financial_consume_customer_payment_v1/);

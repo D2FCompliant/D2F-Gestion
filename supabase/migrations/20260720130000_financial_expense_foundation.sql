@@ -3,7 +3,8 @@
 
 alter table public.d2f_event_outbox
   drop constraint if exists d2f_event_outbox_type_version_chk,
-  drop constraint if exists d2f_event_outbox_envelope_type_chk;
+  drop constraint if exists d2f_event_outbox_envelope_type_chk,
+  drop constraint if exists d2f_event_outbox_envelope_version_chk;
 
 alter table public.d2f_event_outbox
   add constraint d2f_event_outbox_type_version_chk

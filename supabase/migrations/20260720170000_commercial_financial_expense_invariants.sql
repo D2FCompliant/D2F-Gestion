@@ -9,6 +9,9 @@ set source_snapshot_sha256 = encode(digest(source_payload::text, 'sha256'), 'hex
 where source_snapshot_sha256 is null;
 
 alter table public.d2f_financial_invoice_projections
+  drop constraint if exists d2f_financial_invoice_snapshot_hash_chk;
+
+alter table public.d2f_financial_invoice_projections
   alter column source_snapshot_sha256 set not null,
   add constraint d2f_financial_invoice_snapshot_hash_chk check (source_snapshot_sha256 ~ '^[a-f0-9]{64}$');
 
