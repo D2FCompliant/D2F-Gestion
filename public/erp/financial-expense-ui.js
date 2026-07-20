@@ -1,5 +1,5 @@
 (function () {
-  const local = { financial: null, expenses: null, selectedReportId: "", pendingReceipt: null, expenseFoundationReady: true, financialFoundationReady: true, financialFilter: "all", lifetimeLicense: false };
+  const local = { financial: null, expenses: null, selectedReportId: "", pendingReceipt: null, expenseFoundationReady: true, financialFoundationReady: true, financialFilter: "all", lifetimeLicense: false, licenseResolved: false };
   const tr = (key, fallback, vars) => window.__d2fT?.(key, fallback, vars) || fallback;
   const byId = (id) => document.getElementById(id);
   const money = (value, currency = "EUR") => new Intl.NumberFormat(document.documentElement.lang || "fr", {
@@ -44,16 +44,10 @@
   }
   function showFoundation(application, ready) {
     document.querySelectorAll("." + application + "-foundation-banner").forEach((banner) => {
-      banner.hidden = ready;
-      banner.classList.toggle("platformActivationBanner--included", !ready && local.lifetimeLicense);
-      const title = banner.querySelector("strong");
-      const detail = banner.querySelector("span");
+      const moduleAlreadyLicensed = local.licenseResolved && local.lifetimeLicense;
+      banner.hidden = ready || !local.licenseResolved || moduleAlreadyLicensed;
       const button = banner.querySelector('[data-platform-action="platform:requestActivation"]');
-      if (local.lifetimeLicense) {
-        if (title) title.textContent = tr("platform.activation.included", "Module inclus dans votre licence D2F à vie");
-        if (detail) detail.textContent = tr("platform.activation.technical", "Aucune demande commerciale n’est nécessaire. Le socle technique doit seulement être initialisé.");
-        if (button) button.hidden = true;
-      } else if (button) button.hidden = false;
+      if (button) button.hidden = moduleAlreadyLicensed;
     });
   }
   function missingReceiptLines(reportId) {
@@ -410,6 +404,7 @@
 
   window.addEventListener("message", (event) => {
     if (event.origin !== location.origin || event.data?.type !== "d2f-platform-license") return;
+    local.licenseResolved = true;
     local.lifetimeLicense = event.data.account?.plan === "lifetime" || event.data.account?.billingTerm === "lifetime";
     document.documentElement.dataset.d2fLicense = local.lifetimeLicense ? "lifetime" : "subscription";
     showFoundation("financial", local.financialFoundationReady);

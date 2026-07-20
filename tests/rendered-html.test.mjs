@@ -26,7 +26,7 @@ test("server-renders the D2F Platform cockpit", async () => {
   assert.doesNotMatch(html, /codex-preview|Your site is taking shape|react-loading-skeleton/i);
 
   const shell = await readFile(new URL("../app/session-shell.tsx", import.meta.url), "utf8");
-  assert.match(shell, /src="\/erp\/index\.html\?v=20260720-scrollable-lists-v215"/);
+  assert.match(shell, /src="\/erp\/index\.html\?v=20260720-account-license-only-v215"/);
   assert.match(shell, /title="D2F Platform"/);
 });
 
@@ -37,8 +37,8 @@ test("ships a touch-first smartphone layout", async () => {
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
     readFile(new URL("../public/erp/index.html", import.meta.url), "utf8"),
   ]);
-  assert.match(html, /styles\.css\?v=20260720-scrollable-lists-v215/);
-  assert.match(html, /app\.js\?v=20260720-scrollable-lists-v215/);
+  assert.match(html, /styles\.css\?v=20260720-account-license-only-v215/);
+  assert.match(html, /app\.js\?v=20260720-account-license-only-v215/);
   assert.match(styles, /@media \(max-width: 760px\)/);
   assert.match(styles, /platformPage\.is-active\{[^}]*overflow-y:auto[^}]*scrollbar-gutter:stable/s);
   assert.match(styles, /compact workspaces by default/);
