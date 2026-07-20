@@ -1,11 +1,12 @@
 import type { User } from "@supabase/supabase-js";
+import { D2F_PLATFORM_VERSION } from "../../lib/platform-version";
 import { isPlatformAdminEmail, publicBillingConfig, renewedSession, sessionCookie, type AppSession } from "../../lib/auth/server";
 import { accountAllowsApplication, accountBillingTerm, accountIsTrial, accountTrialEndsAt, accountTrialRequested, memberFor, type TenantAccount } from "../../lib/saas/accounts";
 
 export function json(result: unknown, status = 200, headers?: HeadersInit) {
   return Response.json(status < 400 ? { ok: true, result } : { ok: false, error: result }, {
     status,
-    headers: { "cache-control": "no-store", "x-d2f-build": "2.1.4", ...headers },
+    headers: { "cache-control": "no-store", "x-d2f-build": D2F_PLATFORM_VERSION, ...headers },
   });
 }
 

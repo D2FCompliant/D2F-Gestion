@@ -178,6 +178,34 @@ test("requires governed evidence and dual approval before Country Pack publicati
 });
 
 
+test("provides an admin-only Country Pack qualification and publication centre", async () => {
+  const [service, route, center, supportCenter, copies, styles] = await Promise.all([
+    readFile(new URL("lib/country-pack-admin.ts", root), "utf8"),
+    readFile(new URL("app/auth/admin/country-packs/route.ts", root), "utf8"),
+    readFile(new URL("app/country-pack-center.tsx", root), "utf8"),
+    readFile(new URL("app/support-center.tsx", root), "utf8"),
+    readFile(new URL("app/country-pack-i18n.ts", root), "utf8"),
+    readFile(new URL("app/globals.css", root), "utf8"),
+  ]);
+  assert.match(route, /isPlatformAdminEmail\(session\.email\)/);
+  assert.match(route, /action === "evidence"/);
+  assert.match(route, /action === "review"/);
+  assert.match(route, /action === "publish"/);
+  assert.match(route, /updateSupportStatus/);
+  assert.match(service, /verification_status === "verified"/);
+  assert.match(service, /verification: \{ actor: actorEmail/);
+  assert.match(service, /evidence_snapshot_hash === evidenceSnapshotHash/);
+  assert.match(service, /Regulatory|réglementaire/i);
+  assert.match(service, /d2f_publish_country_pack_v1/);
+  assert.match(center, /country-pack-readiness/);
+  assert.match(center, /\["regulatory", "technical", "security"\]/);
+  assert.match(center, /disabled=\{busy \|\| !selected\.readiness\.publishable\}/);
+  assert.match(supportCenter, /copy\.qualifyCountryPack/);
+  assert.match(supportCenter, /view === "countryPacks"/);
+  assert.match(styles, /\.country-pack-center/);
+  for (const locale of ["fr", "en", "sr", "it", "es"]) assert.match(copies, new RegExp("\\b" + locale + ":"));
+});
+
 test("implements Chapters 16-18 canonical ownership and settlement invariants", async () => {
   const [model, paymentEvent, migration, route, paymentService, financeService, expensePolicy, html] = await Promise.all([
     json("platform/contracts/models/commercial-object.v1.schema.json"),

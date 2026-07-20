@@ -3,6 +3,7 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { supportCopies, supportLanguage, type SupportLanguage } from "./support-i18n";
 import { D2F_PLATFORM_VERSION } from "../lib/platform-version";
+import CountryPackCenter from "./country-pack-center";
 
 type SupportMessage = { id: string; authorType: string; authorName: string; authorEmail: string; body: string; internal: boolean; createdAt: string };
 type SupportTicket = {
@@ -40,6 +41,7 @@ export default function SupportCenter({ session, onClose, onAttentionCount, onCh
   const [payload, setPayload] = useState<SupportPayload | null>(null);
   const [selectedId, setSelectedId] = useState("");
   const [creating, setCreating] = useState(false);
+  const [view, setView] = useState<"tickets" | "countryPacks">("tickets");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
@@ -133,8 +135,8 @@ export default function SupportCenter({ session, onClose, onAttentionCount, onCh
   return <div className="support-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
     <section className="support-center" role="dialog" aria-modal="true" aria-labelledby="support-title">
       <header className="support-head"><div><p className="eyebrow">D2F COMPLIANT · VERSION {D2F_PLATFORM_VERSION}</p><h2 id="support-title">{payload?.isAdmin ? copy.adminTitle : copy.title}</h2><p>{payload?.isAdmin ? copy.adminSubtitle : copy.subtitle}</p></div><div><a href={`mailto:${payload?.supportEmail || "support@d2fcompliant.com"}`}><span>{copy.supportByEmail}</span><strong>{payload?.supportEmail || "support@d2fcompliant.com"}</strong></a><button type="button" onClick={onClose} aria-label={copy.close}>×</button></div></header>
-      <div className="support-toolbar"><div><button type="button" className="support-new" onClick={() => { setCreating(true); setSelectedId(""); setError(""); }}>{payload?.isAdmin ? copy.newInternalTicket : copy.newTicket}</button><button type="button" className="support-refresh" onClick={load} disabled={busy}>↻</button></div><p className={payload?.deliveryConfigured ? "is-active" : ""}>{payload?.deliveryConfigured ? copy.emailActive : copy.emailPending}</p></div>
-      <div className={`support-layout ${creating ? "is-creating" : ""}`}>
+      <div className="support-toolbar"><div>{payload?.isAdmin && <><button type="button" className={view === "tickets" ? "support-view-button is-active" : "support-view-button"} onClick={() => setView("tickets")}>Tickets</button><button type="button" className={view === "countryPacks" ? "support-view-button is-active" : "support-view-button"} onClick={() => setView("countryPacks")}>Country Packs</button></>}<button type="button" className="support-new" onClick={() => { setView("tickets"); setCreating(true); setSelectedId(""); setError(""); }}>{payload?.isAdmin ? copy.newInternalTicket : copy.newTicket}</button><button type="button" className="support-refresh" onClick={load} disabled={busy}>↻</button></div><p className={payload?.deliveryConfigured ? "is-active" : ""}>{payload?.deliveryConfigured ? copy.emailActive : copy.emailPending}</p></div>
+      {payload?.isAdmin && view === "countryPacks" ? <CountryPackCenter language={language} ticketId={selected?.id || ""} ticketSubject={selected?.subject || ""} onPublished={(ticketClosed) => { void load(); setView("tickets"); setMessage(ticketClosed ? "Country Pack publié et ticket associé soldé." : "Country Pack publié."); }} /> : <div className={creating ? "support-layout is-creating" : "support-layout"}>
         <aside className={`support-list ${selected || creating ? "has-mobile-detail" : ""}`} aria-label={copy.tickets}>
           <div className="support-list__title"><strong>{copy.tickets}</strong><span>{payload?.tickets.length || 0}</span></div>
           {busy && !payload && <p className="support-empty">{copy.waiting}</p>}
@@ -153,14 +155,14 @@ export default function SupportCenter({ session, onClose, onAttentionCount, onCh
             <button className="primary-action" disabled={busy}>{busy ? copy.creating : copy.create}</button>
           </form> : selected ? <article className="support-ticket">
             <header><div><div className="support-ticket__meta"><strong>{selected.number}</strong><span className={`support-status status-${selected.status}`}>{copy.statuses[selected.status] || selected.status}</span><span className={`support-priority priority-${selected.priority}`}>{copy.priorities[selected.priority] || selected.priority}</span><span className="support-priority">{copy.scopes[selected.ticketScope] || selected.ticketScope} · {copy.requestTypes[selected.requestType] || selected.requestType}</span></div><h3>{selected.subject}</h3><p>{copy.company}: <strong>{selected.companyName}</strong> · {copy.requester}: <strong>{selected.requesterName}</strong> · {selected.contactEmail}</p></div><time>{copy.updated}: {displayDate(selected.updatedAt, language)}</time></header>
-            {payload?.isAdmin && selected.status !== "closed" && <button type="button" className="support-reanalyze" onClick={reanalyze} disabled={busy}>{copy.reanalyze}</button>}
+            {payload?.isAdmin && selected.status !== "closed" && <div className="support-ticket-actions"><button type="button" className="support-reanalyze" onClick={reanalyze} disabled={busy}>{copy.reanalyze}</button>{/Country Pack\s+[A-Z]{2}/i.test(selected.subject + " " + selected.description) && <button type="button" className="support-qualify-pack" onClick={() => setView("countryPacks")}>{copy.qualifyCountryPack}</button>}</div>}
             <section className="support-timeline">{selected.messages.map((item) => <div className={`support-message author-${item.authorType} ${item.internal ? "is-internal" : ""}`} key={item.id}><header><strong>{item.authorName || copy.authors[item.authorType] || item.authorType}</strong><span>{item.internal ? copy.internalNote : copy.authors[item.authorType]}</span><time>{displayDate(item.createdAt, language)}</time></header><p>{item.body}</p></div>)}</section>
             {selected.status !== "closed" && <form className="support-reply" onSubmit={reply}><label>{copy.reply}<textarea name="body" rows={4} maxLength={8000} required /></label>{payload?.isAdmin && <label className="support-internal"><input type="checkbox" name="internal" /><span>{copy.internalNote}</span></label>}<button className="secondary-action" disabled={busy}>{copy.sendReply}</button></form>}
             {payload?.isAdmin && selected.status !== "closed" && <form className="support-admin-form" onSubmit={updateStatus}><label>{copy.status}<select name="status" defaultValue={selected.status}>{Object.entries(copy.statuses).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label><label>{copy.assignedTo}<input name="assignedTo" defaultValue={selected.assignedTo} placeholder="support@d2fcompliant.com" /></label><label className="span-2">{copy.resolution}<textarea name="resolution" rows={3} defaultValue={selected.resolution} /></label><button className="secondary-action span-2" disabled={busy}>{copy.apply}</button></form>}
             {!payload?.isAdmin && selected.status === "resolved" && <button type="button" className="support-close-ticket" onClick={closeResolved} disabled={busy}>{copy.close}</button>}
           </article> : <div className="support-welcome"><div><span>?</span><h3>{copy.assistantTitle}</h3><p>{copy.assistantText}</p><button type="button" className="primary-action" onClick={() => setCreating(true)}>{payload?.isAdmin ? copy.newInternalTicket : copy.newTicket}</button></div></div>}
         </main>
-      </div>
+      </div>}
       {error && <p className="support-toast is-error" role="alert">{error}</p>}{message && <p className="support-toast is-ok">{message}</p>}
     </section>
   </div>;

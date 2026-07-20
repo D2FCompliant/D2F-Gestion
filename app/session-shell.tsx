@@ -2,8 +2,9 @@
 
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { normalizePortalLocale, portalCopies, portalIdentifierIsValid, type PortalLocale } from "./portal-i18n";
-import { regulatoryCountries, regulatoryNews, regulatoryWatchUi, type RegulatoryCountry } from "./regulatory-watch";
 import SupportCenter from "./support-center";
+import { regulatoryCountries, regulatoryNews, regulatoryWatchUi, type RegulatoryCountry } from "./regulatory-watch";
+
 import { D2F_PLATFORM_VERSION_LABEL } from "../lib/platform-version";
 
 type Member = { userId: string; email: string; fullName: string; role: "owner" | "collaborator"; status: "active" | "invited" };
