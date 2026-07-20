@@ -26,7 +26,7 @@ test("server-renders the D2F Platform cockpit", async () => {
   assert.doesNotMatch(html, /codex-preview|Your site is taking shape|react-loading-skeleton/i);
 
   const shell = await readFile(new URL("../app/session-shell.tsx", import.meta.url), "utf8");
-  assert.match(shell, /src="\/erp\/index\.html\?v=20260720-reconciliation-adjustments-v215"/);
+  assert.match(shell, /src="\/erp\/index\.html\?v=20260720-support-governance-sort-v215"/);
   assert.match(shell, /title="D2F Platform"/);
 });
 
@@ -37,8 +37,8 @@ test("ships a touch-first smartphone layout", async () => {
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
     readFile(new URL("../public/erp/index.html", import.meta.url), "utf8"),
   ]);
-  assert.match(html, /styles\.css\?v=20260720-reconciliation-adjustments-v215/);
-  assert.match(html, /app\.js\?v=20260720-reconciliation-adjustments-v215/);
+  assert.match(html, /styles\.css\?v=20260720-support-governance-sort-v215/);
+  assert.match(html, /app\.js\?v=20260720-support-governance-sort-v215/);
   assert.match(styles, /@media \(max-width: 760px\)/);
   assert.match(styles, /platformPage\.is-active\{[^}]*overflow-y:auto[^}]*scrollbar-gutter:stable/s);
   assert.match(styles, /compact workspaces by default/);
@@ -753,7 +753,10 @@ test("provides tenant-scoped support tickets with guided level-1 triage and trac
   assert.match(support, /isPlatformAdminEmail\(session\.email\)/);
   assert.match(support, /support@d2fcompliant\.com/);
   assert.match(support, /D2F_SUPPORT_MAIL_WEBHOOK_URL/);
-  assert.match(support, /Assistant D2F niveau 1/);
+  assert.match(support, /Analyse guidée D2F/);
+  assert.match(support, /l1_mode: "deterministic"/);
+  assert.match(support, /d2f_support_tickets/);
+  assert.match(support, /d2f_support_messages/);
   assert.match(support, /quoteContext && actionContext \? "quote_actions"/);
   assert.match(support, /Inutile de recharger la page/);
   assert.match(support, /Le parcours actuel centralise ces actions dans Exports/);

@@ -44,10 +44,21 @@ async function applicationAccessFor(tenantId: string | undefined, actorEmail: st
   return { internalD2F: false, gestion: true, financial: enabled.has("financial"), expenses: enabled.has("expenses") };
 }
 
-function countryPackCapability(countryValue: unknown) {
+async function countryPackCapability(countryValue: unknown) {
   const country = String(countryValue || "").trim().toUpperCase().slice(0, 2);
-  const supported = new Set(["FR", "RS", "IT", "ES"]);
-  return { country: country || "—", packId: country ? "country." + country.toLowerCase() + ".expense" : "country.unqualified.expense", version: "1.0.0-preview", status: supported.has(country) ? "policy_validation_required" : "not_qualified" };
+  if (!country) return { country: "—", packId: "country.unqualified", version: null, status: "not_qualified", reason: "country_missing" };
+  const result = await getSupabaseAdmin().from("d2f_country_pack_versions")
+    .select("pack_id,pack_version,status,effective_from,effective_to,manifest_sha256")
+    .eq("country", country).eq("status", "published").order("effective_from", { ascending: false }).limit(10);
+  if (result.error) {
+    const storageMissing = ["42P01", "PGRST204", "PGRST205"].includes(result.error.code || "") || /d2f_country_pack_versions/i.test(result.error.message || "");
+    if (!storageMissing) console.warn("[country-pack] registry unavailable", result.error);
+    return { country, packId: `country.${country.toLowerCase()}.unqualified`, version: null, status: "not_qualified", reason: storageMissing ? "registry_not_initialized" : "registry_unavailable" };
+  }
+  const now = new Date().toISOString();
+  const pack = (result.data || []).find((item) => (!item.effective_from || item.effective_from <= now) && (!item.effective_to || item.effective_to > now));
+  if (!pack) return { country, packId: `country.${country.toLowerCase()}.unqualified`, version: null, status: "not_qualified", reason: "no_published_pack" };
+  return { country, packId: pack.pack_id, version: pack.pack_version, status: "qualified", effectiveFrom: pack.effective_from, effectiveTo: pack.effective_to, manifestHash: pack.manifest_sha256 };
 }
 
 const dictionaries: Record<string, unknown> = { fr, en, es, it, sr };
@@ -1267,7 +1278,7 @@ async function validatedNationalConnector(ownerEmail: string) {
 }
 
 async function dispatch(ownerEmail: string, method: string, args: unknown[], tenantIdentity?: { country: string; identifier: string; tenantId?: string }, actorId = ownerEmail, actorRole: "owner" | "collaborator" = "owner", applications: ApplicationAccess = { internalD2F: false, gestion: true, financial: false, expenses: false }) {
-  if (method === "platform:capabilities") return { applications, countryPack: countryPackCapability(tenantIdentity?.country) };
+  if (method === "platform:capabilities") return { applications, countryPack: await countryPackCapability(tenantIdentity?.country) };
   if (method.startsWith("financial:") && !applications.financial) throw new Error("L'option D2F Financial n'est pas active pour cette entreprise");
   if (method.startsWith("expenses:") && !applications.expenses) throw new Error("L'option D2F Expenses n'est pas active pour cette entreprise");
   if (method === "i18n:load") {

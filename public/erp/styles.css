@@ -5032,6 +5032,11 @@ button.dashManagementKpi:hover{border-color:rgba(99,102,241,.38);transform:trans
 .navProduct__mark{ width:28px; height:28px; flex:0 0 28px; display:grid; place-items:center; border-radius:8px; background:linear-gradient(145deg,#0969da,#0ea5e9); color:#fff; font-size:13px; font-weight:950; }
 .navProduct__mark--financial{ background:linear-gradient(145deg,#4f46e5,#7c3aed); }
 .navProduct__mark--expenses{ background:linear-gradient(145deg,#0f9f75,#14b8a6); }
+.navProduct__mark--support{ background:linear-gradient(145deg,#0b72d9,#07a9c8); }
+.platformTable th.is-sortable{ cursor:pointer; user-select:none; padding-right:26px; position:relative; }
+.platformTable th.is-sortable::after{ content:"⇅"; position:absolute; right:9px; opacity:.38; }
+.platformTable th.is-sortable[aria-sort="ascending"]::after{ content:"↑"; opacity:1; color:#0868d9; }
+.platformTable th.is-sortable[aria-sort="descending"]::after{ content:"↓"; opacity:1; color:#0868d9; }
 .navProduct__chevron{ color:#718197; transition:transform .18s ease; }
 .navProduct:not(.is-open) .navProduct__chevron{ transform:rotate(-90deg); }
 .navProduct__menu{ display:grid; gap:2px; }

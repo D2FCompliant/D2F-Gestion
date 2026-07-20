@@ -71,12 +71,56 @@ async function companySupportRows(session: AppSession, admin: boolean) {
     const company = object(companyRow.data);
     for (const ticket of records(company._support_tickets)) {
       if (!admin && String(ticket.tenant_id || "") !== session.tenantId) continue;
-      rows.push({ ownerKey, ticket: { ...ticket, __owner_key: ownerKey } });
+      rows.push({ ownerKey, ticket: { ...ticket, __owner_key: ownerKey, __storage: "company" } });
     }
   }
   return rows
     .sort((left, right) => String(right.ticket.updated_at || "").localeCompare(String(left.ticket.updated_at || "")))
     .slice(0, 300);
+}
+
+async function tableSupportRows(session: AppSession, admin: boolean) {
+  let query = getSupabaseAdmin().from("d2f_support_tickets").select("*").limit(300);
+  if (!admin) query = query.eq("tenant_id", session.tenantId);
+  const ticketsResult = await query.order("updated_at", { ascending: false });
+  if (ticketsResult.error) {
+    if (missingSupportStorage(ticketsResult.error)) return null;
+    throw supportDatabaseError(ticketsResult.error, admin);
+  }
+  const tickets = ticketsResult.data || [];
+  if (!tickets.length) return [];
+  const messageResult = await getSupabaseAdmin().from("d2f_support_messages").select("*").in("ticket_id", tickets.map((ticket) => ticket.id)).order("created_at", { ascending: true });
+  if (messageResult.error) throw supportDatabaseError(messageResult.error, admin);
+  const messagesByTicket = new Map<string, JsonRecord[]>();
+  for (const message of messageResult.data || []) {
+    const ticketId = String(message.ticket_id || "");
+    messagesByTicket.set(ticketId, [...(messagesByTicket.get(ticketId) || []), message]);
+  }
+  return tickets.map((ticket) => ({ ownerKey: String(ticket.owner_key || ""), ticket: { ...ticket, messages: messagesByTicket.get(String(ticket.id)) || [], __owner_key: ticket.owner_key, __storage: "table" } }));
+}
+
+async function supportRows(session: AppSession, admin: boolean) {
+  const [tableRows, legacyRows] = await Promise.all([tableSupportRows(session, admin), companySupportRows(session, admin)]);
+  if (tableRows === null) return legacyRows;
+  const merged = new Map<string, { ownerKey: string; ticket: JsonRecord }>();
+  for (const row of legacyRows) merged.set(String(row.ticket.id || ""), row);
+  for (const row of tableRows) merged.set(String(row.ticket.id || ""), row);
+  return [...merged.values()].sort((left, right) => String(right.ticket.updated_at || "").localeCompare(String(left.ticket.updated_at || ""))).slice(0, 300);
+}
+
+async function saveTableSupportTicket(ticket: JsonRecord) {
+  const supabase = getSupabaseAdmin();
+  const columns = ["id","ticket_number","tenant_id","owner_key","company_name","requester_user_id","requester_name","requester_email","contact_email","locale","category","priority","subject","description","ticket_scope","request_type","status","assigned_to","external_provider","external_key","external_url","l1_mode","l1_summary","resolution","resolved_at","closed_at","created_at","updated_at"];
+  const stored = Object.fromEntries(columns.map((column) => [column, ticket[column] === "" && ["resolved_at", "closed_at"].includes(column) ? null : ticket[column]]));
+  const ticketResult = await supabase.from("d2f_support_tickets").upsert(stored, { onConflict: "id" });
+  if (ticketResult.error) throw ticketResult.error;
+  const messages = records(ticket.messages).map((message) => ({
+    id: message.id, ticket_id: ticket.id, author_type: message.author_type, author_name: message.author_name, author_email: message.author_email, body: message.body, internal: Boolean(message.internal), created_at: message.created_at,
+  }));
+  if (messages.length) {
+    const messageResult = await supabase.from("d2f_support_messages").upsert(messages, { onConflict: "id" });
+    if (messageResult.error) throw messageResult.error;
+  }
 }
 
 async function saveCompanySupportTicket(ownerKey: string, ticket: JsonRecord) {
@@ -86,6 +130,7 @@ async function saveCompanySupportTicket(ownerKey: string, ticket: JsonRecord) {
   const company = object(existing?.data);
   const stored = { ...ticket };
   delete stored.__owner_key;
+  delete stored.__storage;
   const current = records(company._support_tickets);
   const next = [...current.filter((item) => String(item.id || "") !== String(stored.id || "")), stored];
   const { error } = await supabase.from("d2f_company").upsert({
@@ -94,6 +139,16 @@ async function saveCompanySupportTicket(ownerKey: string, ticket: JsonRecord) {
     updated_at: new Date().toISOString(),
   }, { onConflict: "owner_email" });
   if (error) throw error;
+}
+
+async function saveSupportTicket(ownerKey: string, ticket: JsonRecord) {
+  if (ticket.__storage === "company") return saveCompanySupportTicket(ownerKey, ticket);
+  try {
+    await saveTableSupportTicket(ticket);
+  } catch (error) {
+    if (!missingSupportStorage(error as { code?: string; message?: string })) throw error;
+    await saveCompanySupportTicket(ownerKey, ticket);
+  }
 }
 
 function supportResponse(rows: Array<{ ownerKey: string; ticket: JsonRecord }>, admin: boolean) {
@@ -123,7 +178,7 @@ function supportResponse(rows: Array<{ ownerKey: string; ticket: JsonRecord }>, 
 }
 
 async function ticketRow(session: AppSession, ticketId: string, admin: boolean) {
-  const rows = await companySupportRows(session, admin);
+  const rows = await supportRows(session, admin);
   const found = rows.find(({ ticket }) => String(ticket.id || "") === ticketId);
   if (!found) throw new Error("Ticket introuvable");
   return found.ticket;
@@ -264,7 +319,7 @@ function publicTicket(row: JsonRecord, messages: JsonRecord[], admin: boolean) {
     requesterName: String(row.requester_name || ""), requesterEmail: String(row.requester_email || ""), contactEmail: String(row.contact_email || ""),
     ticketScope: String(row.ticket_scope || "customer"), requestType: String(row.request_type || "incident"),
     locale: String(row.locale || "fr"), category: String(row.category || "other"), priority: String(row.priority || "normal"), subject: String(row.subject || ""),
-    description: String(row.description || ""), status: String(row.status || "open"), assignedTo: String(row.assigned_to || ""), l1Mode: String(row.l1_mode || "guided"),
+    description: String(row.description || ""), status: String(row.status || "open"), assignedTo: String(row.assigned_to || ""), l1Mode: String(row.l1_mode || "deterministic"),
     l1Summary: String(row.l1_summary || ""), resolution: String(row.resolution || ""), externalProvider: String(row.external_provider || ""), externalKey: String(row.external_key || ""),
     externalUrl: String(row.external_url || ""), resolvedAt: String(row.resolved_at || ""), closedAt: String(row.closed_at || ""), createdAt: String(row.created_at || ""), updatedAt: String(row.updated_at || ""),
     messages: messages.filter((message) => admin || !Boolean(message.internal)).map(publicMessage),
@@ -278,7 +333,7 @@ function mailConfiguration() {
     supportEmail: text(process.env.D2F_SUPPORT_EMAIL || SUPPORT_EMAIL, 254) || SUPPORT_EMAIL,
     deliveryConfigured: Boolean(smtp || webhookUrl),
     transport: smtp ? "smtp" : webhookUrl ? "webhook" : "none",
-    l1Mode: "guided",
+    l1Mode: "deterministic",
     generativeAiConfigured: false,
   };
 }
@@ -313,7 +368,7 @@ async function queueNotification(ticket: JsonRecord, recipient: string, subject:
 
 export async function listSupport(session: AppSession) {
   const admin = isPlatformAdminEmail(session.email);
-  return supportResponse(await companySupportRows(session, admin), admin);
+  return supportResponse(await supportRows(session, admin), admin);
 }
 
 export async function createSupportTicket(session: AppSession, account: TenantAccount, input: JsonRecord) {
@@ -339,15 +394,15 @@ export async function createSupportTicket(session: AppSession, account: TenantAc
     tenant_id: account.id, owner_key: account.ownerKey, company_name: account.name, requester_user_id: session.userId,
     requester_name: session.fullName, requester_email: session.email, contact_email: contactEmail, locale, category, priority, subject, description,
     ticket_scope: ticketScope, request_type: requestType,
-    status: "open", l1_mode: "guided", l1_summary: guidance.slice(0, 1000),
+    status: "open", l1_mode: "deterministic", l1_summary: guidance.slice(0, 1000),
     assigned_to: "", resolution: "", external_provider: "", external_key: "", external_url: "",
     resolved_at: "", closed_at: "", created_at: now, updated_at: now,
     messages: [
       supportMessage(id, "requester", session.fullName, session.email, description),
-      supportMessage(id, "assistant", "Assistant D2F niveau 1", SUPPORT_EMAIL, guidance),
+      supportMessage(id, "assistant", "Analyse guidée D2F", SUPPORT_EMAIL, guidance),
     ],
   };
-  await saveCompanySupportTicket(account.ownerKey, ticket);
+  await saveSupportTicket(account.ownerKey, ticket);
   const configuration = mailConfiguration();
   await Promise.all([
     queueNotification(ticket, configuration.supportEmail, `[${ticketNumber}] ${ticketScope === "internal" ? "Ticket interne" : "Nouveau ticket"} — ${subject}`, `Entreprise : ${account.name}\nDemandeur : ${session.fullName} <${contactEmail}>\nNature : ${requestType}\nPriorité : ${priority}\n\n${description}`),
@@ -366,12 +421,12 @@ export async function reanalyzeSupportTicket(session: AppSession, input: JsonRec
   const guidance = l1Guidance(locale, category, String(ticket.subject || ""), String(ticket.description || ""));
   const updated = {
     ...ticket,
-    l1_mode: "contextual",
+    l1_mode: "deterministic_contextual",
     l1_summary: guidance.slice(0, 1000),
     updated_at: new Date().toISOString(),
-    messages: [...records(ticket.messages), supportMessage(String(ticket.id), "assistant", "Assistant D2F niveau 1", SUPPORT_EMAIL, guidance)],
+    messages: [...records(ticket.messages), supportMessage(String(ticket.id), "assistant", "Analyse guidée D2F", SUPPORT_EMAIL, guidance)],
   };
-  await saveCompanySupportTicket(String(ticket.__owner_key || session.ownerKey), updated);
+  await saveSupportTicket(String(ticket.__owner_key || session.ownerKey), updated);
   return listSupport(session);
 }
 
@@ -391,7 +446,7 @@ export async function addSupportMessage(session: AppSession, input: JsonRecord) 
     messages: [...records(ticket.messages), supportMessage(String(ticket.id), authorType, session.fullName, session.email, body, internal)],
   };
   const ownerKey = String(ticket.__owner_key || session.ownerKey);
-  await saveCompanySupportTicket(ownerKey, updated);
+  await saveSupportTicket(ownerKey, updated);
   if (!internal) {
     const configuration = mailConfiguration();
     const recipient = admin ? String(ticket.contact_email) : configuration.supportEmail;
@@ -419,7 +474,7 @@ export async function updateSupportStatus(session: AppSession, input: JsonRecord
     ...update,
     messages: [...records(ticket.messages), supportMessage(String(ticket.id), "system", "D2F Support", mailConfiguration().supportEmail, resolution ? `Statut : ${label}. Solution : ${resolution}` : `Statut : ${label}.`)],
   };
-  await saveCompanySupportTicket(String(ticket.__owner_key || session.ownerKey), updated);
+  await saveSupportTicket(String(ticket.__owner_key || session.ownerKey), updated);
   await queueNotification(updated, String(ticket.contact_email), `[${ticket.ticket_number}] Ticket ${label}`, `Le ticket ${ticket.ticket_number} est maintenant ${label}.${resolution ? `\n\nSolution : ${resolution}` : ""}\n\nVous pouvez consulter son historique dans D2F Gestion.`);
   return listSupport(session);
 }

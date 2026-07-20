@@ -773,6 +773,31 @@ function renderToolbar(moduleKey) {
   langWrap.appendChild(langSel);
   elToolbar.appendChild(langWrap);
 
+  const sortOptions = listSortOptions(moduleKey);
+  if (sortOptions.length) {
+    const sortWrap = document.createElement("label");
+    sortWrap.className = "toolbarLanguage toolbarSort";
+    const sortLabel = document.createElement("span");
+    sortLabel.className = "toolbar__langLabel";
+    sortLabel.textContent = t("toolbar.sort", "Trier par");
+    const sortSelect = document.createElement("select");
+    sortSelect.className = "toolbarLanguage__select";
+    sortSelect.setAttribute("aria-label", t("toolbar.sort", "Trier par"));
+    for (const option of sortOptions) {
+      const element = document.createElement("option");
+      element.value = option.value;
+      element.textContent = t(option.key, option.fallback);
+      element.selected = state.listSort[moduleKey] === option.value;
+      sortSelect.appendChild(element);
+    }
+    sortSelect.addEventListener("change", () => {
+      state.listSort[moduleKey] = sortSelect.value;
+      refreshModule(moduleKey).catch((error) => setStatus(`Erreur: ${error.message}`));
+    });
+    sortWrap.append(sortLabel, sortSelect);
+    elToolbar.appendChild(sortWrap);
+  }
+
   /* ----------------- Module actions ----------------- */
   const cfg = MODULES[moduleKey];
   if (!cfg) return;
@@ -935,14 +960,17 @@ async function applyPlatformCapabilities() {
   window.D2FPlatformPreview = localPlatformPreview;
   for (const product of document.querySelectorAll(".navProduct[data-application]")) {
     const application = product.dataset.application;
-    product.hidden = application !== "gestion" && !Boolean(platformCapabilities?.applications?.[application]);
+    product.hidden = !["gestion", "support"].includes(application) && !Boolean(platformCapabilities?.applications?.[application]);
   }
   window.D2FPlatformCapabilities = platformCapabilities;
   const pack = platformCapabilities?.countryPack;
   if (pack) {
-    const label = pack.country + " · " + (pack.status === "not_qualified"
-      ? t("expenses.country_pack.unqualified", "Règles pays non qualifiées")
-      : t("expenses.country_pack.validation", "Validation des règles pays requise"));
+    const packStatusLabel = pack.status === "qualified"
+      ? t("expenses.country_pack.qualified", "Country Pack qualifié")
+      : pack.status === "not_qualified"
+        ? t("expenses.country_pack.unqualified", "Règles pays non qualifiées")
+        : t("expenses.country_pack.validation", "Validation des règles pays requise");
+    const label = pack.country + " · " + packStatusLabel;
     for (const id of ["expense-country-pack", "expenses-rules-pack", "financial-country-pack"]) {
       const badge = document.getElementById(id);
       if (badge) badge.textContent = label;
@@ -994,6 +1022,10 @@ function initNavigation() {
     if (!btn) return;
     const key = btn.dataset.module;
     if (!key) return;
+    if (key === "support-center") {
+      window.parent?.postMessage({ type: "d2f-open-support" }, location.origin);
+      return;
+    }
     showPage(key);
   });
 }
@@ -1010,6 +1042,13 @@ const state = {
   currentModule: "dashboard",
   currentSubview: "",
   company: null,
+  listSort: {
+    clients: "name_asc",
+    items: "name_asc",
+    quotes: "date_desc",
+    invoices: "date_desc",
+    inbound: "date_desc",
+  },
 
   // PATCH E-INVOICING / E-REPORTING (STATE)
   conformity: {
@@ -1077,6 +1116,83 @@ const state = {
     list: [],
   },
 };
+
+function listSortOptions(moduleKey) {
+  const common = {
+    clients: [
+      ["name_asc", "sort.name_asc", "Nom A → Z"], ["name_desc", "sort.name_desc", "Nom Z → A"],
+      ["number_asc", "sort.number_asc", "Numéro croissant"], ["number_desc", "sort.number_desc", "Numéro décroissant"],
+      ["date_desc", "sort.date_desc", "Plus récents"], ["date_asc", "sort.date_asc", "Plus anciens"],
+    ],
+    items: [
+      ["name_asc", "sort.name_asc", "Nom A → Z"], ["name_desc", "sort.name_desc", "Nom Z → A"],
+      ["number_asc", "sort.number_asc", "Référence croissante"], ["number_desc", "sort.number_desc", "Référence décroissante"],
+      ["date_desc", "sort.date_desc", "Plus récents"], ["date_asc", "sort.date_asc", "Plus anciens"],
+    ],
+  };
+  const documents = [
+    ["date_desc", "sort.date_desc", "Plus récents"], ["date_asc", "sort.date_asc", "Plus anciens"],
+    ["number_asc", "sort.number_asc", "Numéro croissant"], ["number_desc", "sort.number_desc", "Numéro décroissant"],
+    ["name_asc", "sort.name_asc", "Nom A → Z"], ["name_desc", "sort.name_desc", "Nom Z → A"],
+  ];
+  return (common[moduleKey] || (["quotes", "invoices", "inbound"].includes(moduleKey) ? documents : []))
+    .map(([value, key, fallback]) => ({ value, key, fallback }));
+}
+
+function sortedModuleRows(moduleKey, rows) {
+  const mode = state.listSort[moduleKey];
+  if (!mode || !Array.isArray(rows)) return rows;
+  const [criterion, direction] = mode.split("_");
+  const valueFor = (row) => {
+    if (criterion === "date") return row.date || row.doc_date || row.updated_at || row.created_at || "";
+    if (criterion === "number") return row.number || row.invoice_number || row.doc_number || row.ref || row.legal_id || row.vat_id || row.id || "";
+    return row.name || row.label || row.client_name || row.supplier_name || "";
+  };
+  return [...rows].sort((left, right) => {
+    const comparison = String(valueFor(left)).localeCompare(String(valueFor(right)), documentListLocale(), { numeric: true, sensitivity: "base" });
+    return direction === "desc" ? -comparison : comparison;
+  });
+}
+
+function installSortableTables() {
+  const enhance = (root = document) => {
+    root.querySelectorAll?.("table.platformTable").forEach((table) => {
+      if (table.dataset.sortable === "true") return;
+      table.dataset.sortable = "true";
+      table.querySelectorAll("thead th").forEach((header, index) => {
+        if (/action/i.test(header.textContent || "") || header.querySelector("button")) return;
+        header.tabIndex = 0;
+        header.classList.add("is-sortable");
+        header.setAttribute("aria-sort", "none");
+        const sort = () => {
+          const body = table.tBodies[0];
+          if (!body) return;
+          const direction = header.dataset.direction === "asc" ? "desc" : "asc";
+          table.querySelectorAll("thead th").forEach((item) => { item.setAttribute("aria-sort", "none"); delete item.dataset.direction; });
+          header.dataset.direction = direction;
+          header.setAttribute("aria-sort", direction === "asc" ? "ascending" : "descending");
+          const value = (row) => String(row.cells[index]?.textContent || "").trim();
+          const number = (text) => { const normalized = text.replace(/[€$£\s]/g, "").replace(",", "."); return /^-?\d+(?:\.\d+)?$/.test(normalized) ? Number(normalized) : Number.NaN; };
+          const rows = [...body.rows].sort((a, b) => {
+            const left = value(a); const right = value(b);
+            const leftNumber = number(left); const rightNumber = number(right);
+            const compared = left && right && Number.isFinite(leftNumber) && Number.isFinite(rightNumber)
+              ? leftNumber - rightNumber
+              : left.localeCompare(right, documentListLocale(), { numeric: true, sensitivity: "base" });
+            return direction === "asc" ? compared : -compared;
+          });
+          rows.forEach((row) => body.appendChild(row));
+        };
+        header.addEventListener("click", sort);
+        header.addEventListener("keydown", (event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); sort(); } });
+      });
+    });
+  };
+  enhance();
+  new MutationObserver((records) => records.forEach((record) => record.addedNodes.forEach((node) => {
+    if (node.nodeType === Node.ELEMENT_NODE) enhance(node);
+  }))).observe(document.body, { childList: true, subtree: true });
+}
 
 /* ----------------- Normalisation data ----------------- */
 function normalizeClient(c) {
@@ -4900,7 +5016,7 @@ if (moduleKey === "conformity") {
 
   if (moduleKey === "clients") {
     const q = $("clientsSearch")?.value || "";
-    state.clients = (await window.api.clients.list({ q })).map(normalizeClient);
+    state.clients = sortedModuleRows("clients", (await window.api.clients.list({ q })).map(normalizeClient));
     setDocumentListCount("clientsListCount", state.clients.length);
     renderClientList($("clientsList"), state.clients, state.selectedClientId);
 
@@ -4917,7 +5033,7 @@ return;
 
   if (moduleKey === "items") {
     const q = $("itemsSearch")?.value || "";
-    state.items = (await window.api.items.list({ q })).map(normalizeItem);
+    state.items = sortedModuleRows("items", (await window.api.items.list({ q })).map(normalizeItem));
 
     renderList(
       $("itemsList"),
@@ -4935,7 +5051,7 @@ return;
 
   if (moduleKey === "quotes") {
     const q = $("quotesSearch")?.value || "";
-    state.quotes = (await window.api.quotes.list({ q })).map(normalizeQuote);
+    state.quotes = sortedModuleRows("quotes", (await window.api.quotes.list({ q })).map(normalizeQuote));
 
     setDocumentListCount("quotesListCount", state.quotes.length);
     renderQuoteDocumentList($("quotesList"), state.quotes, state.selectedQuoteId);
@@ -5006,7 +5122,7 @@ renderQuoteDraft();
 
   if (moduleKey === "invoices") {
     const q = $("invoicesSearch")?.value || "";
-    state.invoices = (await window.api.invoices.list({ q })).map(normalizeInvoice);
+    state.invoices = sortedModuleRows("invoices", (await window.api.invoices.list({ q })).map(normalizeInvoice));
     const invoiceStatusSource = q.trim()
       ? (await window.api.invoices.list({ q: "" })).map(normalizeInvoice)
       : state.invoices;
@@ -5092,7 +5208,7 @@ renderQuoteDraft();
       return;
     }
 
-    state.inbound = (await window.api.inbound.list({ q })).map(normalizeInbound);
+    state.inbound = sortedModuleRows("inbound", (await window.api.inbound.list({ q })).map(normalizeInbound));
 
     renderList(
       $("inboundList"),
@@ -7548,6 +7664,7 @@ async function init() {
       applyStaticI18n(document);
 
       await init(); // si init est async, sinon init();
+      installSortableTables();
       bindQuotesListClick();
       
       document.getElementById("navModules")?.addEventListener("click", (e) => {

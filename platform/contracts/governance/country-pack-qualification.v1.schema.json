@@ -1,0 +1,104 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://d2fcompliant.org/contracts/governance/country-pack-qualification.v1.schema.json",
+  "title": "D2F Country Pack qualification record v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "qualificationId",
+    "packId",
+    "country",
+    "packVersion",
+    "status",
+    "regulatoryOwner",
+    "technicalOwner",
+    "manifest",
+    "evidence",
+    "reviews",
+    "createdAt",
+    "updatedAt"
+  ],
+  "properties": {
+    "qualificationId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "packId": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 160
+    },
+    "country": {
+      "type": "string",
+      "pattern": "^[A-Z]{2}$"
+    },
+    "packVersion": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 80
+    },
+    "status": {
+      "enum": [
+        "draft",
+        "evidence_collection",
+        "regulatory_review",
+        "technical_review",
+        "security_review",
+        "approved",
+        "scheduled",
+        "published",
+        "suspended",
+        "superseded",
+        "revoked",
+        "rejected"
+      ]
+    },
+    "regulatoryOwner": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 254
+    },
+    "technicalOwner": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 254
+    },
+    "manifest": {
+      "type": "object"
+    },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "reviews": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "effectiveFrom": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time"
+    },
+    "effectiveTo": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time"
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "updatedAt": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}

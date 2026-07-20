@@ -139,7 +139,9 @@ test("separates product menus, gates optional applications and captures smartpho
   assert.match(html, /id="expense-receipt-file"[^>]*capture="environment"/);
   assert.match(html, /id="expense-receipt-drop"/);
   assert.match(app, /platform.capabilities/);
-  assert.match(app, /product.hidden = application !== "gestion"/);
+  assert.match(app, /!\["gestion", "support"\]\.includes\(application\)/);
+  assert.match(html, /data-application="support"[\s\S]*D2F Support/);
+  assert.match(app, /type: "d2f-open-support"/);
   assert.match(ui, /window.api.expenses.uploadReceipt/);
   assert.match(route, /d2f_tenant_applications/);
   assert.match(route, /option D2F Financial n'est pas active/);
@@ -150,4 +152,26 @@ test("separates product menus, gates optional applications and captures smartpho
   assert.match(policy, /pending_human_validation/);
   assert.match(migration, /primary key \(tenant_id, application\)/);
   assert.match(migration, /capture_location jsonb/);
+});
+
+
+test("requires governed evidence and dual approval before Country Pack publication", async () => {
+  const [schema, migration, route, html, app] = await Promise.all([
+    json("platform/contracts/governance/country-pack-qualification.v1.schema.json"),
+    readFile(new URL("supabase/migrations/20260720160000_country_pack_governance.sql", root), "utf8"),
+    readFile(new URL("app/rpc/route.ts", root), "utf8"),
+    readFile(new URL("public/erp/index.html", root), "utf8"),
+    readFile(new URL("public/erp/app.js", root), "utf8"),
+  ]);
+  assert.equal(schema.additionalProperties, false);
+  assert.ok(schema.required.includes("regulatoryOwner"));
+  assert.ok(schema.required.includes("technicalOwner"));
+  assert.match(migration, /d2f_country_pack_evidence/);
+  assert.match(migration, /d2f_country_pack_reviews/);
+  assert.match(migration, /Regulatory and technical approvals are required/);
+  assert.doesNotMatch(route, /new Set\(\["FR", "RS", "IT", "ES"\]\)/);
+  assert.match(route, /d2f_country_pack_versions/);
+  assert.match(html, /data-module="support-center"/);
+  assert.match(app, /function sortedModuleRows/);
+  assert.match(app, /function installSortableTables/);
 });

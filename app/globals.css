@@ -425,8 +425,8 @@ button { cursor:pointer; }
 .support-header-button{ display:flex; align-items:center; gap:7px; min-height:40px; padding:7px 11px; border:1px solid #bcd2e2; border-radius:9px; color:#174b70; background:#edf7fd; font-weight:800; }
 .support-header-button:hover{ border-color:#6fa6ca; background:#e4f3fc; }
 .support-header-button strong{ display:grid; place-items:center; min-width:24px; height:24px; padding:0 6px; border-radius:999px; color:#fff; background:#d97706; font-size:10px; }
-.support-backdrop{ position:fixed; inset:0; z-index:120; display:grid; place-items:center; padding:20px; background:rgba(13,35,52,.38); backdrop-filter:blur(5px); }
-.support-center{ position:relative; width:min(1500px,100%); height:min(900px,calc(100dvh - 40px)); display:grid; grid-template-rows:auto auto minmax(0,1fr); overflow:hidden; border:1px solid #d4e0e9; border-radius:18px; color:#102234; background:#f5f8fb; box-shadow:0 30px 90px rgba(10,35,55,.25); }
+.support-backdrop{ position:fixed; inset:0; z-index:120; display:grid; place-items:center; padding:0; background:#f5f8fb; }
+.support-center{ position:relative; width:100%; height:100dvh; display:grid; grid-template-rows:auto auto minmax(0,1fr); overflow:hidden; border:0; border-radius:0; color:#102234; background:#f5f8fb; box-shadow:none; }
 .support-head{ display:flex; align-items:center; justify-content:space-between; gap:20px; padding:18px 22px; border-bottom:1px solid #dce5ec; background:#fff; }
 .support-head h2{ margin:2px 0 3px; font-size:25px; letter-spacing:-.035em; }
 .support-head p{ margin:0; color:#687b8d; font-size:12px; }
