@@ -37,7 +37,7 @@ export async function refreshFinancialProjections(supabase: SupabaseClient, owne
     .from("d2f_event_outbox")
     .select("event_id,event_type")
     .eq("owner_key", ownerKey)
-    .in("event_type", ["InvoiceIssued", "ExpenseApproved"])
+    .in("event_type", ["InvoiceIssued", "InvoicePaymentRegistered", "ExpenseApproved"])
     .order("occurred_at", { ascending: true })
     .limit(200);
   throwDatabase(pending.error);
@@ -45,7 +45,9 @@ export async function refreshFinancialProjections(supabase: SupabaseClient, owne
   for (const event of pending.data || []) {
     const procedure = event.event_type === "InvoiceIssued"
       ? "d2f_financial_consume_invoice_issued_v1"
-      : "d2f_financial_consume_expense_approved_v1";
+      : event.event_type === "InvoicePaymentRegistered"
+        ? "d2f_financial_consume_customer_payment_v1"
+        : "d2f_financial_consume_expense_approved_v1";
     const result = await supabase.rpc(procedure, { p_event_id: event.event_id });
     throwDatabase(result.error);
     if (result.data?.status !== "already_processed") processed += 1;
@@ -54,7 +56,7 @@ export async function refreshFinancialProjections(supabase: SupabaseClient, owne
 }
 
 export async function listFinancialWorkspace(supabase: SupabaseClient, ownerKey: string) {
-  const [invoices, proposals] = await Promise.all([
+  const [invoices, proposals, customerPayments, settlements] = await Promise.all([
     supabase
       .from("d2f_financial_invoice_projections")
       .select("invoice_id,invoice_number,invoice_type,issue_date,due_date,customer_id,customer_name,currency,net_amount,tax_amount,gross_amount,projected_at")
@@ -67,19 +69,38 @@ export async function listFinancialWorkspace(supabase: SupabaseClient, ownerKey:
       .eq("owner_key", ownerKey)
       .order("created_at", { ascending: false })
       .limit(200),
+    supabase
+      .from("d2f_financial_customer_payment_projections")
+      .select("payment_id,payment_date,value_date,amount,currency,payment_method,payment_reference,direction,status,projected_at")
+      .eq("owner_key", ownerKey)
+      .order("payment_date", { ascending: false })
+      .limit(200),
+    supabase
+      .from("d2f_financial_settlement_projections")
+      .select("settlement_id,payment_id,invoice_id,allocated_amount,currency,allocation_type,status,allocated_at")
+      .eq("owner_key", ownerKey)
+      .order("allocated_at", { ascending: false })
+      .limit(500),
   ]);
   throwDatabase(invoices.error);
   throwDatabase(proposals.error);
+  throwDatabase(customerPayments.error);
+  throwDatabase(settlements.error);
   const proposalRows = proposals.data || [];
   return {
     invoices: invoices.data || [],
     proposals: proposalRows,
+    customerPayments: customerPayments.data || [],
+    settlements: settlements.data || [],
     summary: {
       projectedInvoices: (invoices.data || []).length,
       proposalDrafts: proposalRows.filter((item) => item.status === "draft").length,
       amountAwaitingValidation: proposalRows
         .filter((item) => item.status === "draft")
         .reduce((sum, item) => sum + Number(item.amount || 0), 0),
+      projectedCustomerPayments: (customerPayments.data || []).length,
+      allocatedAmount: (settlements.data || []).filter((item) => item.status === "allocated")
+        .reduce((sum, item) => sum + Number(item.allocated_amount || 0), 0),
     },
   };
 }
@@ -87,7 +108,7 @@ export async function listFinancialWorkspace(supabase: SupabaseClient, ownerKey:
 export async function listExpenseWorkspace(supabase: SupabaseClient, ownerKey: string) {
   const reports = await supabase
     .from("d2f_expense_reports")
-    .select("id,report_number,claimant_id,claimant_name,title,currency,status,total_net,total_tax,total_gross,aggregate_version,submitted_at,decided_at,approver_id,decision_note,created_at,updated_at")
+    .select("id,report_number,claimant_id,claimant_name,title,currency,status,total_net,total_tax,total_gross,claimed_amount,eligible_amount,rejected_amount,personal_amount,reimbursable_amount,advance_amount,reimbursed_amount,remaining_amount,reimbursement_status,accounting_status,aggregate_version,submitted_at,decided_at,approver_id,decision_note,created_at,updated_at")
     .eq("owner_key", ownerKey)
     .order("updated_at", { ascending: false })
     .limit(200);
@@ -99,7 +120,7 @@ export async function listExpenseWorkspace(supabase: SupabaseClient, ownerKey: s
   const [lines, receipts] = await Promise.all([
     supabase
       .from("d2f_expense_lines")
-      .select("id,report_id,occurred_on,merchant,description,category,business_purpose,country,currency,net_amount,tax_amount,gross_amount,reimbursable,vat_recoverability,receipt_required,policy_result,created_at")
+      .select("id,report_id,occurred_on,merchant,description,category,business_purpose,country,currency,net_amount,tax_amount,gross_amount,payment_method,original_currency,original_gross_amount,personal_amount,reimbursable_amount,reimbursable,vat_recoverability,receipt_required,policy_version,policy_evaluated_at,policy_result,created_at")
       .in("report_id", ids)
       .order("occurred_on", { ascending: false }),
     supabase
@@ -186,7 +207,13 @@ export async function addExpenseLine(
   const purpose = text(input.businessPurpose || input.business_purpose);
   if (!merchant || !description || !purpose) throw new Error("Commerçant, description et motif professionnel sont obligatoires");
 
-  const policy = evaluateExpenseLine(establishmentCountry, input);
+  const countryPolicy = await expenseCountryPolicy(supabase, establishmentCountry);
+  const policy = evaluateExpenseLine(countryPolicy, input);
+  const paymentMethod = text(input.paymentMethod || input.payment_method || "personal_card");
+  const allowedPaymentMethods = new Set(["personal_card", "personal_cash", "corporate_card", "company_transfer", "company_cash", "advance", "other"]);
+  if (!allowedPaymentMethods.has(paymentMethod)) throw new Error("Mode de paiement invalide");
+  const personalAmount = amount(input.personalAmount ?? input.personal_amount ?? 0);
+  if (personalAmount > gross) throw new Error("La part personnelle ne peut pas dépasser le montant TTC");
 
   const inserted = await supabase
     .from("d2f_expense_lines")
@@ -202,9 +229,16 @@ export async function addExpenseLine(
       net_amount: net,
       tax_amount: tax,
       gross_amount: gross,
+      payment_method: paymentMethod,
+      original_currency: text(input.originalCurrency || input.original_currency || input.currency || report.data.currency).toUpperCase(),
+      original_gross_amount: amount(input.originalGrossAmount ?? input.original_gross_amount ?? gross),
+      personal_amount: personalAmount,
+      reimbursable_amount: null,
       reimbursable: input.reimbursable == null ? null : Boolean(input.reimbursable),
       receipt_required: policy.receiptRequired,
       policy_result: policy.policyResult,
+      policy_version: text(policy.policyResult.packVersion) || null,
+      policy_evaluated_at: new Date().toISOString(),
     })
     .select("*")
     .single();
@@ -329,7 +363,7 @@ export async function submitExpenseReport(
 ) {
   const input = object(inputValue);
   const reportId = text(input.id || input.reportId || input.report_id);
-  const countryPolicy = expenseCountryPolicy(establishmentCountry);
+  const countryPolicy = await expenseCountryPolicy(supabase, establishmentCountry);
   if (countryPolicy.status === "not_qualified") throw new Error("Soumission bloquée : le Country Pack " + countryPolicy.country + " n'est pas qualifié");
   const report = await supabase.from("d2f_expense_reports").select("id").eq("id", reportId).eq("owner_key", ownerKey).maybeSingle();
   throwDatabase(report.error);
@@ -363,6 +397,10 @@ export async function decideExpenseReport(
 ) {
   const input = object(inputValue);
   const reportId = text(input.id || input.reportId || input.report_id);
+  const report = await supabase.from("d2f_expense_reports").select("claimant_id,status").eq("id", reportId).eq("owner_key", ownerKey).maybeSingle();
+  throwDatabase(report.error);
+  if (!report.data) throw new Error("Note de frais introuvable");
+  if (String(report.data.claimant_id) === actorId) throw new Error("Le demandeur ne peut pas être l’unique approbateur de sa propre note de frais");
   const decision = text(input.decision);
   if (!["approved", "rejected", "returned"].includes(decision)) throw new Error("Décision invalide");
   const { data, error } = await supabase.rpc("d2f_expense_decide_v1", {

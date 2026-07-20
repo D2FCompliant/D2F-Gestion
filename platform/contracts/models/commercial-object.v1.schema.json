@@ -1,0 +1,357 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.d2fcompliant.org/models/commercial-object.v1.schema.json",
+  "title": "D2F Canonical Commercial Object v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "modelVersion",
+    "objectType",
+    "authoritativeOwner",
+    "sourceSystem",
+    "sourceId",
+    "sourceVersion",
+    "snapshotAt",
+    "data"
+  ],
+  "properties": {
+    "modelVersion": {
+      "const": 1
+    },
+    "objectType": {
+      "enum": [
+        "Customer",
+        "CatalogItem",
+        "Quote",
+        "CustomerInvoice",
+        "CreditNote",
+        "CustomerPayment",
+        "Settlement"
+      ]
+    },
+    "authoritativeOwner": {
+      "const": "d2f-gestion"
+    },
+    "sourceSystem": {
+      "const": "d2f-gestion"
+    },
+    "sourceId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "sourceVersion": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "snapshotAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "data": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/customer"
+        },
+        {
+          "$ref": "#/$defs/catalogItem"
+        },
+        {
+          "$ref": "#/$defs/quote"
+        },
+        {
+          "$ref": "#/$defs/invoice"
+        },
+        {
+          "$ref": "#/$defs/payment"
+        },
+        {
+          "$ref": "#/$defs/settlement"
+        }
+      ]
+    }
+  },
+  "$defs": {
+    "money": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "amount",
+        "currency"
+      ],
+      "properties": {
+        "amount": {
+          "type": "string",
+          "pattern": "^-?[0-9]+(\\.[0-9]{1,6})?$"
+        },
+        "currency": {
+          "type": "string",
+          "pattern": "^[A-Z]{3}$"
+        }
+      }
+    },
+    "partySnapshot": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "name",
+        "country",
+        "identifiers",
+        "taxIdentifiers",
+        "addresses",
+        "electronicAddresses"
+      ],
+      "properties": {
+        "partyId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "country": {
+          "type": "string",
+          "pattern": "^[A-Z]{2}$"
+        },
+        "identifiers": {
+          "type": "array"
+        },
+        "taxIdentifiers": {
+          "type": "array"
+        },
+        "addresses": {
+          "type": "array"
+        },
+        "electronicAddresses": {
+          "type": "array"
+        }
+      }
+    },
+    "customer": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "partyId",
+        "sourceCustomerId",
+        "status"
+      ],
+      "properties": {
+        "partyId": {
+          "type": "string"
+        },
+        "sourceCustomerId": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "commercialTerms": {
+          "type": "object"
+        }
+      }
+    },
+    "catalogItem": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "id",
+        "itemType",
+        "sourceItemId",
+        "code",
+        "status"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "itemType": {
+          "enum": [
+            "product",
+            "service"
+          ]
+        },
+        "sourceItemId": {
+          "type": "string"
+        },
+        "code": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        }
+      }
+    },
+    "invoice": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "invoiceId",
+        "invoiceNumber",
+        "invoiceType",
+        "issueDate",
+        "currency",
+        "seller",
+        "buyer",
+        "lines",
+        "totals"
+      ],
+      "properties": {
+        "invoiceId": {
+          "type": "string"
+        },
+        "invoiceNumber": {
+          "type": "string"
+        },
+        "invoiceType": {
+          "type": "string"
+        },
+        "issueDate": {
+          "type": "string",
+          "format": "date"
+        },
+        "currency": {
+          "type": "string",
+          "pattern": "^[A-Z]{3}$"
+        },
+        "seller": {
+          "$ref": "#/$defs/partySnapshot"
+        },
+        "buyer": {
+          "$ref": "#/$defs/partySnapshot"
+        },
+        "lines": {
+          "type": "array",
+          "minItems": 1
+        },
+        "totals": {
+          "type": "object"
+        }
+      }
+    },
+    "payment": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "paymentId",
+        "amount",
+        "paymentDate",
+        "status",
+        "allocations"
+      ],
+      "properties": {
+        "paymentId": {
+          "type": "string"
+        },
+        "amount": {
+          "$ref": "#/$defs/money"
+        },
+        "paymentDate": {
+          "type": "string",
+          "format": "date"
+        },
+        "status": {
+          "type": "string"
+        },
+        "allocations": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/settlement"
+          }
+        }
+      }
+    },
+    "settlement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "settlementId",
+        "sourceReference",
+        "targetReference",
+        "allocatedAmount",
+        "allocatedAt",
+        "allocationType",
+        "status"
+      ],
+      "properties": {
+        "settlementId": {
+          "type": "string"
+        },
+        "sourceReference": {
+          "type": "string"
+        },
+        "targetReference": {
+          "type": "string"
+        },
+        "allocatedAmount": {
+          "$ref": "#/$defs/money"
+        },
+        "allocatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "allocationType": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        }
+      }
+    },
+    "quote": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "quoteId",
+        "quoteNumber",
+        "status",
+        "issueDate",
+        "currency",
+        "seller",
+        "buyer",
+        "lines",
+        "totals"
+      ],
+      "properties": {
+        "quoteId": {
+          "type": "string"
+        },
+        "quoteNumber": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "issueDate": {
+          "type": "string",
+          "format": "date"
+        },
+        "validUntil": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date"
+        },
+        "currency": {
+          "type": "string",
+          "pattern": "^[A-Z]{3}$"
+        },
+        "seller": {
+          "$ref": "#/$defs/partySnapshot"
+        },
+        "buyer": {
+          "$ref": "#/$defs/partySnapshot"
+        },
+        "lines": {
+          "type": "array",
+          "minItems": 1
+        },
+        "totals": {
+          "type": "object"
+        }
+      }
+    }
+  }
+}

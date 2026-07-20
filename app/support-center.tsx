@@ -2,6 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { supportCopies, supportLanguage, type SupportLanguage } from "./support-i18n";
+import { D2F_PLATFORM_VERSION } from "../lib/platform-version";
 
 type SupportMessage = { id: string; authorType: string; authorName: string; authorEmail: string; body: string; internal: boolean; createdAt: string };
 type SupportTicket = {
@@ -131,7 +132,7 @@ export default function SupportCenter({ session, onClose, onAttentionCount, onCh
 
   return <div className="support-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
     <section className="support-center" role="dialog" aria-modal="true" aria-labelledby="support-title">
-      <header className="support-head"><div><p className="eyebrow">D2F COMPLIANT · VERSION 2.1.5</p><h2 id="support-title">{payload?.isAdmin ? copy.adminTitle : copy.title}</h2><p>{payload?.isAdmin ? copy.adminSubtitle : copy.subtitle}</p></div><div><a href={`mailto:${payload?.supportEmail || "support@d2fcompliant.com"}`}><span>{copy.supportByEmail}</span><strong>{payload?.supportEmail || "support@d2fcompliant.com"}</strong></a><button type="button" onClick={onClose} aria-label={copy.close}>×</button></div></header>
+      <header className="support-head"><div><p className="eyebrow">D2F COMPLIANT · VERSION {D2F_PLATFORM_VERSION}</p><h2 id="support-title">{payload?.isAdmin ? copy.adminTitle : copy.title}</h2><p>{payload?.isAdmin ? copy.adminSubtitle : copy.subtitle}</p></div><div><a href={`mailto:${payload?.supportEmail || "support@d2fcompliant.com"}`}><span>{copy.supportByEmail}</span><strong>{payload?.supportEmail || "support@d2fcompliant.com"}</strong></a><button type="button" onClick={onClose} aria-label={copy.close}>×</button></div></header>
       <div className="support-toolbar"><div><button type="button" className="support-new" onClick={() => { setCreating(true); setSelectedId(""); setError(""); }}>{payload?.isAdmin ? copy.newInternalTicket : copy.newTicket}</button><button type="button" className="support-refresh" onClick={load} disabled={busy}>↻</button></div><p className={payload?.deliveryConfigured ? "is-active" : ""}>{payload?.deliveryConfigured ? copy.emailActive : copy.emailPending}</p></div>
       <div className={`support-layout ${creating ? "is-creating" : ""}`}>
         <aside className={`support-list ${selected || creating ? "has-mobile-detail" : ""}`} aria-label={copy.tickets}>

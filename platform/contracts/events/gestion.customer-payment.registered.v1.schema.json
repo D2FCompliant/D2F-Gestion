@@ -1,0 +1,157 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.d2fcompliant.org/events/customer-payment-registered.v1.schema.json",
+  "title": "InvoicePaymentRegistered v1",
+  "allOf": [
+    {
+      "$ref": "event-envelope.v1.schema.json"
+    },
+    {
+      "type": "object",
+      "properties": {
+        "eventType": {
+          "const": "InvoicePaymentRegistered"
+        },
+        "eventVersion": {
+          "const": 1
+        },
+        "eventCategory": {
+          "const": "business"
+        },
+        "producer": {
+          "type": "object",
+          "properties": {
+            "application": {
+              "const": "d2f-gestion"
+            }
+          }
+        },
+        "subject": {
+          "type": "object",
+          "properties": {
+            "aggregateType": {
+              "const": "CustomerPayment"
+            }
+          }
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "paymentId",
+            "paymentDate",
+            "amount",
+            "currency",
+            "paymentMethod",
+            "status",
+            "allocations"
+          ],
+          "properties": {
+            "paymentId": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "paymentDate": {
+              "type": "string",
+              "format": "date"
+            },
+            "valueDate": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "date"
+            },
+            "amount": {
+              "$ref": "#/$defs/decimal"
+            },
+            "currency": {
+              "type": "string",
+              "pattern": "^[A-Z]{3}$"
+            },
+            "paymentMethod": {
+              "type": "string",
+              "minLength": 1
+            },
+            "paymentReference": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "status": {
+              "enum": [
+                "posted",
+                "cancelled"
+              ]
+            },
+            "direction": {
+              "enum": [
+                "in",
+                "out"
+              ]
+            },
+            "payer": {
+              "type": [
+                "object",
+                "null"
+              ]
+            },
+            "payee": {
+              "type": [
+                "object",
+                "null"
+              ]
+            },
+            "allocations": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "settlementId",
+                  "invoiceId",
+                  "allocatedAmount",
+                  "allocationType",
+                  "status"
+                ],
+                "properties": {
+                  "settlementId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "invoiceId": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "allocatedAmount": {
+                    "$ref": "#/$defs/decimal"
+                  },
+                  "allocationType": {
+                    "enum": [
+                      "payment",
+                      "refund"
+                    ]
+                  },
+                  "status": {
+                    "enum": [
+                      "allocated",
+                      "cancelled"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "decimal": {
+      "type": "string",
+      "pattern": "^-?[0-9]+(\\.[0-9]{1,6})?$"
+    }
+  }
+}

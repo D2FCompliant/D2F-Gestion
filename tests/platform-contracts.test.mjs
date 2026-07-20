@@ -175,3 +175,36 @@ test("requires governed evidence and dual approval before Country Pack publicati
   assert.match(app, /function sortedModuleRows/);
   assert.match(app, /function installSortableTables/);
 });
+
+
+test("implements Chapters 16-18 canonical ownership and settlement invariants", async () => {
+  const [model, paymentEvent, migration, route, paymentService, financeService, expensePolicy, html] = await Promise.all([
+    json("platform/contracts/models/commercial-object.v1.schema.json"),
+    json("platform/contracts/events/gestion.customer-payment.registered.v1.schema.json"),
+    readFile(new URL("supabase/migrations/20260720170000_commercial_financial_expense_invariants.sql", root), "utf8"),
+    readFile(new URL("app/rpc/route.ts", root), "utf8"),
+    readFile(new URL("lib/platform/register-customer-payment.ts", root), "utf8"),
+    readFile(new URL("lib/platform/financial-expense.ts", root), "utf8"),
+    readFile(new URL("lib/platform/expense-country-policy.ts", root), "utf8"),
+    readFile(new URL("public/erp/index.html", root), "utf8"),
+  ]);
+  assert.equal(model.properties.authoritativeOwner.const, "d2f-gestion");
+  assert.ok(model.$defs.quote);
+  assert.ok(model.$defs.payment);
+  assert.ok(model.$defs.settlement);
+  for (const field of ["identifiers", "taxIdentifiers", "addresses", "electronicAddresses"]) assert.ok(model.$defs.partySnapshot.required.includes(field));
+  assert.equal(paymentEvent.allOf[1].properties.eventType.const, "InvoicePaymentRegistered");
+  assert.equal(paymentEvent.allOf[1].properties.producer.properties.application.const, "d2f-gestion");
+  assert.equal(paymentEvent.allOf[1].properties.subject.properties.aggregateType.const, "CustomerPayment");
+  assert.match(migration, /d2f_financial_customer_payment_projections/);
+  assert.match(migration, /d2f_financial_settlement_projections/);
+  assert.match(migration, /d2f_enforce_expense_segregation_v1/);
+  assert.match(route, /registerCustomerPaymentAtomically/);
+  assert.match(paymentService, /d2f_register_customer_payment_v1/);
+  assert.match(financeService, /d2f_financial_consume_customer_payment_v1/);
+  assert.match(financeService, /claimant_id.*actorId/);
+  assert.match(expensePolicy, /d2f_country_pack_versions/);
+  assert.doesNotMatch(expensePolicy, /QUALIFIED_COUNTRIES/);
+  assert.match(html, /expense-line-payment-method/);
+  assert.match(html, /expense-line-personal/);
+});

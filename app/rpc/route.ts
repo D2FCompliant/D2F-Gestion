@@ -14,6 +14,7 @@ import { validateEstablishmentIdentifier } from "../../lib/company-identifiers";
 import { preflightInvoice } from "../../lib/country-compliance";
 import { issueInvoiceAtomically } from "../../lib/platform/issue-invoice";
 import { addExpenseLine, createExpenseReport, decideExpenseReport, listExpenseWorkspace, listFinancialWorkspace, refreshFinancialProjections, submitExpenseReport, uploadExpenseReceipt } from "../../lib/platform/financial-expense";
+import { registerCustomerPaymentAtomically } from "../../lib/platform/register-customer-payment";
 
 export const dynamic = "force-dynamic";
 
@@ -640,7 +641,7 @@ function receivableRows(invoices: JsonRecord[], payments: JsonRecord[]) {
     });
 }
 
-async function savePaymentRecord(ownerEmail: string, input: JsonRecord) {
+async function savePaymentRecord(ownerEmail: string, tenantId: string | null, actorId: string, input: JsonRecord) {
   const invoiceId = String(input.invoice_id || input.invoiceId || "");
   if (!invoiceId) throw new Error("Facture manquante pour le paiement");
   const invoice = await getRecord(ownerEmail, "invoices", invoiceId);
@@ -662,7 +663,27 @@ async function savePaymentRecord(ownerEmail: string, input: JsonRecord) {
       throw new Error(`Le paiement dépasse le solde restant de ${row.remaining.toFixed(2)} EUR`);
     }
   }
-  return saveRecord(ownerEmail, "payments", input);
+  const amount = Math.abs(numberValue(input.amount));
+  const paymentId = String(input.id || crypto.randomUUID());
+  const currency = String(input.currency || object(invoice).currency || "EUR").toUpperCase().slice(0, 3);
+  const paymentDate = String(input.date || input.payment_date || new Date().toISOString().slice(0, 10)).slice(0, 10);
+  return registerCustomerPaymentAtomically(getSupabaseAdmin(), {
+    ownerKey: ownerEmail,
+    tenantId,
+    actorId,
+    invoiceId,
+    paymentId,
+    amount,
+    currency,
+    paymentDate,
+    valueDate: input.value_date ? String(input.value_date).slice(0, 10) : null,
+    method: String(input.method || "other"),
+    reference: String(input.reference || ""),
+    direction: String(input.direction || "in").toLowerCase() === "out" ? "out" : "in",
+    status: String(input.status || "posted").toLowerCase() === "cancelled" ? "cancelled" : "posted",
+    notes: String(input.notes || ""),
+    idempotencyKey: String(input.idempotency_key || `gestion:payment:record:${paymentId}`),
+  });
 }
 
 async function dashboard(ownerEmail: string) {
@@ -1424,7 +1445,7 @@ async function dispatch(ownerEmail: string, method: string, args: unknown[], ten
       return record;
     }
     if (entity === "payments" && ["save", "upsert", "create", "update", "record"].includes(action)) {
-      return savePaymentRecord(ownerEmail, object(first(args)));
+      return savePaymentRecord(ownerEmail, tenantIdentity?.tenantId || null, actorId, object(first(args)));
     }
     if (["save", "upsert", "create", "update", "record"].includes(action)) {
       const input = object(first(args));

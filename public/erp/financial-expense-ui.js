@@ -314,7 +314,7 @@
 
   function expenseInput() {
     return { reportId: local.selectedReportId, occurredOn: byId("expense-line-date")?.value, merchant: byId("expense-line-merchant")?.value, description: byId("expense-line-description")?.value,
-      category: byId("expense-line-category")?.value, businessPurpose: byId("expense-line-purpose")?.value, netAmount: byId("expense-line-net")?.value, taxAmount: byId("expense-line-tax")?.value,
+      category: byId("expense-line-category")?.value, paymentMethod: byId("expense-line-payment-method")?.value, personalAmount: byId("expense-line-personal")?.value, businessPurpose: byId("expense-line-purpose")?.value, netAmount: byId("expense-line-net")?.value, taxAmount: byId("expense-line-tax")?.value,
       grossAmount: number(byId("expense-line-net")?.value) + number(byId("expense-line-tax")?.value), country: byId("expense-line-country")?.value, currency: byId("expense-report-currency")?.value || "EUR" };
   }
   async function receiptPayload(file) {
@@ -372,7 +372,7 @@
       local.selectedReportId = created.id; if (byId("expense-report-title")) byId("expense-report-title").value = ""; return refreshExpenses();
     }
     if (action === "expenses:addLine") {
-      await window.api.expenses.addLine(expenseInput()); for (const id of ["expense-line-merchant", "expense-line-description", "expense-line-purpose", "expense-line-net", "expense-line-tax"]) if (byId(id)) byId(id).value = ""; return refreshExpenses();
+      await window.api.expenses.addLine(expenseInput()); for (const id of ["expense-line-merchant", "expense-line-description", "expense-line-purpose", "expense-line-net", "expense-line-tax", "expense-line-personal"]) if (byId(id)) byId(id).value = ""; return refreshExpenses();
     }
     if (action === "expenses:submit") { await window.api.expenses.submit({ id: local.selectedReportId, idempotencyKey: "expense:submit:" + local.selectedReportId }); return refreshExpenses(); }
     const decisions = { "expenses:approve": "approved", "expenses:reject": "rejected", "expenses:return": "returned" };

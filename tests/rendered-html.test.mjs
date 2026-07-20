@@ -59,12 +59,13 @@ test("ships a touch-first smartphone layout", async () => {
 });
 
 test("makes the quote deposit unit explicit with no preset value", async () => {
-  const [html, app, styles, shell, pkg] = await Promise.all([
+  const [html, app, styles, shell, pkg, platformVersion] = await Promise.all([
     readFile(new URL("../public/erp/index.html", import.meta.url), "utf8"),
     readFile(new URL("../public/erp/app.js", import.meta.url), "utf8"),
     readFile(new URL("../public/erp/styles.css", import.meta.url), "utf8"),
     readFile(new URL("../app/session-shell.tsx", import.meta.url), "utf8"),
     readFile(new URL("../package.json", import.meta.url), "utf8"),
+    readFile(new URL("../lib/platform-version.ts", import.meta.url), "utf8"),
   ]);
   assert.match(html, /class="depositModeOption"[\s\S]*?quotes\.deposit_percent[\s\S]*?quotes\.deposit_amount_ttc/);
   assert.match(html, /id="q-deposit-value"[^>]*min="0\.01"[^>]*max="100"/);
@@ -72,8 +73,9 @@ test("makes the quote deposit unit explicit with no preset value", async () => {
   assert.match(app, /function syncQuoteDepositModeUi/);
   assert.match(app, /syncQuoteDepositModeUi\(\{ clearValue: true \}\)/);
   assert.match(styles, /\.depositModeOption input:checked \+ span/);
-  assert.match(shell, /app-build-badge">v2\.1\.5/);
-  assert.equal(JSON.parse(pkg).version, "2.1.5");
+  assert.match(shell, /app-build-badge">\{D2F_PLATFORM_VERSION_LABEL\}/);
+  assert.match(platformVersion, /D2F_PLATFORM_VERSION = "3\.0\.0"/);
+  assert.equal(JSON.parse(pkg).version, "3.0.0");
 });
 
 test("renders human-readable document lists on desktop and smartphone", async () => {
@@ -770,7 +772,7 @@ test("provides tenant-scoped support tickets with guided level-1 triage and trac
   assert.match(route, /reanalyzeSupportTicket/);
   assert.match(route, /updateSupportStatus/);
   assert.match(center, /className="support-center"/);
-  assert.match(center, /D2F COMPLIANT · VERSION 2\.1\.5/);
+  assert.match(center, /D2F COMPLIANT · VERSION \{D2F_PLATFORM_VERSION\}/);
   assert.match(center, /copy\.adminTitle/);
   assert.match(center, /copy\.newInternalTicket/);
   assert.match(center, /supportApi\("PATCH"/);
