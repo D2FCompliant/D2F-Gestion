@@ -1,0 +1,62 @@
+openapi: 3.1.0
+info:
+  title: D2F Gestion Platform Boundary
+  version: 1.0.0
+  description: Versioned commands exposed by D2F Gestion to the D2F Platform.
+servers:
+  - url: /api/v1
+paths:
+  /invoices/{invoiceId}/issue:
+    post:
+      operationId: issueCustomerInvoice
+      summary: Issue a draft customer invoice atomically with its Outbox event
+      parameters:
+        - name: invoiceId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+            minLength: 16
+            maxLength: 200
+      responses:
+        "200":
+          description: Invoice was already issued by the same idempotent command
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IssueInvoiceResult"
+        "201":
+          description: Invoice issued and event appended
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IssueInvoiceResult"
+        "401":
+          description: Authentication required
+        "403":
+          description: Invoice is outside the authorized tenant or legal entity
+        "409":
+          description: Invoice state or idempotency conflict
+        "422":
+          description: Invoice cannot be issued
+components:
+  schemas:
+    IssueInvoiceResult:
+      type: object
+      additionalProperties: false
+      required: [invoiceId, invoiceNumber, status, eventId]
+      properties:
+        invoiceId:
+          type: string
+        invoiceNumber:
+          type: string
+        status:
+          const: issued
+        eventId:
+          type: string
+          format: uuid

@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.d2fcompliant.org/events/event-envelope.v1.schema.json",
+  "title": "D2F Canonical Event Envelope v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["eventId", "eventType", "eventVersion", "eventCategory", "occurredAt", "recordedAt", "producer", "subject", "context", "actor", "trace", "contract", "security", "payload", "metadata"],
+  "properties": {
+    "eventId": {"type": "string", "format": "uuid"},
+    "eventType": {"type": "string", "pattern": "^[A-Z][A-Za-z0-9]+$"},
+    "eventVersion": {"type": "integer", "minimum": 1},
+    "eventCategory": {"enum": ["business", "integration", "platform", "regulatory"]},
+    "occurredAt": {"type": "string", "format": "date-time"},
+    "recordedAt": {"type": "string", "format": "date-time"},
+    "producer": {"type": "object", "additionalProperties": false, "required": ["application", "service", "instance", "version"], "properties": {
+      "application": {"type": "string", "minLength": 1}, "service": {"type": "string", "minLength": 1},
+      "instance": {"type": ["string", "null"]}, "version": {"type": "string", "minLength": 1}
+    }},
+    "subject": {"type": "object", "additionalProperties": false, "required": ["aggregateType", "aggregateId", "aggregateVersion"], "properties": {
+      "aggregateType": {"type": "string", "minLength": 1}, "aggregateId": {"type": "string", "minLength": 1},
+      "aggregateVersion": {"type": "integer", "minimum": 1}
+    }},
+    "context": {"type": "object", "additionalProperties": false, "required": ["tenantId", "organizationId", "legalEntityId", "establishmentId", "countryContext", "languageContext"], "properties": {
+      "tenantId": {"type": "string", "minLength": 1}, "organizationId": {"type": ["string", "null"]},
+      "legalEntityId": {"type": ["string", "null"]}, "establishmentId": {"type": ["string", "null"]},
+      "countryContext": {"type": ["string", "null"], "pattern": "^[A-Z]{2}$"},
+      "languageContext": {"type": ["string", "null"], "pattern": "^[a-z]{2}(-[A-Z]{2})?$"}
+    }},
+    "actor": {"type": "object", "additionalProperties": false, "required": ["actorType", "actorId", "delegatedBy"], "properties": {
+      "actorType": {"enum": ["user", "service", "system", "connector", "ai"]},
+      "actorId": {"type": "string", "minLength": 1}, "delegatedBy": {"type": ["string", "null"]}
+    }},
+    "trace": {"type": "object", "additionalProperties": false, "required": ["correlationId", "causationId", "commandId", "workflowInstanceId", "traceId"], "properties": {
+      "correlationId": {"type": "string", "format": "uuid"}, "causationId": {"type": ["string", "null"], "format": "uuid"},
+      "commandId": {"type": ["string", "null"]}, "workflowInstanceId": {"type": ["string", "null"]},
+      "traceId": {"type": ["string", "null"]}
+    }},
+    "contract": {"type": "object", "additionalProperties": false, "required": ["schemaId", "schemaVersion", "contentType"], "properties": {
+      "schemaId": {"type": "string", "minLength": 1}, "schemaVersion": {"type": "integer", "minimum": 1},
+      "contentType": {"type": "string", "minLength": 1}
+    }},
+    "security": {"type": "object", "additionalProperties": false, "required": ["classification", "containsPersonalData", "containsFinancialData", "encryptionRequired"], "properties": {
+      "classification": {"enum": ["public", "internal", "confidential", "restricted"]},
+      "containsPersonalData": {"type": "boolean"}, "containsFinancialData": {"type": "boolean"},
+      "encryptionRequired": {"type": "boolean"}
+    }},
+    "payload": {"type": "object"},
+    "metadata": {"type": "object"}
+  }
+}

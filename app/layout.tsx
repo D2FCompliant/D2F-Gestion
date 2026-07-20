@@ -11,16 +11,16 @@ export async function generateMetadata(): Promise<Metadata> {
   const host = incoming.get("x-forwarded-host") || incoming.get("host") || "localhost:3000";
   const protocol = incoming.get("x-forwarded-proto") || (host.includes("localhost") ? "http" : "https");
   const socialImage = `${protocol}://${host}/og.png`;
-  const title = "D2F Gestion — Pilotez votre activité";
-  const description = "Gestion, facturation EN16931 et e-Reporting dans un espace sécurisé pour chaque entreprise.";
+  const title = "D2F Platform — Pilotez votre activité";
+  const description = "Gestion commerciale, finance, notes de frais et conformité dans une plateforme sécurisée et modulaire.";
   return {
     title,
     description,
     icons: {
-      icon: [{ url: "/d2f-gestion-logo.png", type: "image/png" }],
-      apple: "/d2f-gestion-logo.png",
+      icon: [{ url: "/d2f-platform-logo.png", type: "image/png" }],
+      apple: "/d2f-platform-logo.png",
     },
-    openGraph: { title, description, type: "website", images: [{ url: socialImage, width: 1731, height: 909, alt: "D2F Gestion — Pilotez votre activité" }] },
+    openGraph: { title, description, type: "website", images: [{ url: socialImage, width: 1731, height: 909, alt: "D2F Platform — Pilotez votre activité" }] },
     twitter: { card: "summary_large_image", title, description, images: [socialImage] },
   };
 }

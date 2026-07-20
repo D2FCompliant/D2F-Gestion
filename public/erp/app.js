@@ -204,6 +204,17 @@ const MODULES = {
   ],
 },
 
+  "financial-overview": { title: "Cockpit financier", desc: "Indicateurs réels issus de D2F Gestion en lecture seule.", actions: [{ id: "financial:refresh", fallback: "Rafraîchir", variant: "secondary" }] },
+  "financial-proposals": { title: "Propositions comptables", desc: "Pré-comptabilisation explicable, contrôlée et soumise à validation.", actions: [{ id: "financial:refresh", fallback: "Rafraîchir", variant: "secondary" }] },
+  "financial-reconciliation": { title: "Rapprochement", desc: "Factures, paiements et soldes à rapprocher.", actions: [{ id: "financial:refresh", fallback: "Rafraîchir", variant: "secondary" }] },
+  "financial-rules": { title: "Règles & simulations", desc: "Règles déterministes, versions et Country Packs applicables.", actions: [{ id: "financial:refresh", fallback: "Rafraîchir", variant: "secondary" }] },
+
+  "expenses-overview": { title: "Tableau de bord Expenses", desc: "Vue d’ensemble du cycle des notes de frais.", actions: [{ id: "expenses:refresh", fallback: "Rafraîchir", variant: "secondary" }] },
+  "expenses-reports": { title: "Mes notes de frais", desc: "Création, lignes, justificatifs et soumission.", actions: [{ id: "expenses:refresh", fallback: "Rafraîchir", variant: "secondary" }] },
+  "expenses-capture": { title: "Capture mobile", desc: "Photographier ou déposer un justificatif et conserver son original.", actions: [{ id: "expenses:refresh", fallback: "Rafraîchir", variant: "secondary" }] },
+  "expenses-approvals": { title: "Approbations", desc: "File de décision, constats et piste d’audit.", actions: [{ id: "expenses:refresh", fallback: "Rafraîchir", variant: "secondary" }] },
+  "expenses-rules": { title: "Règles & barèmes", desc: "Règles applicables par pays, période et version.", actions: [{ id: "expenses:refresh", fallback: "Rafraîchir", variant: "secondary" }] },
+
   payments: {
     title: "Encaissements",
     desc: "Enregistrer un paiement sur une facture sélectionnée (total ou partiel).",
@@ -307,6 +318,15 @@ const MODULES = {
 const WORKFLOW_GUIDES = {
   company: { action: "company:save" },
   dashboard: { action: "dashboard:refresh" },
+  "financial-overview": { action: "financial:refresh" },
+  "financial-proposals": { action: "financial:refresh" },
+  "financial-reconciliation": { action: "financial:refresh" },
+  "financial-rules": { focusId: "financial-rule-amount" },
+  "expenses-overview": { action: "expenses:refresh" },
+  "expenses-reports": { focusId: "expense-report-title" },
+  "expenses-capture": { focusId: "expense-receipt-drop" },
+  "expenses-approvals": { focusId: "expense-decision-note" },
+  "expenses-rules": {},
   clients: { action: "clients:new" },
   items: { action: "items:new" },
   quotes: { action: "quotes:new" },
@@ -808,6 +828,8 @@ function renderToolbar(moduleKey) {
 }
 
 function toolbarDirectActionIds(moduleKey) {
+  if (moduleKey.startsWith("financial-")) return ["financial:refresh"];
+  if (moduleKey.startsWith("expenses-")) return ["expenses:refresh"];
   if (moduleKey === "quotes") {
     if (state.quoteDraft?.historical_import) return ["quotes:new"];
     const hasId = !!state.quoteDraft?.id;
@@ -832,6 +854,8 @@ function toolbarDirectActionIds(moduleKey) {
   return {
     company: ["company:save"],
     dashboard: ["dashboard:refresh"],
+    financial: ["financial:refresh"],
+    expenses: ["expenses:refresh"],
     payments: ["payments:refresh"],
     clients: ["clients:save", "clients:new"],
     items: ["items:save", "items:new"],
@@ -898,28 +922,58 @@ function isToolbarActionDisabled(actionId, moduleKey) {
   return false;
 }
 
+let platformCapabilities = { applications: { gestion: true, financial: false, expenses: false }, countryPack: null };
+
+async function applyPlatformCapabilities() {
+  const localPlatformPreview = new URLSearchParams(window.location.search).get("preview") === "platform";
+  try {
+    platformCapabilities = await window.api.platform.capabilities();
+  } catch (error) {
+    console.warn("[platform] capabilities unavailable", error);
+  }
+  if (localPlatformPreview) platformCapabilities = { applications: { internalD2F: true, gestion: true, financial: true, expenses: true }, countryPack: { country: "RS", status: "policy_validation_required" } };
+  window.D2FPlatformPreview = localPlatformPreview;
+  for (const product of document.querySelectorAll(".navProduct[data-application]")) {
+    const application = product.dataset.application;
+    product.hidden = application !== "gestion" && !Boolean(platformCapabilities?.applications?.[application]);
+  }
+  window.D2FPlatformCapabilities = platformCapabilities;
+  const pack = platformCapabilities?.countryPack;
+  if (pack) {
+    const label = pack.country + " · " + (pack.status === "not_qualified"
+      ? t("expenses.country_pack.unqualified", "Règles pays non qualifiées")
+      : t("expenses.country_pack.validation", "Validation des règles pays requise"));
+    for (const id of ["expense-country-pack", "expenses-rules-pack", "financial-country-pack"]) {
+      const badge = document.getElementById(id);
+      if (badge) badge.textContent = label;
+    }
+  }
+}
+
 function showPage(key) {
-  for (const p of dom.pages()) p.classList.toggle("is-active", p.dataset.page === key);
-  document.querySelectorAll(".nav__item").forEach((b) => b.classList.toggle("is-active", b.dataset.module === key));
+  for (const page of dom.pages()) page.classList.toggle("is-active", page.dataset.page === key);
+  document.querySelectorAll(".nav__item").forEach((button) => button.classList.toggle("is-active", button.dataset.module === key));
 
   const activeNavItem = document.querySelector(`.nav__item[data-module="${key}"]`);
   if (activeNavItem && window.matchMedia?.("(max-width: 760px)").matches) {
-    window.requestAnimationFrame(() => {
-      activeNavItem.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
-    });
+    window.requestAnimationFrame(() => activeNavItem.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" }));
   }
 
   const elTitle = dom.title();
   const elDesc = dom.desc();
-
   if (elTitle) elTitle.textContent = normalizeLabel(t(`app.title.${key}`, MODULES[key]?.title || key));
   if (elDesc) elDesc.textContent = t(`app.desc.${key}`, MODULES[key]?.desc || "");
 
   renderToolbar(key);
   state.currentModule = key;
+  state.currentSubview = "";
+  activeNavItem?.closest(".navProduct")?.classList.add("is-open");
   renderWorkflowCompanion(key);
-  refreshModule(key).catch((e) => setStatus(`Erreur: ${e.message}`));
+  refreshModule(key).catch((error) => setStatus(`Erreur: ${error.message}`));
 }
+
+window.D2FShowPage = showPage;
+window.D2FOpenPayment = (invoiceId) => { state.payments.selectedInvoiceId = String(invoiceId || "") || null; showPage("payments"); };
 
 function initNavigation() {
   const elNav = dom.nav(); // = document.getElementById("navModules")
@@ -929,12 +983,17 @@ function initNavigation() {
   }
 
   elNav.addEventListener("click", (e) => {
+    const toggle = e.target.closest("[data-product-toggle]");
+    if (toggle) {
+      const product = toggle.closest(".navProduct");
+      const isOpen = product?.classList.toggle("is-open");
+      toggle.setAttribute("aria-expanded", String(Boolean(isOpen)));
+      return;
+    }
     const btn = e.target.closest(".nav__item");
     if (!btn) return;
-
     const key = btn.dataset.module;
     if (!key) return;
-
     showPage(key);
   });
 }
@@ -949,6 +1008,7 @@ function setView(view) {
 const state = {
   lang: getLang(),
   currentModule: "dashboard",
+  currentSubview: "",
   company: null,
 
   // PATCH E-INVOICING / E-REPORTING (STATE)
@@ -4762,6 +4822,16 @@ async function refreshModule(moduleKey) {
     return;
   }
 
+  if (moduleKey.startsWith("financial-")) {
+    await window.D2FFinancialExpenseUI?.refreshFinancial(moduleKey);
+    return;
+  }
+
+  if (moduleKey.startsWith("expenses-")) {
+    await window.D2FFinancialExpenseUI?.refreshExpenses(moduleKey);
+    return;
+  }
+
   // ===================== BEGIN PATCH E-INVOICING / E-REPORTING (REFRESH MODULE) =====================
 if (moduleKey === "conformity") {
   await initConformityPage();
@@ -5160,6 +5230,16 @@ async function handleAction(actionId, payload) {
       case "dashboard:refresh":
         await refreshModule("dashboard");
         setStatus(t("status.dashboard_refreshed", "Dashboard refreshed"));
+        break;
+
+      case "financial:refresh":
+        await window.D2FFinancialExpenseUI?.refreshFinancial();
+        setStatus("D2F Financial actualise");
+        break;
+
+      case "expenses:refresh":
+        await window.D2FFinancialExpenseUI?.refreshExpenses();
+        setStatus("D2F Expenses actualise");
         break;
 
       case "theme:accent:indigo":
@@ -6129,7 +6209,7 @@ case "invoices:issue": {
   const dueDate = $("i-due-date")?.value || state.invoiceDraft.due_date || "";
   if (!dueDate) throw new Error(t("invoices.error.due_date_required", "L’échéance est obligatoire avant l’émission de la facture."));
   await handleAction("invoices:save");
-  await window.api.invoices.issue(id);
+  await window.api.invoices.issue({ id, idempotency_key: "gestion:invoice:issue:" + id });
   await refreshModule("invoices");
   setStatus(t("status.invoice_issued", "Invoice issued"));
   break;
@@ -7090,7 +7170,7 @@ function initConformityAiAgent() {
 }
 
 /* ----------------- Init bindings ----------------- */
-function init() {
+async function init() {
   console.log("init() start");
 
   try {
@@ -7111,6 +7191,8 @@ function init() {
         console.error(e);
       }
     })();
+
+    await applyPlatformCapabilities();
 
     // prépare les modals
     ensureRejectModal();

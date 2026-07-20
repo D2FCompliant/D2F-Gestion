@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.d2fcompliant.org/events/expense-approved.v1.schema.json",
+  "title": "ExpenseApproved v1",
+  "allOf": [
+    {"$ref": "event-envelope.v1.schema.json"},
+    {"type": "object", "properties": {
+      "eventType": {"const": "ExpenseApproved"},
+      "eventVersion": {"const": 1},
+      "eventCategory": {"const": "business"},
+      "producer": {"type": "object", "properties": {"application": {"const": "d2f-expense"}}},
+      "subject": {"type": "object", "properties": {"aggregateType": {"const": "ExpenseReport"}}},
+      "payload": {"type": "object", "additionalProperties": false,
+        "required": ["expenseReportId", "reportNumber", "approverId", "currency", "approvedGross"],
+        "properties": {
+          "expenseReportId": {"type": "string", "format": "uuid"},
+          "reportNumber": {"type": "string", "minLength": 1},
+          "approverId": {"type": "string", "minLength": 1},
+          "decisionNote": {"type": ["string", "null"]},
+          "currency": {"type": "string", "pattern": "^[A-Z]{3}$"},
+          "approvedGross": {"$ref": "#/$defs/decimal"}
+        }
+      }
+    }}
+  ],
+  "$defs": {"decimal": {"type": "string", "pattern": "^-?[0-9]+(\\.[0-9]{1,6})?$"}}
+}

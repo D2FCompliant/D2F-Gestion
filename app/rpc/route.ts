@@ -8,15 +8,47 @@ import { getOwnerEmail, getSupabaseAdmin, SupabaseConfigurationError } from "../
 import { createDocumentPdf, pdfBytesToBase64 } from "../../lib/document-pdf";
 import { createUblDocument, textToBase64 } from "../../lib/ubl";
 import { getIntegration, listTransmissions, saveIntegration, testIntegration, transmitIntegration, type IntegrationType } from "../../lib/integrations";
-import { readAppSession, renewedSession, sessionCookie } from "../../lib/auth/server";
+import { isPlatformAdminEmail, normalizedEmail, readAppSession, renewedSession, sessionCookie } from "../../lib/auth/server";
 import { accountAllowsApplication, getAccountById, memberFor } from "../../lib/saas/accounts";
 import { validateEstablishmentIdentifier } from "../../lib/company-identifiers";
 import { preflightInvoice } from "../../lib/country-compliance";
+import { issueInvoiceAtomically } from "../../lib/platform/issue-invoice";
+import { addExpenseLine, createExpenseReport, decideExpenseReport, listExpenseWorkspace, listFinancialWorkspace, refreshFinancialProjections, submitExpenseReport, uploadExpenseReceipt } from "../../lib/platform/financial-expense";
 
 export const dynamic = "force-dynamic";
 
 type JsonRecord = Record<string, unknown>;
 type Entity = "clients" | "items" | "quotes" | "invoices" | "payments" | "inbound";
+type ApplicationAccess = { internalD2F: boolean; gestion: true; financial: boolean; expenses: boolean };
+
+async function applicationAccessFor(tenantId: string | undefined, actorEmail: string, ownerKey: string): Promise<ApplicationAccess> {
+  const configuredInternalOwners = [process.env.D2F_OWNER_EMAIL, process.env.D2F_DATA_OWNER_KEY].map(normalizedEmail).filter(Boolean);
+  const localInternalOwner = process.env.NODE_ENV !== "production" ? normalizedEmail(process.env.LOCAL_OWNER_EMAIL) : "";
+  const internalD2F = isPlatformAdminEmail(actorEmail) || configuredInternalOwners.includes(normalizedEmail(ownerKey)) || Boolean(localInternalOwner && localInternalOwner === normalizedEmail(ownerKey));
+  if (internalD2F) return { internalD2F: true, gestion: true, financial: true, expenses: true };
+  if (!tenantId) return { internalD2F: false, gestion: true, financial: false, expenses: false };
+  const now = new Date().toISOString();
+  const result = await getSupabaseAdmin().from("d2f_tenant_applications")
+    .select("application,status,effective_from,effective_until")
+    .eq("tenant_id", tenantId)
+    .in("status", ["trial", "active"]);
+  if (result.error) {
+    if (["42P01", "PGRST204", "PGRST205"].includes(result.error.code || "") || /d2f_tenant_applications/i.test(result.error.message || "")) {
+      return { internalD2F: false, gestion: true, financial: false, expenses: false };
+    }
+    return { internalD2F: false, gestion: true, financial: false, expenses: false };
+  }
+  const enabled = new Set((result.data || []).filter((item) =>
+    (!item.effective_from || item.effective_from <= now) && (!item.effective_until || item.effective_until >= now)
+  ).map((item) => item.application));
+  return { internalD2F: false, gestion: true, financial: enabled.has("financial"), expenses: enabled.has("expenses") };
+}
+
+function countryPackCapability(countryValue: unknown) {
+  const country = String(countryValue || "").trim().toUpperCase().slice(0, 2);
+  const supported = new Set(["FR", "RS", "IT", "ES"]);
+  return { country: country || "—", packId: country ? "country." + country.toLowerCase() + ".expense" : "country.unqualified.expense", version: "1.0.0-preview", status: supported.has(country) ? "policy_validation_required" : "not_qualified" };
+}
 
 const dictionaries: Record<string, unknown> = { fr, en, es, it, sr };
 const entities = new Set<Entity>(["clients", "items", "quotes", "invoices", "payments", "inbound"]);
@@ -743,6 +775,7 @@ function isMutationMethod(method: string) {
     "setStatus", "issue", "createFromQuote", "createDeposit", "createCreditNote", "setInboundConfig",
     "setConformityConfig", "saveConfig", "setLogo", "clearLogo", "accept", "reject", "dispute",
     "send", "sendInvoice", "sendNow", "archive", "importFile", "uploadEvidence", "deleteEvidence", "archiveEvidence",
+    "createReport", "addLine", "uploadReceipt", "submit", "decide", "refreshProjections",
   ].includes(action);
 }
 
@@ -877,6 +910,9 @@ function previewResult(method: string) {
   if (method === "dashboard:metrics") return { ok: true, year: new Date().getFullYear(), target: {}, ytd: { cash: {}, recognized: {}, revenue_issued: {} }, series: { cash_monthly: [], cash_cumulative: [], target_cumulative: [], recognized_ht_monthly: [] } };
   if (method.endsWith(":list") || method === "payments:listAll") return [];
   if (method.endsWith(":get") || method.endsWith(":getFull")) return null;
+  if (method === "platform:capabilities") return { applications: { internalD2F: true, gestion: true, financial: true, expenses: true }, countryPack: { country: "RS", packId: "country.rs.expense", version: "1.0.0-preview", status: "policy_validation_required" } };
+  if (method === "financial:workspace") return { invoices: [], proposals: [], summary: { projectedInvoices: 0, proposalDrafts: 0, amountAwaitingValidation: 0 } };
+  if (method === "expenses:workspace") return { reports: [], lines: [], receipts: [], summary: { draft: 0, submitted: 0, approved: 0, totalApproved: 0 } };
   return undefined;
 }
 
@@ -1229,13 +1265,27 @@ async function validatedNationalConnector(ownerEmail: string) {
   return { company, config, country, expectedProfile };
 }
 
-async function dispatch(ownerEmail: string, method: string, args: unknown[], tenantIdentity?: { country: string; identifier: string }) {
+async function dispatch(ownerEmail: string, method: string, args: unknown[], tenantIdentity?: { country: string; identifier: string; tenantId?: string }, actorId = ownerEmail, actorRole: "owner" | "collaborator" = "owner", applications: ApplicationAccess = { internalD2F: false, gestion: true, financial: false, expenses: false }) {
+  if (method === "platform:capabilities") return { applications, countryPack: countryPackCapability(tenantIdentity?.country) };
+  if (method.startsWith("financial:") && !applications.financial) throw new Error("L'option D2F Financial n'est pas active pour cette entreprise");
+  if (method.startsWith("expenses:") && !applications.expenses) throw new Error("L'option D2F Expenses n'est pas active pour cette entreprise");
   if (method === "i18n:load") {
     const localeArg = object(first(args));
     const locale = String(localeArg.locale || first(args) || "fr").toLowerCase().slice(0, 2);
     return dictionaries[locale] || fr;
   }
   if (method === "xpReject:load" || method === "rejectionReasons:load") return rejectionReasons;
+  if (method === "financial:workspace") return listFinancialWorkspace(getSupabaseAdmin(), ownerEmail);
+  if (method === "financial:refreshProjections") return refreshFinancialProjections(getSupabaseAdmin(), ownerEmail);
+  if (method === "expenses:workspace") return listExpenseWorkspace(getSupabaseAdmin(), ownerEmail);
+  if (method === "expenses:createReport") return createExpenseReport(getSupabaseAdmin(), ownerEmail, tenantIdentity?.tenantId || ownerEmail, actorId, first(args));
+  if (method === "expenses:addLine") return addExpenseLine(getSupabaseAdmin(), ownerEmail, tenantIdentity?.country || "", first(args));
+  if (method === "expenses:uploadReceipt") return uploadExpenseReceipt(getSupabaseAdmin(), ownerEmail, actorId, first(args));
+  if (method === "expenses:submit") return submitExpenseReport(getSupabaseAdmin(), ownerEmail, tenantIdentity?.country || "", actorId, first(args));
+  if (method === "expenses:decide") {
+    if (actorRole !== "owner") throw new Error("Seul le proprietaire peut approuver ou refuser une note de frais dans cette premiere version");
+    return decideExpenseReport(getSupabaseAdmin(), ownerEmail, actorId, first(args));
+  }
   if (method === "company:get") return getCompany(ownerEmail);
   if (method === "company:save") {
     const payload = object(first(args));
@@ -1484,14 +1534,16 @@ async function dispatch(ownerEmail: string, method: string, args: unknown[], ten
       return saveRecord(ownerEmail, "quotes", { ...source, status: nextStatus });
     }
     if (entity === "invoices" && action === "issue") {
-      const id = idFrom(first(args));
-      const source = await getRecord(ownerEmail, "invoices", id);
-      if (!source) throw new Error("Facture introuvable");
-      const allInvoices = await listRecords(ownerEmail, "invoices");
-      const isCreditNote = invoiceType(source) === "credit_note";
-      const count = allInvoices.filter((item) => item.status === "issued" && (invoiceType(item) === "credit_note") === isCreditNote).length + 1;
-      const prefix = isCreditNote ? "AV" : "F";
-      return saveRecord(ownerEmail, "invoices", { ...source, status: "issued", invoice_number: source.invoice_number || `${prefix}${new Date().getFullYear()}-${String(count).padStart(4, "0")}`, issued_at: new Date().toISOString() });
+      const payload = object(first(args));
+      const id = idFrom(payload);
+      return issueInvoiceAtomically(getSupabaseAdmin(), {
+        ownerKey: ownerEmail,
+        tenantId: tenantIdentity?.tenantId || null,
+        invoiceId: id,
+        actorId,
+        idempotencyKey: String(payload.idempotency_key || `gestion:invoice:issue:${id}`),
+        outboundPaConnectorId: String(payload.outbound_pa_connector_id || "") || null,
+      });
     }
     if (entity === "invoices" && action === "createFromQuote") {
       const quote = await getRecord(ownerEmail, "quotes", idFrom(first(args)));
@@ -1556,13 +1608,17 @@ export async function POST(request: Request) {
   const ownerEmail = appSession?.ownerKey || getOwnerEmail(request);
   if (!ownerEmail) return reply("Authentification requise", 401);
   let refreshedCookie = "";
-  let tenantIdentity: { country: string; identifier: string } | undefined;
+  let tenantIdentity: { country: string; identifier: string; tenantId?: string } | undefined;
+  let actorRole: "owner" | "collaborator" = appSession?.role || "owner";
+  let applications: ApplicationAccess = { internalD2F: false, gestion: true, financial: false, expenses: false };
   if (appSession) {
     const account = await getAccountById(appSession.tenantId);
     const member = account ? memberFor(account, appSession.userId, appSession.email) : null;
     if (!account || !member) return reply("Accès entreprise révoqué", 403);
     if (!accountAllowsApplication(account)) return reply("Abonnement inactif — validation du virement requise", 402);
-    tenantIdentity = { country: account.country.toUpperCase(), identifier: account.companyIdentifier.toUpperCase() };
+    tenantIdentity = { country: account.country.toUpperCase(), identifier: account.companyIdentifier.toUpperCase(), tenantId: account.id };
+    actorRole = member.role;
+    applications = await applicationAccessFor(account.id, appSession.email, account.ownerKey);
     const refreshed = renewedSession({
       userId: appSession.userId,
       email: appSession.email,
@@ -1573,6 +1629,14 @@ export async function POST(request: Request) {
     });
     refreshedCookie = await sessionCookie(refreshed, request);
   }
+  if (!appSession) {
+    applications = await applicationAccessFor(undefined, ownerEmail, ownerEmail);
+    const localCompany = await getCompany(ownerEmail);
+    tenantIdentity = {
+      country: String(localCompany.country || "").toUpperCase(),
+      identifier: String(localCompany.legal_id || localCompany.vat_id || "").toUpperCase(),
+    };
+  }
   const responseHeaders = refreshedCookie ? { "set-cookie": refreshedCookie } : undefined;
   let method = "";
   try {
@@ -1580,7 +1644,7 @@ export async function POST(request: Request) {
     method = String(body.method || "");
     const args = Array.isArray(body.args) ? body.args : [];
     if (!method || !method.includes(":")) return reply("Méthode RPC invalide", 400, responseHeaders);
-    const result = await dispatch(ownerEmail, method, args, tenantIdentity);
+    const result = await dispatch(ownerEmail, method, args, tenantIdentity, appSession?.email || ownerEmail, actorRole, applications);
     if (isMutationMethod(method)) await appendAuditEvent(ownerEmail, appSession?.email || ownerEmail, method, args, result);
     return reply(result, 200, responseHeaders);
   } catch (error) {

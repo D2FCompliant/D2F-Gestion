@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.d2fcompliant.org/events/invoice-issued.v1.schema.json",
+  "title": "InvoiceIssued v1",
+  "allOf": [
+    {"$ref": "event-envelope.v1.schema.json"},
+    {"type": "object", "properties": {
+      "eventType": {"const": "InvoiceIssued"},
+      "eventVersion": {"const": 1},
+      "eventCategory": {"const": "business"},
+      "producer": {"type": "object", "properties": {"application": {"const": "d2f-gestion"}}},
+      "subject": {"type": "object", "properties": {"aggregateType": {"const": "CustomerInvoice"}}},
+      "payload": {
+        "type": "object", "additionalProperties": false,
+        "required": ["invoiceId", "invoiceNumber", "invoiceType", "issueDate", "currency", "seller", "buyer", "totals", "lines", "routing"],
+        "properties": {
+          "invoiceId": {"type": "string", "minLength": 1},
+          "invoiceNumber": {"type": "string", "minLength": 1},
+          "invoiceType": {"enum": ["final", "deposit", "credit_note"]},
+          "issueDate": {"type": "string", "format": "date"},
+          "dueDate": {"type": ["string", "null"]},
+          "currency": {"type": "string", "pattern": "^[A-Z]{3}$"},
+          "seller": {"$ref": "#/$defs/party"},
+          "buyer": {"$ref": "#/$defs/party"},
+          "totals": {"type": "object", "additionalProperties": false, "required": ["net", "tax", "gross"], "properties": {
+            "net": {"$ref": "#/$defs/decimal"}, "tax": {"$ref": "#/$defs/decimal"}, "gross": {"$ref": "#/$defs/decimal"}
+          }},
+          "sourceQuoteId": {"type": ["string", "null"]},
+          "sourceInvoiceId": {"type": ["string", "null"]},
+          "lines": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/line"}},
+          "routing": {"type": "object", "additionalProperties": false, "required": ["receptionPaConnectorId", "outboundPaConnectorId", "outboundPaSelectionSource"], "properties": {
+            "receptionPaConnectorId": {"type": ["string", "null"], "format": "uuid"},
+            "outboundPaConnectorId": {"type": ["string", "null"], "format": "uuid"},
+            "outboundPaSelectionSource": {"enum": ["invoice", "client", "default", "none"]}
+          }}
+        }
+      }
+    }}
+  ],
+  "$defs": {
+    "decimal": {"type": "string", "pattern": "^-?[0-9]+(\\.[0-9]{1,6})?$"},
+    "party": {"type": "object", "additionalProperties": false, "required": ["name", "country"], "properties": {
+      "id": {"type": ["string", "null"]}, "name": {"type": "string", "minLength": 1},
+      "legalId": {"type": ["string", "null"]}, "vatId": {"type": ["string", "null"]},
+      "country": {"type": "string", "pattern": "^[A-Z]{2}$"}
+    }},
+    "line": {"type": "object", "additionalProperties": false, "required": ["lineId", "description", "quantity", "unitCode", "unitPriceNet", "taxRate", "lineNet"], "properties": {
+      "lineId": {"type": "string", "minLength": 1}, "description": {"type": "string", "minLength": 1},
+      "quantity": {"type": "string", "pattern": "^[0-9]+(\\.[0-9]{1,6})?$"},
+      "unitCode": {"type": "string", "minLength": 1}, "unitPriceNet": {"$ref": "#/$defs/decimal"},
+      "taxCategory": {"type": ["string", "null"]}, "taxRate": {"type": "string", "pattern": "^[0-9]+(\\.[0-9]{1,6})?$"},
+      "lineNet": {"$ref": "#/$defs/decimal"}
+    }}
+  }
+}

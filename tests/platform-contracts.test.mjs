@@ -1,0 +1,153 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import test from "node:test";
+
+const root = new URL("../", import.meta.url);
+const json = async (path) => JSON.parse(await readFile(new URL(path, root), "utf8"));
+
+test("defines the strict DPRA canonical event envelope", async () => {
+  const schema = await json("platform/contracts/events/event-envelope.v1.schema.json");
+  assert.equal(schema.additionalProperties, false);
+  for (const field of ["eventId", "eventType", "eventVersion", "producer", "subject", "context", "actor", "trace", "contract", "security", "payload"]) {
+    assert.ok(schema.required.includes(field), field);
+  }
+  assert.equal(schema.properties.eventVersion.minimum, 1);
+  assert.match(schema.properties.eventType.pattern, /A-Z/);
+  assert.ok(schema.properties.security.required.includes("containsFinancialData"));
+  assert.ok(schema.properties.trace.required.includes("correlationId"));
+});
+
+test("publishes canonical InvoiceIssued only from D2F Gestion", async () => {
+  const schema = await json("platform/contracts/events/gestion.invoice.issued.v1.schema.json");
+  const specialization = schema.allOf[1].properties;
+  assert.equal(specialization.eventType.const, "InvoiceIssued");
+  assert.equal(specialization.eventVersion.const, 1);
+  assert.equal(specialization.subject.properties.aggregateType.const, "CustomerInvoice");
+  assert.equal(specialization.producer.properties.application.const, "d2f-gestion");
+  assert.ok(specialization.payload.required.includes("invoiceNumber"));
+  assert.ok(specialization.payload.required.includes("totals"));
+  assert.ok(specialization.payload.required.includes("lines"));
+  assert.ok(specialization.payload.required.includes("routing"));
+  assert.equal(schema.$defs.decimal.type, "string");
+});
+
+test("defines Expense lifecycle contracts without conflating accounting", async () => {
+  const [submitted, approved] = await Promise.all([
+    json("platform/contracts/events/expense-submitted.v1.schema.json"),
+    json("platform/contracts/events/expense-approved.v1.schema.json"),
+  ]);
+  assert.equal(submitted.allOf[1].properties.eventType.const, "ExpenseSubmitted");
+  assert.equal(approved.allOf[1].properties.eventType.const, "ExpenseApproved");
+  assert.equal(submitted.allOf[1].properties.subject.properties.aggregateType.const, "ExpenseReport");
+  assert.equal(approved.allOf[1].properties.producer.properties.application.const, "d2f-expense");
+  assert.ok(approved.allOf[1].properties.payload.required.includes("approvedGross"));
+});
+
+test("country availability is capability-based and versioned", async () => {
+  const schema = await json("platform/contracts/capabilities/country-capabilities.v1.schema.json");
+  assert.deepEqual(schema.properties.capabilities.additionalProperties.enum, ["unsupported", "preview", "qualified", "production", "suspended"]);
+  assert.ok(schema.required.includes("packVersion"));
+  assert.ok(schema.required.includes("effectiveFrom"));
+});
+
+test("provides an RLS-protected Outbox, Inbox and policy-driven PA routing", async () => {
+  const sql = await readFile(new URL("supabase/migrations/20260720110000_platform_event_backbone.sql", root), "utf8");
+  assert.match(sql, /create table if not exists public\.d2f_event_outbox/);
+  assert.match(sql, /create table if not exists public\.d2f_event_inbox/);
+  assert.match(sql, /primary key \(consumer, event_id\)/);
+  assert.match(sql, /where published_at is null/);
+  assert.match(sql, /create or replace function public\.d2f_issue_invoice_v1/);
+  assert.match(sql, /event_type = 'InvoiceIssued'/);
+  assert.match(sql, /d2f_canonical_event_v1/);
+  assert.match(sql, /d2f_pa_connectors_one_inbound_default_idx/);
+  assert.doesNotMatch(sql, /one_active_inbound/);
+  assert.match(sql, /is_default_inbound and direction in \('inbound', 'both'\)/);
+  assert.match(sql, /outbound_selection_source := 'client'/);
+});
+
+test("creates separated Financial projections and Expense aggregates", async () => {
+  const sql = await readFile(new URL("supabase/migrations/20260720130000_financial_expense_foundation.sql", root), "utf8");
+  assert.match(sql, /create table if not exists public\.d2f_financial_invoice_projections/);
+  assert.match(sql, /create table if not exists public\.d2f_financial_accounting_proposals/);
+  assert.match(sql, /create table if not exists public\.d2f_expense_reports/);
+  assert.match(sql, /create table if not exists public\.d2f_expense_lines/);
+  assert.match(sql, /create table if not exists public\.d2f_expense_receipts/);
+  assert.match(sql, /Only a draft or returned report can be submitted/);
+  assert.match(sql, /Only a submitted report can be decided/);
+  assert.match(sql, /'ExpenseSubmitted'/);
+  assert.match(sql, /'ExpenseApproved'/);
+  assert.match(sql, /enable row level security/g);
+  assert.match(sql, /revoke all .* from anon, authenticated/g);
+});
+
+test("routes the legacy issue command through the atomic platform boundary", async () => {
+  const [route, helper, app] = await Promise.all([
+    readFile(new URL("app/rpc/route.ts", root), "utf8"),
+    readFile(new URL("lib/platform/issue-invoice.ts", root), "utf8"),
+    readFile(new URL("public/erp/app.js", root), "utf8"),
+  ]);
+  assert.match(route, /issueInvoiceAtomically\(getSupabaseAdmin\(\)/);
+  assert.match(route, /tenantId: tenantIdentity\?\.tenantId/);
+  assert.match(helper, /d2f_issue_invoice_v1/);
+  assert.match(app, /idempotency_key: "gestion:invoice:issue:" \+ id/);
+});
+
+test("exposes usable Financial and Expenses workspaces", async () => {
+  const [html, ui, route, service, shim] = await Promise.all([
+    readFile(new URL("public/erp/index.html", root), "utf8"),
+    readFile(new URL("public/erp/financial-expense-ui.js", root), "utf8"),
+    readFile(new URL("app/rpc/route.ts", root), "utf8"),
+    readFile(new URL("lib/platform/financial-expense.ts", root), "utf8"),
+    readFile(new URL("public/erp/renderer/web-api-shim.js", root), "utf8"),
+  ]);
+  for (const page of ["financial-overview", "financial-proposals", "financial-reconciliation", "financial-rules", "expenses-overview", "expenses-reports", "expenses-capture", "expenses-approvals", "expenses-rules"]) {
+    assert.match(html, new RegExp(`data-module="${page}"`));
+    assert.match(html, new RegExp(`data-page="${page}"`));
+  }
+  assert.match(html, /expense-report-title/);
+  assert.match(html, /expense-submit-selected/);
+  assert.match(ui, /window\.api\.expenses\.createReport/);
+  assert.match(ui, /window\.api\.expenses\.addLine/);
+  assert.match(ui, /window\.api\.expenses\.submit/);
+  assert.match(ui, /window\.api\.expenses\.decide/);
+  assert.match(ui, /financial:recordPayment/);
+  assert.match(ui, /expenses:openCapture/);
+  assert.match(ui, /platform:requestActivation/);
+  assert.match(ui, /fetch\("\/auth\/support"/);
+  assert.match(route, /method === "financial:workspace"/);
+  assert.match(route, /actorRole !== "owner"/);
+  assert.match(service, /d2f_expense_submit_v1/);
+  assert.match(service, /d2f_expense_decide_v1/);
+  assert.match(shim, /financial: ns\("financial"\)/);
+  assert.match(shim, /expenses: ns\("expenses"\)/);
+});
+
+
+test("separates product menus, gates optional applications and captures smartphone receipts", async () => {
+  const [html, app, ui, route, service, policy, migration] = await Promise.all([
+    readFile(new URL("public/erp/index.html", root), "utf8"),
+    readFile(new URL("public/erp/app.js", root), "utf8"),
+    readFile(new URL("public/erp/financial-expense-ui.js", root), "utf8"),
+    readFile(new URL("app/rpc/route.ts", root), "utf8"),
+    readFile(new URL("lib/platform/financial-expense.ts", root), "utf8"),
+    readFile(new URL("lib/platform/expense-country-policy.ts", root), "utf8"),
+    readFile(new URL("supabase/migrations/20260720143000_platform_applications_and_expense_capture.sql", root), "utf8"),
+  ]);
+  assert.match(html, /data-application="gestion"[\s\S]*D2F Gestion/);
+  assert.match(html, /data-application="financial"[\s\S]*D2F Financial/);
+  assert.match(html, /data-application="expenses"[\s\S]*D2F Expenses/);
+  assert.match(html, /id="expense-receipt-file"[^>]*capture="environment"/);
+  assert.match(html, /id="expense-receipt-drop"/);
+  assert.match(app, /platform.capabilities/);
+  assert.match(app, /product.hidden = application !== "gestion"/);
+  assert.match(ui, /window.api.expenses.uploadReceipt/);
+  assert.match(route, /d2f_tenant_applications/);
+  assert.match(route, /option D2F Financial n'est pas active/);
+  assert.match(route, /option D2F Expenses n'est pas active/);
+  assert.match(service, /d2f-expense-receipts/);
+  assert.match(service, /capture_context/);
+  assert.match(service, /SHA-256/);
+  assert.match(policy, /pending_human_validation/);
+  assert.match(migration, /primary key \(tenant_id, application\)/);
+  assert.match(migration, /capture_location jsonb/);
+});

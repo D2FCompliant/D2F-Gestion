@@ -14,20 +14,20 @@ async function render() {
   );
 }
 
-test("server-renders the D2F Gestion cockpit", async () => {
+test("server-renders the D2F Platform cockpit", async () => {
   const response = await render();
   assert.equal(response.status, 200);
   assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
   const html = await response.text();
-  assert.match(html, /<title>D2F Gestion — Pilotez votre activité<\/title>/i);
+  assert.match(html, /<title>D2F Platform — Pilotez votre activité<\/title>/i);
   assert.match(html, /Ouverture sécurisée/);
   assert.doesNotMatch(html, /<iframe[^>]+\/erp\/index\.html/);
   assert.match(html, /og\.png/);
   assert.doesNotMatch(html, /codex-preview|Your site is taking shape|react-loading-skeleton/i);
 
   const shell = await readFile(new URL("../app/session-shell.tsx", import.meta.url), "utf8");
-  assert.match(shell, /src="\/erp\/index\.html\?v=20260717-client-import-v215"/);
-  assert.match(shell, /title="D2F Gestion"/);
+  assert.match(shell, /src="\/erp\/index\.html\?v=20260720-financial-expenses-actions-v215"/);
+  assert.match(shell, /title="D2F Platform"/);
 });
 
 test("ships a touch-first smartphone layout", async () => {
@@ -37,8 +37,8 @@ test("ships a touch-first smartphone layout", async () => {
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
     readFile(new URL("../public/erp/index.html", import.meta.url), "utf8"),
   ]);
-  assert.match(html, /styles\.css\?v=20260717-client-import-v215/);
-  assert.match(html, /app\.js\?v=20260717-client-import-v215/);
+  assert.match(html, /styles\.css\?v=20260720-financial-expenses-actions-v215/);
+  assert.match(html, /app\.js\?v=20260720-financial-expenses-actions-v215/);
   assert.match(styles, /@media \(max-width: 760px\)/);
   assert.match(styles, /position:fixed;\s*z-index:1000;\s*left:0;\s*right:0;\s*bottom:0/);
   assert.match(styles, /grid-template-columns:minmax\(0,1fr\) minmax\(0,1fr\) !important/);
@@ -203,7 +203,7 @@ test("keeps Supabase access tenant-scoped and server-side", async () => {
   assert.match(envExample, /SUPABASE_URL/);
   assert.match(envExample, /D2F_SESSION_SECRET/);
   assert.match(envExample, /D2F_MONTHLY_PRICE_EUR/);
-  assert.match(legacyHtml, /D2F – Gestion/);
+  assert.match(legacyHtml, /D2F Platform/);
   assert.doesNotMatch(legacyHtml, /\/d2f-gestion-logo\.png\?v=20260710-brand-2026/);
   assert.match(legacyHtml, /© D2F Compliant d\.o\.o 2026/);
   assert.match(legacyHtml, /web-api-shim\.js/);
@@ -237,7 +237,7 @@ test("shows one visible product brand and blocks clients until payment is verifi
   ]);
   assert.doesNotMatch(legacyHtml, /class="brand"/);
   assert.match(styles, /\.account-brand img \{ width:72px; height:72px/);
-  assert.match(shell, /ACCÈS D2F GESTION/);
+  assert.match(shell, /ACCÈS D2F PLATFORM/);
   assert.match(shell, /confirmTransfer/);
   assert.match(shell, /Confirmer reçu \+/);
   assert.match(accounts, /currentPeriodStart && account\.subscription\.currentPeriodEnd/);

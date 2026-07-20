@@ -4880,3 +4880,250 @@ button.dashManagementKpi:hover{border-color:rgba(99,102,241,.38);transform:trans
   .documentCsvDropzone{ min-height:160px; padding:20px 14px; }
   .documentCsvImportGrid{ grid-template-columns:1fr; }
 }
+
+/* D2F Platform: Financial and Expenses */
+.platformKpis{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:14px;
+  margin-bottom:16px;
+}
+.platformKpis--four{ grid-template-columns:repeat(4,minmax(0,1fr)); }
+.platformKpi{
+  min-height:132px;
+  padding:20px;
+  border:1px solid var(--stroke);
+  border-radius:var(--radius);
+  background:rgba(255,255,255,.82);
+  box-shadow:var(--shadow2);
+  display:flex;
+  flex-direction:column;
+  gap:7px;
+}
+.platformKpi span{ color:var(--muted); font-size:13px; font-weight:850; }
+.platformKpi strong{ font-size:clamp(26px,2.3vw,38px); line-height:1; letter-spacing:-.04em; }
+.platformKpi small{ color:var(--muted2); line-height:1.35; }
+.platformKpi--accent{ background:linear-gradient(145deg,rgba(99,102,241,.13),rgba(6,182,212,.10)); }
+.platformKpi--warning{ background:linear-gradient(145deg,rgba(245,158,11,.13),rgba(255,255,255,.85)); }
+.platformGrid{ display:grid; gap:16px; }
+.platformGrid--expense{ grid-template-columns:minmax(0,1fr); }
+.platformPanel{ padding:0; overflow:hidden; }
+.platformPanel__head{
+  min-height:78px;
+  padding:18px 20px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+  border-bottom:1px solid var(--stroke);
+}
+.platformPanel__head h2{ margin:2px 0 0; font-size:19px; }
+.platformEyebrow{ margin:0; color:var(--accent); font-size:11px; font-weight:900; letter-spacing:.14em; }
+.platformSubtitle{ margin:6px 0 0; color:var(--muted); font-size:13px; }
+.platformGuardrail{
+  padding:7px 10px;
+  border-radius:999px;
+  background:rgba(99,102,241,.10);
+  color:rgba(49,46,129,.92);
+  font-size:11px;
+  font-weight:850;
+  white-space:nowrap;
+}
+.platformTableWrap{ width:100%; overflow:auto; }
+.platformTable{ width:100%; min-width:720px; border-collapse:collapse; }
+.platformTable th,.platformTable td{
+  padding:13px 16px;
+  border-bottom:1px solid rgba(11,18,32,.07);
+  text-align:left;
+  vertical-align:middle;
+}
+.platformTable th{
+  background:rgba(245,247,255,.76);
+  color:var(--muted);
+  font-size:11px;
+  letter-spacing:.04em;
+  text-transform:uppercase;
+}
+.platformTable td{ font-size:13px; }
+.platformTable .numeric{ text-align:right; font-variant-numeric:tabular-nums; }
+.platformTable tr.is-selected td{ background:rgba(99,102,241,.06); }
+.platformEmpty{ margin:0; padding:26px 18px; text-align:center; color:var(--muted); }
+.platformStatus{
+  display:inline-flex;
+  padding:6px 9px;
+  border-radius:999px;
+  background:rgba(99,102,241,.10);
+  color:rgba(49,46,129,.92);
+  font-size:11px;
+  font-weight:850;
+  white-space:nowrap;
+}
+.platformStatus--submitted{ background:rgba(245,158,11,.14); color:#92400e; }
+.platformStatus--approved,.platformStatus--validated,.platformStatus--posted{ background:rgba(34,197,94,.13); color:#166534; }
+.platformStatus--rejected{ background:rgba(239,68,68,.12); color:#991b1b; }
+.platformStatus--returned{ background:rgba(6,182,212,.12); color:#155e75; }
+.platformActions{ display:flex; align-items:center; gap:6px; white-space:nowrap; }
+.btn--compact{ padding:7px 9px; min-height:0; font-size:11px; }
+.platformLink{
+  border:0;
+  padding:0;
+  background:none;
+  color:var(--accent);
+  font:inherit;
+  font-weight:850;
+  cursor:pointer;
+}
+.platformCreatePanel{ padding-bottom:18px; }
+.platformFormRow{
+  padding:18px 20px 0;
+  display:grid;
+  grid-template-columns:minmax(220px,1fr) 110px auto;
+  align-items:end;
+  gap:12px;
+}
+.platformFormRow label,.platformExpenseForm label{ display:grid; gap:7px; color:var(--muted); font-size:12px; font-weight:800; }
+.platformFormRow input,.platformExpenseForm input,.platformExpenseForm select,.platformDecisionNote{
+  width:100%;
+  border:1px solid var(--stroke);
+  border-radius:12px;
+  background:rgba(255,255,255,.9);
+  color:var(--text);
+  padding:11px 12px;
+}
+.platformDecisionNote{ max-width:330px; }
+.platformExpenseForm{
+  padding:18px 20px;
+  display:grid;
+  grid-template-columns:repeat(4,minmax(120px,1fr));
+  align-items:end;
+  gap:12px;
+  background:rgba(245,247,255,.58);
+  border-bottom:1px solid var(--stroke);
+}
+.platformExpenseForm[hidden]{ display:none; }
+.platformFieldWide{ grid-column:span 2; }
+
+@media (max-width:1100px){
+  .platformKpis,.platformKpis--four{ grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .platformExpenseForm{ grid-template-columns:repeat(2,minmax(140px,1fr)); }
+}
+@media (max-width:760px){
+  .platformKpis,.platformKpis--four{ grid-template-columns:1fr 1fr; gap:10px; }
+  .platformKpi{ min-height:112px; padding:15px; }
+  .platformKpi strong{ font-size:24px; }
+  .platformPanel__head{ align-items:flex-start; flex-direction:column; }
+  .platformFormRow,.platformExpenseForm{ grid-template-columns:1fr; padding:14px; }
+  .platformFieldWide{ grid-column:auto; }
+  .platformDecisionNote{ max-width:none; }
+  .platformTable{ min-width:650px; }
+}
+
+
+/* D2F Platform product navigation and mobile receipt capture */
+.nav--products{ gap:9px; }
+.navProduct{ display:grid; gap:3px; padding:5px; border:1px solid #e4eaf1; border-radius:12px; background:#f9fbfd; }
+.navProduct[hidden]{ display:none!important; }
+.navProduct__toggle{ width:100%; min-height:46px; padding:6px 7px; display:flex; align-items:center; justify-content:space-between; gap:8px; border:0; border-radius:9px; background:transparent; color:#20364b; cursor:pointer; text-align:left; }
+.navProduct__toggle:hover{ background:#eef4fa; }
+.navProduct__brand{ min-width:0; display:flex; align-items:center; gap:9px; }
+.navProduct__brand>span:last-child{ min-width:0; display:grid; gap:1px; }
+.navProduct__brand strong{ font-size:13px; line-height:1.1; }
+.navProduct__brand small{ overflow:hidden; color:#718197; font-size:10px; line-height:1.15; text-overflow:ellipsis; white-space:nowrap; }
+.navProduct__mark{ width:28px; height:28px; flex:0 0 28px; display:grid; place-items:center; border-radius:8px; background:linear-gradient(145deg,#0969da,#0ea5e9); color:#fff; font-size:13px; font-weight:950; }
+.navProduct__mark--financial{ background:linear-gradient(145deg,#4f46e5,#7c3aed); }
+.navProduct__mark--expenses{ background:linear-gradient(145deg,#0f9f75,#14b8a6); }
+.navProduct__chevron{ color:#718197; transition:transform .18s ease; }
+.navProduct:not(.is-open) .navProduct__chevron{ transform:rotate(-90deg); }
+.navProduct__menu{ display:grid; gap:2px; }
+.navProduct:not(.is-open) .navProduct__menu{ display:none; }
+.navProduct__menu .nav__item{ min-height:34px; padding:5px 8px 5px 13px; font-size:12px; }
+.navProduct__menu .nav__icon{ width:20px; height:20px; font-size:12px; }
+
+.expenseCaptureBody{ display:grid; gap:14px; padding:18px 20px 20px; }
+.expenseCaptureTarget{ display:flex; align-items:center; justify-content:space-between; gap:12px; padding:11px 13px; border-radius:10px; background:#f4f7fb; color:var(--muted); font-size:12px; }
+.expenseCaptureTarget strong{ color:var(--text); text-align:right; }
+.expenseCaptureDrop{ min-height:190px; padding:24px; display:grid; place-items:center; align-content:center; gap:8px; border:2px dashed #a9bfd7; border-radius:16px; background:linear-gradient(145deg,#f8fbff,#f2fbf8); text-align:center; cursor:pointer; }
+.expenseCaptureDrop:hover,.expenseCaptureDrop.is-dragging,.expenseCaptureDrop:focus-visible{ border-color:#0878db; background:#edf7ff; outline:none; }
+.expenseCaptureDrop__icon{ width:52px; height:52px; display:grid; place-items:center; border-radius:15px; background:linear-gradient(145deg,#0878db,#12a88b); color:#fff; font-size:25px; box-shadow:0 10px 24px rgba(8,120,219,.18); }
+.expenseCaptureDrop strong{ color:var(--text); font-size:16px; }
+.expenseCaptureDrop small,.expenseCaptureReady small{ display:block; color:var(--muted); }
+.expenseCaptureReady{ display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; padding:13px; border:1px solid #cce4d9; border-radius:12px; background:#f0fbf6; }
+.expenseCaptureReady[hidden]{ display:none; }
+.expenseLocationConsent{ display:flex; align-items:center; gap:7px; color:var(--muted); font-size:12px; font-weight:700; }
+
+@media (max-width:760px){
+  .nav--products{ align-items:stretch; gap:5px; }
+  .navProduct{ flex:0 0 auto; display:flex; padding:2px; border-radius:10px; }
+  .navProduct__toggle{ width:62px; min-height:58px; padding:4px; justify-content:center; }
+  .navProduct__brand{ display:grid; place-items:center; gap:2px; text-align:center; }
+  .navProduct__brand>span:last-child{ display:block; }
+  .navProduct__brand strong{ display:block; font-size:9px; }
+  .navProduct__brand small,.navProduct__chevron{ display:none; }
+  .navProduct__mark{ width:24px; height:24px; flex-basis:24px; font-size:11px; }
+  .navProduct__menu{ display:flex; gap:2px; }
+  .navProduct:not(.is-open) .navProduct__menu{ display:none; }
+  .navProduct__menu .nav__item{ flex:0 0 68px; width:68px; min-width:68px; height:58px; min-height:58px; padding:4px 2px; font-size:9px; }
+  .expenseCaptureBody{ padding:14px; }
+  .expenseCaptureTarget{ align-items:flex-start; flex-direction:column; }
+  .expenseCaptureTarget strong{ text-align:left; }
+  .expenseCaptureDrop{ min-height:220px; }
+  .expenseCaptureReady{ align-items:stretch; flex-direction:column; }
+}
+
+.expenseCaptureLine{ display:grid; gap:6px; color:var(--muted); font-size:12px; font-weight:800; }
+.expenseCaptureLine select{ min-height:42px; padding:9px 11px; border:1px solid var(--stroke); border-radius:9px; background:#fff; color:var(--text); }
+
+
+/* D2F Platform — dedicated Financial & Expenses workspaces */
+.platformPage{ display:none; gap:18px; }
+.platformPage.is-active{ display:grid; animation:platformPageIn .22s ease-out; }
+@keyframes platformPageIn{ from{opacity:.35;transform:translateY(5px)} to{opacity:1;transform:none} }
+.platformHero{
+  display:flex;align-items:flex-start;justify-content:space-between;gap:24px;
+  padding:24px 26px;border:1px solid var(--border);border-radius:22px;overflow:hidden;position:relative;
+  background:linear-gradient(135deg,rgba(255,255,255,.96),rgba(244,247,255,.92));
+}
+.platformHero::after{content:"";position:absolute;width:190px;height:190px;border-radius:50%;right:-70px;top:-105px;background:var(--hero-glow,rgba(99,102,241,.13));pointer-events:none}
+.platformHero--financial{--hero-glow:rgba(14,165,233,.17);border-color:rgba(14,165,233,.23)}
+.platformHero--expenses{--hero-glow:rgba(16,185,129,.17);border-color:rgba(16,185,129,.23)}
+.platformHero h2{font-size:clamp(24px,2.6vw,36px);margin:3px 0 6px;letter-spacing:-.035em}
+.platformHero p:not(.platformEyebrow){margin:0;color:var(--muted);max-width:760px;line-height:1.5}
+.platformKpi--danger{background:linear-gradient(145deg,rgba(239,68,68,.12),rgba(255,255,255,.9))}
+.platformJourney{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.platformJourney--expenses{grid-template-columns:repeat(4,minmax(0,1fr))}
+.platformJourney button{
+  appearance:none;text-align:left;border:1px solid var(--border);border-radius:18px;background:var(--surface,white);padding:18px;
+  display:grid;grid-template-columns:34px 1fr;column-gap:12px;row-gap:3px;color:inherit;cursor:pointer;transition:.16s ease;
+}
+.platformJourney button:hover{transform:translateY(-2px);border-color:var(--accent);box-shadow:0 10px 24px rgba(31,41,55,.08)}
+.platformJourney button>span{grid-row:1/3;width:32px;height:32px;border-radius:11px;display:grid;place-items:center;background:rgba(37,99,235,.10);color:var(--accent);font-weight:950}
+.platformJourney button strong{font-size:14px}.platformJourney button small{color:var(--muted);line-height:1.35}
+.platformLegend{display:flex;gap:18px;flex-wrap:wrap;padding:0 4px;color:var(--muted);font-size:13px;font-weight:750}
+.platformLegend>span{display:flex;align-items:center;gap:7px}.legendDot{width:9px;height:9px;border-radius:50%;background:#94a3b8}.legendDot--ok{background:#10b981}.legendDot--warn{background:#f59e0b}.legendDot--open{background:#3b82f6}
+.platformRuleGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.platformRuleCard{border:1px solid var(--border);border-radius:18px;background:var(--surface,white);padding:18px;display:grid;gap:12px;min-height:210px;box-shadow:0 7px 20px rgba(15,23,42,.035)}
+.platformRuleCard>div{display:grid;gap:5px}.platformRuleCard strong{font-size:15px;overflow-wrap:anywhere}.platformRuleCard p{color:var(--muted);font-size:13px;line-height:1.5;margin:0}.platformRuleCard small{color:var(--muted2);align-self:end}
+.platformRuleCard--pending{border-style:dashed;background:linear-gradient(145deg,rgba(245,158,11,.08),rgba(255,255,255,.96))}
+.platformRuleType{font-size:10px;font-weight:950;letter-spacing:.13em;color:var(--accent)}
+.platformGuardrail--warning{background:rgba(245,158,11,.12);color:#92400e;border-color:rgba(245,158,11,.22)}
+.platformSimulation{display:grid;grid-template-columns:minmax(220px,1fr) auto minmax(300px,2fr);align-items:end;gap:14px;padding:20px 22px}
+.platformSimulation label{display:grid;gap:7px;color:var(--muted);font-size:13px;font-weight:800}
+.platformSimulation__result{min-height:44px;border-radius:13px;background:rgba(148,163,184,.11);padding:12px 14px;color:var(--muted);font-size:13px;line-height:1.45}
+.platformNotice{display:flex;gap:12px;align-items:flex-start;justify-content:space-between;border:1px dashed rgba(245,158,11,.45);background:rgba(245,158,11,.08);border-radius:16px;padding:17px 18px}
+.platformNotice strong{white-space:nowrap}.platformNotice span{color:var(--muted);line-height:1.5}
+.platformEmpty--rich{display:grid;justify-items:center;gap:5px;padding:42px 18px}.platformEmpty--rich strong{color:var(--text);font-size:15px}.platformEmpty--rich span{max-width:620px}
+.platformStatus--matched{background:rgba(16,185,129,.12);color:#047857}.platformStatus--partial{background:rgba(245,158,11,.15);color:#92400e}.platformStatus--open{background:rgba(59,130,246,.12);color:#1d4ed8}
+@media(max-width:1100px){.platformJourney--expenses{grid-template-columns:repeat(2,minmax(0,1fr))}.platformRuleGrid{grid-template-columns:1fr}.platformSimulation{grid-template-columns:1fr auto}.platformSimulation__result{grid-column:1/-1}}
+@media(max-width:720px){.platformHero{padding:19px;flex-direction:column}.platformHero .platformGuardrail{align-self:flex-start}.platformJourney,.platformJourney--expenses{grid-template-columns:1fr}.platformSimulation{grid-template-columns:1fr}.platformSimulation .btn{width:100%}.platformNotice{flex-direction:column}.platformNotice strong{white-space:normal}}
+
+.platformKpiButton{appearance:none;text-align:left;color:inherit;font:inherit;cursor:pointer;width:100%;border-color:var(--border);transition:transform .16s ease,border-color .16s ease,box-shadow .16s ease}
+.platformKpiButton:hover,.platformKpiButton:focus-visible{transform:translateY(-2px);border-color:var(--accent);box-shadow:0 12px 26px rgba(15,23,42,.09);outline:none}
+.platformKpiButton small{color:var(--accent)}
+.platformActivationBanner{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:16px 18px;border:1px solid rgba(245,158,11,.38);border-radius:16px;background:linear-gradient(135deg,rgba(245,158,11,.13),rgba(255,255,255,.95))}
+.platformActivationBanner[hidden]{display:none}.platformActivationBanner>div{display:grid;gap:4px}.platformActivationBanner span{color:var(--muted);font-size:13px;line-height:1.4}
+.platformTaskPanel{padding:0;overflow:hidden}.platformActionQueue{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;padding:18px}
+.platformActionItem{appearance:none;display:grid;gap:6px;text-align:left;padding:16px;border:1px solid var(--border);border-radius:15px;background:var(--surface,white);color:inherit;cursor:pointer;transition:.16s ease}
+.platformActionItem:hover,.platformActionItem:focus-visible{border-color:var(--accent);transform:translateY(-2px);outline:none}.platformActionItem span{font-weight:900}.platformActionItem small{color:var(--muted);line-height:1.4}.platformActionItem strong{color:var(--accent);font-size:12px;margin-top:5px}.platformActionItem--urgent{border-color:rgba(239,68,68,.3);background:rgba(239,68,68,.055)}.platformActionItem--urgent strong{color:#dc2626}
+@media(max-width:900px){.platformActionQueue{grid-template-columns:1fr}.platformActivationBanner{align-items:flex-start;flex-direction:column}.platformActivationBanner .btn{width:100%}}
+
+.platformNotice>div{display:grid;gap:5px}.platformNotice .btn{flex:0 0 auto}

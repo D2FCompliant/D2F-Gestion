@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title data-i18n="app.window_title">D2F – Gestion</title>
+  <title data-i18n="app.window_title">D2F Platform</title>
 
   <meta http-equiv="Content-Security-Policy"
         content="default-src 'self';
@@ -15,7 +15,7 @@
                  object-src 'none';
                  base-uri 'none'">
 
-  <link rel="stylesheet" href="./styles.css?v=20260717-client-import-v215" />
+  <link rel="stylesheet" href="./styles.css?v=20260720-financial-expenses-actions-v215" />
 </head>
 
 <body>
@@ -33,18 +33,50 @@
     <aside class="sidebar">
       <div class="sidebar__section">
         <div class="sidebar__label" data-i18n="sidebar.modules">Modules</div>
-        <nav class="nav" id="navModules">
-          <button class="nav__item" data-module="company"><span class="nav__icon" aria-hidden="true">⌂</span><span data-i18n="app.title.company">Société</span></button>
-          <button class="nav__item" data-module="dashboard"><span class="nav__icon" aria-hidden="true">▦</span><span data-i18n="app.title.dashboard">Dashboard</span></button>
-          <button class="nav__item" data-module="clients"><span class="nav__icon" aria-hidden="true">◉</span><span data-i18n="app.title.clients">Clients</span></button>
-          <button class="nav__item" data-module="items"><span class="nav__icon" aria-hidden="true">◇</span><span data-i18n="app.title.items">Articles</span></button>
-          <button class="nav__item is-active" data-module="quotes"><span class="nav__icon" aria-hidden="true">▤</span><span data-i18n="app.title.quotes">Devis</span></button>
-          <button class="nav__item" data-module="invoices"><span class="nav__icon" aria-hidden="true">▥</span><span data-i18n="app.title.invoices">Factures</span></button>
-          <button class="nav__item" data-module="payments"><span class="nav__icon" aria-hidden="true">€</span><span data-i18n="app.title.payments">Encaissements</span></button>
-          <button class="nav__item" data-module="inbound"><span class="nav__icon" aria-hidden="true">⇩</span><span data-i18n="app.title.inbound">Fournisseurs</span></button>
-          <button class="nav__item" data-module="exports"><span class="nav__icon" aria-hidden="true">↗</span><span data-i18n="app.title.exports">Exports</span></button>
-          <button class="nav__item" data-module="conformity"><span class="nav__icon" aria-hidden="true">✓</span><span data-i18n="app.title.conformity">e-Reporting</span></button>
-          <button class="nav__item" data-module="audit"><span class="nav__icon" aria-hidden="true">≡</span><span data-i18n="app.title.audit">PAF / Trace</span></button>
+        <nav class="nav nav--products" id="navModules" aria-label="Applications D2F">
+          <section class="navProduct is-open" data-application="gestion">
+            <button class="navProduct__toggle" type="button" data-product-toggle="gestion" aria-expanded="true">
+              <span class="navProduct__brand"><span class="navProduct__mark">G</span><span><strong>D2F Gestion</strong><small data-i18n="nav.product.gestion">Gestion commerciale</small></span></span><span class="navProduct__chevron" aria-hidden="true">⌄</span>
+            </button>
+            <div class="navProduct__menu">
+              <button class="nav__item is-active" data-module="dashboard"><span class="nav__icon" aria-hidden="true">▦</span><span data-i18n="app.title.dashboard">Tableau de bord</span></button>
+              <button class="nav__item" data-module="company"><span class="nav__icon" aria-hidden="true">⌂</span><span data-i18n="app.title.company">Société</span></button>
+              <button class="nav__item" data-module="clients"><span class="nav__icon" aria-hidden="true">◉</span><span data-i18n="app.title.clients">Clients</span></button>
+              <button class="nav__item" data-module="items"><span class="nav__icon" aria-hidden="true">◇</span><span data-i18n="app.title.items">Articles</span></button>
+              <button class="nav__item" data-module="quotes"><span class="nav__icon" aria-hidden="true">▤</span><span data-i18n="app.title.quotes">Devis</span></button>
+              <button class="nav__item" data-module="invoices"><span class="nav__icon" aria-hidden="true">▥</span><span data-i18n="app.title.invoices">Factures</span></button>
+              <button class="nav__item" data-module="payments"><span class="nav__icon" aria-hidden="true">€</span><span data-i18n="app.title.payments">Encaissements</span></button>
+              <button class="nav__item" data-module="inbound"><span class="nav__icon" aria-hidden="true">⇩</span><span data-i18n="app.title.inbound">Fournisseurs</span></button>
+              <button class="nav__item" data-module="exports"><span class="nav__icon" aria-hidden="true">↗</span><span data-i18n="app.title.exports">Exports</span></button>
+              <button class="nav__item" data-module="conformity"><span class="nav__icon" aria-hidden="true">✓</span><span data-i18n="app.title.conformity">e-Reporting</span></button>
+              <button class="nav__item" data-module="audit"><span class="nav__icon" aria-hidden="true">≡</span><span data-i18n="app.title.audit">PAF / Trace</span></button>
+            </div>
+          </section>
+
+          <section class="navProduct is-open" data-application="financial">
+            <button class="navProduct__toggle" type="button" data-product-toggle="financial" aria-expanded="true">
+              <span class="navProduct__brand"><span class="navProduct__mark navProduct__mark--financial">F</span><span><strong>D2F Financial</strong><small data-i18n="nav.product.financial">Finance et comptabilité</small></span></span><span class="navProduct__chevron" aria-hidden="true">⌄</span>
+            </button>
+            <div class="navProduct__menu">
+              <button class="nav__item" data-module="financial-overview"><span class="nav__icon" aria-hidden="true">▦</span><span data-i18n="financial.nav.overview">Cockpit financier</span></button>
+              <button class="nav__item" data-module="financial-proposals"><span class="nav__icon" aria-hidden="true">≋</span><span data-i18n="financial.nav.proposals">Propositions comptables</span></button>
+              <button class="nav__item" data-module="financial-reconciliation"><span class="nav__icon" aria-hidden="true">⇄</span><span data-i18n="financial.nav.reconciliation">Rapprochement</span></button>
+              <button class="nav__item" data-module="financial-rules"><span class="nav__icon" aria-hidden="true">⚙</span><span data-i18n="financial.nav.rules">Règles & simulations</span></button>
+            </div>
+          </section>
+
+          <section class="navProduct is-open" data-application="expenses">
+            <button class="navProduct__toggle" type="button" data-product-toggle="expenses" aria-expanded="true">
+              <span class="navProduct__brand"><span class="navProduct__mark navProduct__mark--expenses">E</span><span><strong>D2F Expenses</strong><small data-i18n="nav.product.expenses">Notes de frais</small></span></span><span class="navProduct__chevron" aria-hidden="true">⌄</span>
+            </button>
+            <div class="navProduct__menu">
+              <button class="nav__item" data-module="expenses-overview"><span class="nav__icon" aria-hidden="true">▦</span><span data-i18n="expenses.nav.overview">Tableau de bord</span></button>
+              <button class="nav__item" data-module="expenses-reports"><span class="nav__icon" aria-hidden="true">☷</span><span data-i18n="expenses.nav.reports">Mes notes de frais</span></button>
+              <button class="nav__item" data-module="expenses-capture"><span class="nav__icon" aria-hidden="true">▣</span><span data-i18n="expenses.nav.capture">Capture mobile</span></button>
+              <button class="nav__item" data-module="expenses-approvals"><span class="nav__icon" aria-hidden="true">✓</span><span data-i18n="expenses.nav.approvals">Approbations</span></button>
+              <button class="nav__item" data-module="expenses-rules"><span class="nav__icon" aria-hidden="true">⚙</span><span data-i18n="expenses.nav.rules">Règles & barèmes</span></button>
+            </div>
+          </section>
         </nav>
       </div>
 
@@ -920,6 +952,126 @@
       </section>
 
 <!-- Dashboard -->
+      <!-- D2F Financial : écrans indépendants -->
+      <section class="page platformPage" data-page="financial-overview">
+        <div class="platformHero platformHero--financial">
+          <div><p class="platformEyebrow">D2F FINANCIAL</p><h2 data-i18n="financial.overview.title">Cockpit financier</h2><p data-i18n="financial.overview.subtitle">Une lecture financière des données réelles de D2F Gestion, sans modifier la gestion commerciale.</p></div>
+          <span class="platformGuardrail" data-i18n="financial.overview.source">Source D2F Gestion · lecture seule</span>
+        </div>
+        <div class="platformKpis platformKpis--four">
+          <button type="button" class="platformKpi platformKpiButton" data-platform-go="financial-reconciliation"><span data-i18n="financial.kpi.revenue">Chiffre d’affaires reconnu HT</span><strong id="financial-revenue">0,00 EUR</strong><small data-i18n="financial.kpi.revenue_hint">Voir les factures qui composent ce montant →</small></button>
+          <button type="button" class="platformKpi platformKpiButton" data-platform-go="payments"><span data-i18n="financial.kpi.cash">Encaissements</span><strong id="financial-cash">0,00 EUR</strong><small data-i18n="financial.kpi.cash_hint">Ouvrir les encaissements →</small></button>
+          <button type="button" class="platformKpi platformKpiButton platformKpi--accent" data-platform-action="financial:filterOpen"><span data-i18n="financial.kpi.outstanding">Créances ouvertes</span><strong id="financial-outstanding">0,00 EUR</strong><small id="financial-open-count">0 facture · traiter →</small></button>
+          <button type="button" class="platformKpi platformKpiButton platformKpi--danger" data-platform-action="financial:filterOverdue"><span data-i18n="financial.kpi.overdue">Échu</span><strong id="financial-overdue">0,00 EUR</strong><small id="financial-overdue-count">0 facture · traiter →</small></button>
+        </div>
+        <div class="platformJourney">
+          <button type="button" data-platform-go="financial-proposals"><span>1</span><strong data-i18n="financial.journey.proposals">Examiner les propositions</strong><small data-i18n="financial.journey.proposals_hint">Aucune comptabilisation automatique</small></button>
+          <button type="button" data-platform-go="financial-reconciliation"><span>2</span><strong data-i18n="financial.journey.match">Rapprocher les flux</strong><small data-i18n="financial.journey.match_hint">Factures, règlements et soldes</small></button>
+          <button type="button" data-platform-go="financial-rules"><span>3</span><strong data-i18n="financial.journey.rules">Contrôler les règles</strong><small data-i18n="financial.journey.rules_hint">Version, effet et explication</small></button>
+        </div>
+        <article class="card platformPanel">
+          <div class="platformPanel__head"><div><p class="platformEyebrow" data-i18n="financial.invoices.eyebrow">PROJECTION GESTION</p><h2 data-i18n="financial.invoices.title">Dernières factures clients émises</h2></div><span class="platformGuardrail" data-i18n="financial.invoices.guardrail">Source : D2F Gestion</span></div>
+          <div class="platformTableWrap"><table class="platformTable"><thead><tr><th data-i18n="common.invoice">Facture</th><th data-i18n="common.client">Client</th><th data-i18n="common.issued_at">Émission</th><th data-i18n="common.due_at">Échéance</th><th class="numeric">TTC</th></tr></thead><tbody id="financial-invoices-body"></tbody></table><p class="platformEmpty" id="financial-invoices-empty" data-i18n="financial.invoices.empty">Aucune facture émise pour le moment.</p></div>
+        </article>
+        <article class="card platformTaskPanel"><div class="platformPanel__head"><div><p class="platformEyebrow" data-i18n="platform.todo">À TRAITER</p><h2 data-i18n="financial.tasks.title">Prochaines actions financières</h2></div></div><div id="financial-action-queue" class="platformActionQueue"></div></article>
+      </section>
+
+      <section class="page platformPage" data-page="financial-proposals">
+        <div class="platformActivationBanner financial-foundation-banner" hidden><div><strong data-i18n="platform.activation.required">Activation requise</strong><span data-i18n="platform.activation.financial">Le stockage Financial doit être activé pour exécuter et conserver ces opérations.</span></div><button class="btn" type="button" data-platform-action="platform:requestActivation" data-application="financial" data-i18n="platform.activation.request">Demander l’activation</button></div>
+        <div class="platformHero platformHero--financial"><div><p class="platformEyebrow" data-i18n="financial.proposals.eyebrow">PRÉ-COMPTABILITÉ</p><h2 data-i18n="financial.proposals.title">Propositions comptables</h2><p data-i18n="financial.proposals.subtitle">Contrôlez la source, les montants, le compte suggéré et la trace de règle avant validation.</p></div><span class="platformGuardrail" data-i18n="financial.proposals.guardrail">Validation humaine obligatoire</span></div>
+        <div class="platformKpis">
+          <article class="platformKpi"><span data-i18n="financial.kpi.proposals">À valider</span><strong id="financial-proposal-count">0</strong><small data-i18n="financial.kpi.proposals_hint">Propositions, jamais écritures automatiques</small></article>
+          <article class="platformKpi platformKpi--accent"><span data-i18n="financial.kpi.awaiting">Montant en attente</span><strong id="financial-awaiting-amount">0,00 EUR</strong><small data-i18n="financial.kpi.awaiting_hint">Validation comptable requise</small></article>
+          <article class="platformKpi"><span data-i18n="financial.kpi.findings">Anomalies à traiter</span><strong id="financial-findings-count">0</strong><small data-i18n="financial.kpi.findings_hint">Résultats de règles explicables</small></article>
+        </div>
+        <article class="card platformPanel">
+          <div class="platformPanel__head"><div><h2 data-i18n="financial.proposals.queue">File de validation</h2><p class="platformSubtitle" data-i18n="financial.proposals.queue_hint">Chaque décision conserve l’auteur, la date, la règle et sa version.</p></div></div>
+          <div class="platformTableWrap"><table class="platformTable"><thead><tr><th data-i18n="common.source">Source</th><th data-i18n="common.reference">Référence</th><th data-i18n="financial.proposals.journal">Journal / compte</th><th class="numeric" data-i18n="common.amount">Montant</th><th data-i18n="common.status">Statut</th><th data-i18n="financial.proposals.trace">Trace</th></tr></thead><tbody id="financial-proposals-body"></tbody></table><div class="platformEmpty platformEmpty--rich" id="financial-proposals-empty"><strong data-i18n="financial.proposals.empty_title">Aucune proposition à valider</strong><span data-i18n="financial.proposals.empty">Les propositions apparaîtront après activation du socle Financial et réception d’événements métier validés.</span><button class="btn btn--secondary" type="button" data-platform-action="platform:requestActivation" data-application="financial" data-i18n="financial.activation.proposals">Activer les propositions comptables</button></div></div>
+        </article>
+      </section>
+
+      <section class="page platformPage" data-page="financial-reconciliation">
+        <div class="platformHero platformHero--financial"><div><p class="platformEyebrow">MATCHING</p><h2 data-i18n="financial.reconciliation.title">Rapprochement</h2><p data-i18n="financial.reconciliation.subtitle">Comparez les factures émises, les paiements enregistrés et le solde restant à justifier.</p></div><span class="platformGuardrail" data-i18n="financial.reconciliation.mode">Rapprochement déterministe</span></div>
+        <div class="platformLegend"><span><i class="legendDot legendDot--ok"></i><span data-i18n="financial.reconciliation.matched">Rapproché</span></span><span><i class="legendDot legendDot--warn"></i><span data-i18n="financial.reconciliation.partial">Partiel</span></span><span><i class="legendDot legendDot--open"></i><span data-i18n="financial.reconciliation.open">À rapprocher</span></span></div>
+        <article class="card platformPanel">
+          <div class="platformPanel__head"><div><h2 data-i18n="financial.reconciliation.receivables">Factures et règlements</h2><p class="platformSubtitle" data-i18n="financial.reconciliation.source_hint">Données opérationnelles de D2F Gestion ; aucune écriture comptable n’est générée ici.</p></div></div>
+          <div class="platformTableWrap"><table class="platformTable"><thead><tr><th data-i18n="common.invoice">Facture</th><th data-i18n="common.client">Client</th><th class="numeric" data-i18n="financial.reconciliation.gross">TTC</th><th class="numeric" data-i18n="financial.reconciliation.paid">Réglé</th><th class="numeric" data-i18n="financial.reconciliation.remaining">Reste</th><th data-i18n="common.status">Statut</th><th data-i18n="common.actions">Action</th></tr></thead><tbody id="financial-reconciliation-body"></tbody></table><p class="platformEmpty" id="financial-reconciliation-empty" data-i18n="financial.reconciliation.empty">Aucune facture à rapprocher.</p></div>
+        </article>
+      </section>
+
+      <section class="page platformPage" data-page="financial-rules">
+        <div class="platformHero platformHero--financial"><div><p class="platformEyebrow">RULE META MODEL 1.0</p><h2 data-i18n="financial.rules.title">Règles & simulations</h2><p data-i18n="financial.rules.subtitle">Registre versionné des règles déterministes. Les règles pays non qualifiées ne participent jamais à une décision.</p></div><span class="platformGuardrail platformGuardrail--warning" id="financial-country-pack">Country Pack à qualifier</span></div>
+        <div class="platformRuleGrid">
+          <article class="platformRuleCard"><div><span class="platformRuleType">VALIDATION</span><strong>accounting.entry.balance</strong></div><span class="platformStatus platformStatus--validated" data-i18n="rules.status.platform">Plateforme</span><p data-i18n="financial.rules.balance">Vérifie l’équilibre débit/crédit d’une proposition avant toute validation.</p><small>v1.0.0 · déterministe · sans effet de bord</small></article>
+          <article class="platformRuleCard"><div><span class="platformRuleType">MATCHING</span><strong>financial.receivable.match</strong></div><span class="platformStatus platformStatus--validated" data-i18n="rules.status.platform">Plateforme</span><p data-i18n="financial.rules.match">Rapproche les règlements explicitement liés aux factures et signale les écarts.</p><small>v1.0.0 · source D2F Gestion</small></article>
+          <article class="platformRuleCard platformRuleCard--pending"><div><span class="platformRuleType">COUNTRY PACK</span><strong id="financial-pack-rule">country.*.accounting</strong></div><span class="platformStatus platformStatus--submitted" data-i18n="rules.status.review">Validation requise</span><p data-i18n="financial.rules.country">Les mappings comptables, fiscaux et légaux restent inactifs avant qualification locale.</p><small id="financial-pack-version">version preview</small></article>
+        </div>
+        <div class="platformNotice"><div><strong data-i18n="platform.country_pack.action_title">Qualification locale requise</strong><span data-i18n="platform.country_pack.action_hint">Demandez la validation du Country Pack avant d’utiliser ses règles pour une décision.</span></div><button class="btn btn--secondary" type="button" data-platform-action="platform:requestActivation" data-application="country-pack" data-i18n="platform.country_pack.request">Demander la qualification</button></div>
+        <article class="card platformPanel"><div class="platformPanel__head"><div><h2 data-i18n="financial.rules.simulation">Simulateur sans écriture</h2><p class="platformSubtitle" data-i18n="financial.rules.simulation_hint">Une simulation produit une explication et des constats ; elle ne modifie aucune donnée métier.</p></div></div><div class="platformSimulation"><label><span data-i18n="financial.rules.amount">Montant à contrôler</span><input id="financial-rule-amount" type="number" min="0" step="0.01" placeholder="0,00"></label><button class="btn" type="button" data-platform-action="financial:simulate" data-i18n="financial.rules.run">Simuler</button><div id="financial-rule-result" class="platformSimulation__result" data-i18n="financial.rules.waiting">Saisissez un montant pour lancer les contrôles génériques.</div></div></article>
+      </section>
+
+      <!-- D2F Expenses : écrans indépendants -->
+      <section class="page platformPage" data-page="expenses-overview">
+        <div class="platformActivationBanner expenses-foundation-banner" hidden><div><strong data-i18n="platform.activation.required">Activation requise</strong><span data-i18n="platform.activation.expenses">Le stockage Expenses doit être activé pour exécuter et conserver ces opérations.</span></div><button class="btn" type="button" data-platform-action="platform:requestActivation" data-application="expenses" data-i18n="platform.activation.request">Demander l’activation</button></div>
+        <div class="platformHero platformHero--expenses"><div><p class="platformEyebrow">D2F EXPENSES</p><h2 data-i18n="expenses.overview.title">Tableau de bord des frais</h2><p data-i18n="expenses.overview.subtitle">Du justificatif capturé au remboursement, avec contrôle humain et traçabilité.</p></div><span class="platformGuardrail" id="expense-country-pack">Règles pays à valider</span></div>
+        <div class="platformKpis platformKpis--four">
+          <button type="button" class="platformKpi platformKpiButton" data-platform-go="expenses-reports"><span data-i18n="expenses.kpi.drafts">Brouillons</span><strong id="expense-draft-count">0</strong><small data-i18n="expenses.kpi.drafts_hint">Ouvrir et compléter →</small></button>
+          <button type="button" class="platformKpi platformKpiButton platformKpi--warning" data-platform-go="expenses-approvals"><span data-i18n="expenses.kpi.submitted">À approuver</span><strong id="expense-submitted-count">0</strong><small data-i18n="expenses.kpi.submitted_hint">Ouvrir la file de décision →</small></button>
+          <button type="button" class="platformKpi platformKpiButton" data-platform-go="expenses-reports"><span data-i18n="expenses.kpi.approved">Approuvées</span><strong id="expense-approved-count">0</strong><small data-i18n="expenses.kpi.approved_hint">Consulter l’historique →</small></button>
+          <button type="button" class="platformKpi platformKpiButton platformKpi--accent" data-platform-go="financial-proposals"><span data-i18n="expenses.kpi.total">Total approuvé</span><strong id="expense-approved-total">0,00 EUR</strong><small data-i18n="expenses.kpi.total_hint">Voir la projection Financial →</small></button>
+        </div>
+        <div class="platformJourney platformJourney--expenses">
+          <button type="button" data-platform-go="expenses-reports"><span>1</span><strong data-i18n="expenses.journey.report">Créer la note</strong><small data-i18n="expenses.journey.report_hint">Objet, lignes et montants</small></button>
+          <button type="button" data-platform-go="expenses-capture"><span>2</span><strong data-i18n="expenses.journey.capture">Photographier les reçus</strong><small data-i18n="expenses.journey.capture_hint">Smartphone, fichier ou dépôt</small></button>
+          <button type="button" data-platform-go="expenses-approvals"><span>3</span><strong data-i18n="expenses.journey.approve">Faire approuver</strong><small data-i18n="expenses.journey.approve_hint">Décision motivée et tracée</small></button>
+          <button type="button" data-platform-go="expenses-rules"><span>4</span><strong data-i18n="expenses.journey.rules">Vérifier les barèmes</strong><small data-i18n="expenses.journey.rules_hint">Pays, version et effet</small></button>
+        </div>
+        <article class="card platformTaskPanel"><div class="platformPanel__head"><div><p class="platformEyebrow" data-i18n="platform.todo">À FAIRE</p><h2 data-i18n="expenses.tasks.title">Prochaines actions Expenses</h2></div></div><div id="expenses-action-queue" class="platformActionQueue"></div></article>
+      </section>
+
+      <section class="page platformPage" data-page="expenses-reports">
+        <div class="platformActivationBanner expenses-foundation-banner" hidden><div><strong data-i18n="platform.activation.required">Activation requise</strong><span data-i18n="platform.activation.expenses">Le stockage Expenses doit être activé pour exécuter et conserver ces opérations.</span></div><button class="btn" type="button" data-platform-action="platform:requestActivation" data-application="expenses" data-i18n="platform.activation.request">Demander l’activation</button></div>
+        <div class="platformHero platformHero--expenses"><div><p class="platformEyebrow" data-i18n="expenses.reports.eyebrow">MES DÉPENSES</p><h2 data-i18n="expenses.reports.title">Mes notes de frais</h2><p data-i18n="expenses.reports.subtitle">Préparez une note, ajoutez les lignes puis soumettez-la lorsque les justificatifs sont complets.</p></div></div>
+        <article class="card platformPanel platformCreatePanel"><div class="platformPanel__head"><div><h2 data-i18n="expenses.create.title">Commencer une note de frais</h2></div></div><div class="platformFormRow"><label><span data-i18n="expenses.create.purpose">Objet professionnel</span><input id="expense-report-title" type="text" data-i18n-attr="placeholder:expenses.create.purpose_ph" placeholder="Déplacement client à Lyon"></label><label class="platformCurrency"><span data-i18n="company.currency">Devise</span><input id="expense-report-currency" type="text" maxlength="3" value="EUR"></label><button class="btn" type="button" data-platform-action="expenses:createReport" data-i18n="expenses.create.action">Créer le brouillon</button></div></article>
+        <article class="card platformPanel platformReportsPanel"><div class="platformPanel__head"><div><h2 data-i18n="expenses.reports.list">Notes en cours et historique</h2></div></div><div class="platformTableWrap"><table class="platformTable"><thead><tr><th data-i18n="common.number">Numéro</th><th data-i18n="common.purpose">Objet</th><th class="numeric">TTC</th><th data-i18n="common.status">Statut</th><th data-i18n="common.actions">Actions</th></tr></thead><tbody id="expense-reports-body"></tbody></table><p class="platformEmpty" id="expense-reports-empty" data-i18n="expenses.reports.empty">Aucune note de frais. Créez le premier brouillon ci-dessus.</p></div></article>
+        <article class="card platformPanel platformDetailPanel"><div class="platformPanel__head"><div><p class="platformEyebrow" data-i18n="expenses.detail.eyebrow">DÉTAIL DE LA NOTE</p><h2 id="expense-selected-title" data-i18n="expenses.detail.select">Sélectionnez une note de frais</h2><p id="expense-selected-detail" class="platformSubtitle" data-i18n="expenses.detail.empty">Les lignes et justificatifs apparaîtront ici.</p></div><button id="expense-submit-selected" class="btn" type="button" data-platform-action="expenses:submit" hidden data-i18n="expenses.action.submit">Soumettre pour approbation</button></div>
+          <div id="expense-line-form" class="platformExpenseForm" hidden><label><span data-i18n="expenses.line.date">Date</span><input id="expense-line-date" type="date"></label><label><span data-i18n="expenses.line.merchant">Commerçant</span><input id="expense-line-merchant" type="text" placeholder="SNCF"></label><label><span data-i18n="expenses.line.category">Catégorie</span><select id="expense-line-category"><option value="travel" data-i18n="expenses.category.travel">Transport</option><option value="meals" data-i18n="expenses.category.meals">Repas</option><option value="lodging" data-i18n="expenses.category.lodging">Hébergement</option><option value="supplies" data-i18n="expenses.category.supplies">Fournitures</option><option value="other" data-i18n="expenses.category.other">Autre</option></select></label><label><span data-i18n="company.country">Pays</span><input id="expense-line-country" type="text" maxlength="2" placeholder="FR"></label><label class="platformFieldWide"><span data-i18n="expenses.line.description">Description</span><input id="expense-line-description" type="text" placeholder="Train aller-retour"></label><label class="platformFieldWide"><span data-i18n="expenses.line.purpose">Motif professionnel</span><input id="expense-line-purpose" type="text" placeholder="Rendez-vous client"></label><label><span data-i18n="expenses.line.net">Montant HT</span><input id="expense-line-net" type="number" min="0" step="0.01" placeholder="0,00"></label><label><span data-i18n="expenses.line.tax">Taxe</span><input id="expense-line-tax" type="number" min="0" step="0.01" placeholder="0,00"></label><button class="btn btn--secondary" type="button" data-platform-action="expenses:addLine" data-i18n="expenses.line.add">Ajouter la ligne</button></div>
+          <div class="platformTableWrap"><table class="platformTable"><thead><tr><th data-i18n="expenses.line.date">Date</th><th data-i18n="expenses.line.merchant">Commerçant</th><th data-i18n="expenses.line.category">Catégorie</th><th data-i18n="expenses.line.purpose">Motif</th><th class="numeric">TTC</th></tr></thead><tbody id="expense-lines-body"></tbody></table></div>
+        </article>
+      </section>
+
+      <section class="page platformPage" data-page="expenses-capture">
+        <div class="platformActivationBanner expenses-foundation-banner" hidden><div><strong data-i18n="platform.activation.required">Activation requise</strong><span data-i18n="platform.activation.expenses">Le stockage Expenses doit être activé pour exécuter et conserver ces opérations.</span></div><button class="btn" type="button" data-platform-action="platform:requestActivation" data-application="expenses" data-i18n="platform.activation.request">Demander l’activation</button></div>
+        <div class="platformHero platformHero--expenses"><div><p class="platformEyebrow" data-i18n="expenses.capture.eyebrow">CAPTURE MOBILE</p><h2 data-i18n="expenses.capture.title">Charger un justificatif</h2><p data-i18n="expenses.capture.subtitle">Photographiez le reçu avec le smartphone ou choisissez un fichier. L’original est conservé séparément de l’OCR.</p></div><span class="platformGuardrail" data-i18n="expenses.capture.original">Original + empreinte SHA-256</span></div>
+        <article class="card platformPanel platformCapturePanel"><div class="expenseCaptureBody">
+          <label class="expenseCaptureLine"><span data-i18n="expenses.capture.target">Note de frais</span><select id="expense-capture-report-select"><option value="" data-i18n="expenses.capture.no_report">Sélectionnez une note</option></select></label>
+          <div class="expenseCaptureTarget"><span data-i18n="expenses.capture.target_selected">Note sélectionnée</span><strong id="expense-capture-report">Sélectionnez d’abord une note de frais</strong></div>
+          <label class="expenseCaptureLine"><span data-i18n="expenses.capture.line">Ligne associée</span><select id="expense-receipt-line"><option value="" data-i18n="expenses.capture.line_empty">Ajoutez d’abord une ligne à la note</option></select></label>
+          <input id="expense-receipt-file" type="file" accept="image/jpeg,image/png,image/webp,application/pdf" capture="environment" hidden>
+          <div class="expenseCaptureDrop" id="expense-receipt-drop" tabindex="0" role="button" aria-controls="expense-receipt-file"><span class="expenseCaptureDrop__icon" aria-hidden="true">▣</span><strong data-i18n="expenses.capture.drop_title">Prendre une photo ou déposer un justificatif</strong><small data-i18n="expenses.capture.drop_hint">JPEG, PNG, WebP ou PDF · 10 Mo maximum</small><div class="platformActions"><button class="btn" type="button" data-platform-action="expenses:pickReceipt" data-i18n="expenses.capture.camera">Appareil photo / fichier</button></div></div>
+          <div class="expenseCaptureReady" id="expense-receipt-ready" hidden><div><strong id="expense-receipt-name"></strong><small id="expense-receipt-meta"></small></div><label class="expenseLocationConsent"><input id="expense-location-consent" type="checkbox"> <span data-i18n="expenses.capture.location">Joindre ma position (facultatif)</span></label><button class="btn" type="button" data-platform-action="expenses:uploadReceipt" data-i18n="expenses.capture.upload">Enregistrer l’original</button></div>
+          <p class="platformSubtitle" data-i18n="expenses.capture.provenance">La date de capture, l’utilisateur, le contexte appareil et l’empreinte SHA-256 sont conservés. L’OCR restera une suggestion à valider.</p>
+        </div></article>
+      </section>
+
+      <section class="page platformPage" data-page="expenses-approvals">
+        <div class="platformActivationBanner expenses-foundation-banner" hidden><div><strong data-i18n="platform.activation.required">Activation requise</strong><span data-i18n="platform.activation.expenses">Le stockage Expenses doit être activé pour exécuter et conserver ces opérations.</span></div><button class="btn" type="button" data-platform-action="platform:requestActivation" data-application="expenses" data-i18n="platform.activation.request">Demander l’activation</button></div>
+        <div class="platformHero platformHero--expenses"><div><p class="platformEyebrow">FOUR-EYES</p><h2 data-i18n="expenses.approvals.title">Approbations</h2><p data-i18n="expenses.approvals.subtitle">Décidez uniquement sur les notes soumises, avec commentaire, constats de règles et piste d’audit.</p></div><span class="platformGuardrail" data-i18n="expenses.approvals.owner">Réservé au responsable habilité</span></div>
+        <div class="platformKpis"><article class="platformKpi platformKpi--warning"><span data-i18n="expenses.kpi.submitted">À approuver</span><strong id="expense-approval-count">0</strong><small data-i18n="expenses.approvals.waiting">Décision attendue</small></article><article class="platformKpi"><span data-i18n="expenses.approvals.findings">Avec constat</span><strong id="expense-approval-findings">0</strong><small data-i18n="expenses.approvals.findings_hint">Aucun constat n’est ignoré silencieusement</small></article><article class="platformKpi"><span data-i18n="expenses.approvals.sla">Délai moyen</span><strong>—</strong><small data-i18n="expenses.approvals.sla_hint">Disponible après historique suffisant</small></article></div>
+        <article class="card platformPanel"><div class="platformPanel__head"><div><h2 data-i18n="expenses.approvals.queue">File de décision</h2></div><input id="expense-decision-note" class="platformDecisionNote" type="text" data-i18n-attr="placeholder:expenses.reports.decision_ph" placeholder="Commentaire de décision"></div><div class="platformTableWrap"><table class="platformTable"><thead><tr><th data-i18n="common.number">Numéro</th><th data-i18n="common.purpose">Objet</th><th data-i18n="expenses.reports.claimant">Demandeur</th><th class="numeric">TTC</th><th data-i18n="expenses.approvals.controls">Contrôles</th><th data-i18n="common.actions">Décision</th></tr></thead><tbody id="expense-approvals-body"></tbody></table><div class="platformEmpty platformEmpty--rich" id="expense-approvals-empty"><strong data-i18n="expenses.approvals.empty_title">Aucune décision en attente</strong><span data-i18n="expenses.approvals.empty">Les notes soumises apparaîtront ici.</span></div></div></article>
+      </section>
+
+      <section class="page platformPage" data-page="expenses-rules">
+        <div class="platformActivationBanner expenses-foundation-banner" hidden><div><strong data-i18n="platform.activation.required">Activation requise</strong><span data-i18n="platform.activation.expenses">Le stockage Expenses doit être activé pour exécuter et conserver ces opérations.</span></div><button class="btn" type="button" data-platform-action="platform:requestActivation" data-application="expenses" data-i18n="platform.activation.request">Demander l’activation</button></div>
+        <div class="platformHero platformHero--expenses"><div><p class="platformEyebrow">COUNTRY PACK</p><h2 data-i18n="expenses.rules.title">Règles & barèmes</h2><p data-i18n="expenses.rules.subtitle">Visualisez ce qui est applicable, en révision ou bloqué pour le pays et la date de dépense.</p></div><span class="platformGuardrail platformGuardrail--warning" id="expenses-rules-pack">Pack à qualifier</span></div>
+        <div class="platformRuleGrid">
+          <article class="platformRuleCard"><div><span class="platformRuleType">VALIDATION</span><strong>expense.amount.consistency</strong></div><span class="platformStatus platformStatus--validated" data-i18n="rules.status.platform">Plateforme</span><p data-i18n="expenses.rules.amount">Vérifie que HT + taxe = TTC avec une règle d’arrondi explicite.</p><small>v1.0.0 · déterministe</small></article>
+          <article class="platformRuleCard"><div><span class="platformRuleType">ANOMALY</span><strong>expense.duplicate.detect</strong></div><span class="platformStatus platformStatus--validated" data-i18n="rules.status.platform">Plateforme</span><p data-i18n="expenses.rules.duplicate">Recherche les doublons sans supprimer ni rejeter automatiquement une dépense.</p><small>v1.0.0 · constat explicable</small></article>
+          <article class="platformRuleCard platformRuleCard--pending"><div><span class="platformRuleType">COUNTRY PACK</span><strong id="expenses-pack-rule">country.*.expense</strong></div><span class="platformStatus platformStatus--submitted" data-i18n="rules.status.review">Validation requise</span><p data-i18n="expenses.rules.country">Seuil de justificatif, TVA récupérable, indemnités kilométriques et per diem restent inactifs avant qualification.</p><small id="expenses-pack-version">version preview</small></article>
+        </div>
+        <div class="platformNotice"><div><strong data-i18n="expenses.rules.no_default">Aucun seuil légal par défaut</strong><span data-i18n="expenses.rules.no_default_hint">Une donnée manquante ne devient jamais silencieusement zéro, faux ou vide. Le moteur renvoie « incomplet » et demande une validation.</span></div><button class="btn btn--secondary" type="button" data-platform-action="platform:requestActivation" data-application="country-pack" data-i18n="platform.country_pack.request">Demander la qualification</button></div>
+      </section>
+
 <section class="page" data-page="dashboard">
   <div class="grid2">
     <div class="card card--accent">
@@ -1543,7 +1695,8 @@
   <script src="./renderer/web-electron-shim.js?v=20260717-client-import-v215"></script>
   <script src="./renderer/web-api-shim.js?v=20260717-client-import-v215"></script>
   <script src="./dashboard-ui.js?v=20260717-client-import-v215"></script>
-  <script src="./app.js?v=20260717-client-import-v215"></script>
+  <script src="./financial-expense-ui.js?v=20260720-financial-expenses-actions-v215"></script>
+  <script src="./app.js?v=20260720-financial-expenses-actions-v215"></script>
 
   <div id="clientsImportModal" class="modal" aria-hidden="true">
     <div class="modal__backdrop" data-modal-close></div>
