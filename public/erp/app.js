@@ -5239,7 +5239,7 @@ renderQuoteDraft();
 
   if ($("p-date")) $("p-date").value = $("p-date").value || new Date().toISOString().slice(0, 10);
 
-  state.payments.selectedInvoiceId = String($("p-invoice")?.value || cur || "").trim() || null;
+  state.payments.selectedInvoiceId = String($("p-invoice")?.value || state.payments.selectedInvoiceId || "").trim() || null;
 
   // ✅ Le rendu fait le chargement (1 seule source de vérité)
   await renderPaymentsPage();

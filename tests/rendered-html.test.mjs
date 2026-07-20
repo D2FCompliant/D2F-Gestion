@@ -361,6 +361,8 @@ test("ships a global payment overview and complete screen translations", async (
   assert.match(html, /id="p-invoiceSummary"/);
   assert.match(html, /id="p-payment-status"/);
   assert.match(app, /payments\.listAll/);
+  assert.doesNotMatch(app, /\$\("p-invoice"\)\?\.value \|\| cur/);
+  assert.match(app, /\$\("p-invoice"\)\?\.value \|\| state\.payments\.selectedInvoiceId/);
   assert.match(app, /D2FReceivables\.summarize/);
   assert.match(html, /id="p-operation-type"/);
   assert.match(html, /id="p-deposit-invoice"/);
