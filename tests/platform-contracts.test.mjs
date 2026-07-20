@@ -292,3 +292,20 @@ test("ships four sourced Country Packs without automatic publication", async () 
   assert.match(migration, /Automatic Country Pack publication is forbidden/);
   assert.doesNotMatch(migration, /perform public\.d2f_publish_country_pack_v1/);
 });
+
+
+test("issues one-time D2F password links valid for 24 hours", async () => {
+  const [auth, reset, completion, shell] = await Promise.all([
+    readFile(new URL("lib/auth/server.ts", root), "utf8"),
+    readFile(new URL("app/auth/password-reset/route.ts", root), "utf8"),
+    readFile(new URL("app/auth/complete-invite/route.ts", root), "utf8"),
+    readFile(new URL("app/session-shell.tsx", root), "utf8"),
+  ]);
+  assert.match(auth, /ttlSeconds = 24 \* 60 \* 60/);
+  assert.match(auth, /purpose: "password_activation"/);
+  assert.match(reset, /d2f_password_activation_nonce/);
+  assert.match(reset, /valable 24 heures/);
+  assert.match(completion, /Lien d’activation déjà utilisé ou remplacé/);
+  assert.match(completion, /delete userMetadata\.d2f_password_activation_nonce/);
+  assert.match(shell, /d2f_activation/);
+});

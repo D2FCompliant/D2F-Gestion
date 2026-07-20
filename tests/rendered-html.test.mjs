@@ -74,8 +74,8 @@ test("makes the quote deposit unit explicit with no preset value", async () => {
   assert.match(app, /syncQuoteDepositModeUi\(\{ clearValue: true \}\)/);
   assert.match(styles, /\.depositModeOption input:checked \+ span/);
   assert.match(shell, /app-build-badge">\{D2F_PLATFORM_VERSION_LABEL\}/);
-  assert.match(platformVersion, /D2F_PLATFORM_VERSION = "3\.3\.3"/);
-  assert.equal(JSON.parse(pkg).version, "3.3.3");
+  assert.match(platformVersion, /D2F_PLATFORM_VERSION = "3\.3\.4"/);
+  assert.equal(JSON.parse(pkg).version, "3.3.4");
 });
 
 test("renders human-readable document lists on desktop and smartphone", async () => {

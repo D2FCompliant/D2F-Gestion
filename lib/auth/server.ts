@@ -69,6 +69,31 @@ function constantTimeEqual(left: string, right: string) {
   return difference === 0;
 }
 
+export type PasswordActivation = { userId: string; email: string; nonce: string; purpose: "password_activation"; expiresAt: number };
+
+export async function createPasswordActivationToken(userId: string, email: string, nonce: string, ttlSeconds = 24 * 60 * 60) {
+  const activation: PasswordActivation = { userId, email: normalizedEmail(email), nonce, purpose: "password_activation", expiresAt: Math.floor(Date.now() / 1000) + ttlSeconds };
+  const payload = bytesToBase64Url(new TextEncoder().encode(JSON.stringify(activation)));
+  return `d2f.${payload}.${await signature(payload)}`;
+}
+
+export async function readPasswordActivationToken(token: string): Promise<PasswordActivation> {
+  const [prefix, payload, suppliedSignature] = String(token || "").split(".");
+  if (prefix !== "d2f" || !payload || !suppliedSignature || !constantTimeEqual(suppliedSignature, await signature(payload))) {
+    throw new Error("Lien d’activation invalide");
+  }
+  try {
+    const activation = JSON.parse(new TextDecoder().decode(base64UrlToBytes(payload))) as PasswordActivation;
+    if (activation.purpose !== "password_activation" || !activation.userId || !activation.email || !activation.nonce || activation.expiresAt <= Math.floor(Date.now() / 1000)) {
+      throw new Error("Lien d’activation expiré");
+    }
+    return activation;
+  } catch (error) {
+    if (error instanceof Error && /expiré/.test(error.message)) throw error;
+    throw new Error("Lien d’activation invalide");
+  }
+}
+
 function cookieValue(request: Request, name: string) {
   const cookies = request.headers.get("cookie") || "";
   for (const item of cookies.split(";")) {

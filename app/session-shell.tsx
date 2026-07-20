@@ -368,7 +368,7 @@ function PasswordCompletion({ token, onAuthenticated }: { token: string; onAuthe
     const form = new FormData(event.currentTarget);
     if (form.get("password") !== form.get("confirm")) { setError("Les mots de passe ne correspondent pas"); setBusy(false); return; }
     try {
-      const result = await api("/auth/complete-invite", { method: "POST", body: JSON.stringify({ accessToken: token, password: form.get("password") }) });
+      const result = await api("/auth/complete-invite", { method: "POST", body: JSON.stringify(token.startsWith("d2f.") ? { activationToken: token, password: form.get("password") } : { accessToken: token, password: form.get("password") }) });
       history.replaceState(null, "", location.pathname);
       onAuthenticated(result);
     } catch (caught) { setError(caught instanceof Error ? caught.message : "Lien invalide"); }
@@ -551,6 +551,12 @@ export default function SessionShell({ monthlyPriceEur, annualPriceEur }: { mont
     let cancelled = false;
     const bootstrap = window.setTimeout(() => {
       const parameters = new URLSearchParams(location.hash.replace(/^#/, ""));
+      const activationToken = parameters.get("d2f_activation") || "";
+      if (activationToken) {
+        history.replaceState(null, "", location.pathname);
+        if (!cancelled) { setCompletionToken(activationToken); setLoading(false); }
+        return;
+      }
       const accessToken = parameters.get("access_token") || "";
       const type = parameters.get("type") || "";
       if (accessToken && ["invite", "recovery"].includes(type)) {
