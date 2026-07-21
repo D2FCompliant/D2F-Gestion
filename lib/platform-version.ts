@@ -1,2 +1,2 @@
-export const D2F_PLATFORM_VERSION = "3.3.7" as const;
+export const D2F_PLATFORM_VERSION = "3.3.8" as const;
 export const D2F_PLATFORM_VERSION_LABEL = `v${D2F_PLATFORM_VERSION}` as const;

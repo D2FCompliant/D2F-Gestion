@@ -16,6 +16,14 @@ async function sha256(value: string) {
   return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
+function isSafeLegacyPlatformPack(version: JsonRecord, manifest: JsonRecord) {
+  const expense = object(manifest.expense);
+  const legalThresholds = object(expense.legalThresholds);
+  return text(version.pack_id).endsWith(".platform")
+    && expense.status === "production"
+    && legalThresholds.status === "human_validation_required";
+}
+
 async function governanceRows(supabase: SupabaseClient) {
   const versions = await supabase.from("d2f_country_pack_versions")
     .select("id,pack_id,country,pack_version,status,regulatory_owner,technical_owner,manifest,manifest_sha256,effective_from,effective_to,published_at,created_by,created_at,updated_at")
@@ -40,13 +48,16 @@ async function publicPack(version: JsonRecord, allEvidence: JsonRecord[], allRev
   const evidenceSnapshotHash = await sha256(JSON.stringify(evidence.map((row) => ({ id: row.id, sha256: row.sha256, verification_status: row.verification_status })).sort((left, right) => String(left.id).localeCompare(String(right.id)))));
   const approvalsComplete = Object.values(latestReviews).every((row) => row && row.decision === "approved" && row.evidence_snapshot_hash === evidenceSnapshotHash);
   const ownersComplete = Boolean(text(version.regulatory_owner) && text(version.technical_owner));
-  const manualPublication = manifest.automaticPublication === false;
+  // Legacy platform baselines contain no country-specific threshold and remain
+  // eligible for an explicit human publication. The missing flag is persisted
+  // as false atomically immediately before publication.
+  const manualPublication = manifest.automaticPublication === false || isSafeLegacyPlatformPack(version, manifest);
   return {
     id: version.id, packId: version.pack_id, country: version.country, version: version.pack_version, status: version.status,
     regulatoryOwner: version.regulatory_owner, technicalOwner: version.technical_owner, manifestHash: version.manifest_sha256,
     effectiveFrom: version.effective_from, effectiveTo: version.effective_to, publishedAt: version.published_at,
     createdBy: version.created_by, createdAt: version.created_at, updatedAt: version.updated_at,
-    manifest: { module: manifest.module || "", currency: manifest.currency || "", languages: manifest.languages || [], unresolvedDecisions: manifest.unresolvedDecisions || [] },
+    manifest: { module: manifest.module || "", currency: manifest.currency || "", languages: manifest.languages || [], unresolvedDecisions: manifest.unresolvedDecisions || [], automaticPublication: manifest.automaticPublication },
     evidence, reviews, latestReviews, evidenceSnapshotHash,
     readiness: { ownersComplete, evidenceVerified, approvalsComplete, manualPublication, publishable: ownersComplete && evidenceVerified && approvalsComplete && manualPublication && version.status !== "published" },
   };
@@ -109,7 +120,23 @@ export async function publishCountryPack(supabase: SupabaseClient, actorEmail: s
   if (!pack.readiness.evidenceVerified) throw new Error("Toutes les preuves doivent être vérifiées");
   if (!pack.readiness.approvalsComplete) throw new Error("Les validations réglementaire, technique et sécurité sont obligatoires");
   if (!pack.readiness.manualPublication) throw new Error("La publication automatique est interdite");
+  if (pack.manifest.automaticPublication !== false) {
+    const current = await supabase.from("d2f_country_pack_versions").select("id,pack_id,manifest").eq("id", packVersionId).maybeSingle();
+    databaseError(current.error);
+    if (!current.data) throw new Error("Country Pack introuvable");
+    const manifest = object(current.data.manifest);
+    if (!isSafeLegacyPlatformPack(current.data, manifest)) throw new Error("Le manifeste doit interdire explicitement la publication automatique");
+    const upgradedManifest = { ...manifest, automaticPublication: false };
+    const upgraded = await supabase.from("d2f_country_pack_versions").update({
+      manifest: upgradedManifest,
+      manifest_sha256: await sha256(JSON.stringify(upgradedManifest)),
+      updated_at: new Date().toISOString(),
+    }).eq("id", packVersionId).select("id").maybeSingle();
+    databaseError(upgraded.error);
+    if (!upgraded.data) throw new Error("Country Pack introuvable");
+  }
   const published = await supabase.rpc("d2f_publish_country_pack_v1", { p_pack_version_id: packVersionId, p_actor: actorEmail });
   databaseError(published.error);
-  return { workspace: await listCountryPackGovernance(supabase), published: { id: pack.id, country: pack.country, packId: pack.packId, version: pack.version, manifestHash: pack.manifestHash } };
+  const publishedRow = object(Array.isArray(published.data) ? published.data[0] : published.data);
+  return { workspace: await listCountryPackGovernance(supabase), published: { id: pack.id, country: pack.country, packId: pack.packId, version: pack.version, manifestHash: text(publishedRow.manifest_sha256 || pack.manifestHash) } };
 }

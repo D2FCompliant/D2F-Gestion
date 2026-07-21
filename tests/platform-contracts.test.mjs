@@ -198,6 +198,8 @@ test("provides an admin-only Country Pack qualification and publication centre",
   assert.match(service, /evidence_snapshot_hash === evidenceSnapshotHash/);
   assert.match(service, /Regulatory|réglementaire/i);
   assert.match(service, /d2f_publish_country_pack_v1/);
+  assert.match(service, /isSafeLegacyPlatformPack/);
+  assert.match(service, /automaticPublication: false/);
   assert.match(center, /country-pack-readiness/);
   assert.match(center, /\["regulatory", "technical", "security"\]/);
   assert.match(center, /disabled=\{busy \|\| !selected\.readiness\.publishable\}/);
