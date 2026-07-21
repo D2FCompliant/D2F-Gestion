@@ -74,8 +74,8 @@ test("makes the quote deposit unit explicit with no preset value", async () => {
   assert.match(app, /syncQuoteDepositModeUi\(\{ clearValue: true \}\)/);
   assert.match(styles, /\.depositModeOption input:checked \+ span/);
   assert.match(shell, /app-build-badge">\{D2F_PLATFORM_VERSION_LABEL\}/);
-  assert.match(platformVersion, /D2F_PLATFORM_VERSION = "3\.3\.8"/);
-  assert.equal(JSON.parse(pkg).version, "3.3.8");
+  assert.match(platformVersion, /D2F_PLATFORM_VERSION = "3\.3\.9"/);
+  assert.equal(JSON.parse(pkg).version, "3.3.9");
 });
 
 test("renders human-readable document lists on desktop and smartphone", async () => {
@@ -661,6 +661,8 @@ test("keeps client activation under D2F control and supports one reviewed trial"
   assert.match(accounts, /selectBillingTerm/);
   assert.match(accounts, /addUtcYear/);
   assert.match(accounts, /prefillCompanyProfile/);
+  assert.match(accounts, /const \[dedicatedAccounts, legacyAccounts\]/);
+  assert.match(accounts, /knownEstablishments/);
   assert.match(accounts, /Une période d’essai ou d’abonnement a déjà été accordée/);
   assert.match(shell, /className="admin-request-button"/);
   assert.match(shell, /window\.setInterval\(refreshRequests, 60000\)/);
@@ -670,6 +672,7 @@ test("keeps client activation under D2F control and supports one reviewed trial"
   assert.match(shell, /https:\/\/d2fcompliant\.com/);
   assert.match(shell, /Demander mes 14 jours d’essai/);
   assert.match(shell, /Démarrer l’essai demandé/);
+  assert.match(shell, /Aucune entreprise cliente enregistrée/);
   assert.match(auth, /RS35160600000229522419/);
   assert.match(auth, /DBDBRSBG/);
   assert.match(signup, /billing: publicBillingConfig\(\)/);

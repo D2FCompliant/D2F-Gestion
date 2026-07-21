@@ -648,11 +648,28 @@ export async function declareBankTransfer(account: TenantAccount, actor: TenantM
 export async function listTenantAccounts() {
   const supabase = getSupabaseAdmin();
   const { data, error } = await supabase.from("d2f_tenants").select("id").order("created_at", { ascending: false }).limit(500);
-  if (!error) {
-    return (await Promise.all((data || []).map((row) => dedicatedAccount(supabase, String(row.id))))).filter(Boolean) as TenantAccount[];
+  if (error) {
+    if (!missingAccountTable(error)) throw error;
+    return fallbackAccounts(supabase);
   }
-  if (!missingAccountTable(error)) throw error;
-  return fallbackAccounts(supabase);
+
+  const [dedicatedAccounts, legacyAccounts] = await Promise.all([
+    Promise.all((data || []).map((row) => dedicatedAccount(supabase, String(row.id))))
+      .then((accounts) => accounts.filter(Boolean) as TenantAccount[]),
+    fallbackAccounts(supabase),
+  ]);
+  const knownIds = new Set(dedicatedAccounts.map((account) => account.id));
+  const knownOwners = new Set(dedicatedAccounts.map((account) => normalizedEmail(account.ownerKey)).filter(Boolean));
+  const knownEstablishments = new Set(dedicatedAccounts.map((account) => `${account.country.toUpperCase()}:${account.companyIdentifier}`));
+  const mergedAccounts = [...dedicatedAccounts];
+
+  for (const account of legacyAccounts) {
+    const establishment = `${account.country.toUpperCase()}:${account.companyIdentifier}`;
+    if (knownIds.has(account.id) || knownOwners.has(normalizedEmail(account.ownerKey)) || knownEstablishments.has(establishment)) continue;
+    mergedAccounts.push(account);
+  }
+
+  return mergedAccounts.sort((left, right) => String(right.createdAt).localeCompare(String(left.createdAt)));
 }
 
 export async function setTenantSubscriptionStatus(tenantId: string, requestedStatus: "active" | "suspended" | "trial", actorEmail = ""):
