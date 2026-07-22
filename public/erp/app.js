@@ -576,10 +576,13 @@ function invoiceFullToDraft(full) {
     date: inv.date ?? null,
     lines: lines || [],
     status: inv.status ?? "draft",
-    type_code: typeToTypeCode(inv.type),
+    type: inv.source_invoice_id || inv.sourceInvoiceId || inv.partial_credit ? "credit_note" : (inv.type || inv.kind || "final"),
+    type_code: typeToTypeCode(inv.source_invoice_id || inv.sourceInvoiceId || inv.partial_credit ? "credit_note" : (inv.type || inv.kind || "final")),
     prepaid_amount: Number(prepaid || 0),
     amount_due: Number(inv.amount_due ?? inv.payable_amount ?? 0),
     source_quote_id: inv.quote_id ?? inv.source_quote_id ?? null,
+    source_invoice_id: inv.source_invoice_id ?? inv.sourceInvoiceId ?? null,
+    source_invoice_number: inv.source_invoice_number ?? inv.sourceInvoiceNumber ?? "",
     vat_mode: inv.vat_mode ?? "AUTO",
     vat_effective: inv.vat_effective ?? "AUTO",
     allowance_percent: Number(inv.allowance_percent || 0),
@@ -5168,9 +5171,12 @@ renderQuoteDraft();
       payment_term: full.invoice.payment_term || full.invoice.paymentTerm || invoiceClient.payment_term || "",
       payment_text: full.invoice.payment_text || full.invoice.paymentText || invoiceClient.payment_text || "",
       status: full.invoice.status || "draft",
-      type_code: full.invoice.type_code || full.invoice.invoice_type_code || "380",
+      type: full.invoice.source_invoice_id || full.invoice.sourceInvoiceId || full.invoice.partial_credit ? "credit_note" : (full.invoice.type || full.invoice.kind || "final"),
+      type_code: typeToTypeCode(full.invoice.source_invoice_id || full.invoice.sourceInvoiceId || full.invoice.partial_credit ? "credit_note" : (full.invoice.type || full.invoice.kind || "final")),
       prepaid_amount: Number(full.invoice.prepaid_amount || 0) || 0,
       source_quote_id: full.invoice.source_quote_id || null,
+      source_invoice_id: full.invoice.source_invoice_id || full.invoice.sourceInvoiceId || null,
+      source_invoice_number: full.invoice.source_invoice_number || full.invoice.sourceInvoiceNumber || "",
       vat_mode: full.invoice.vat_mode || "AUTO",
       vat_effective: "AUTO",
       allowance_percent: Number(full.invoice.allowance_percent || 0),
@@ -6350,6 +6356,11 @@ case "invoices:save": {
 
   const date = $("i-date")?.value || new Date().toISOString().slice(0, 10);
   const totals = computeTotals(state.invoiceDraft.lines, state.invoiceDraft.allowance_percent);
+  const documentType = state.invoiceDraft.source_invoice_id || state.invoiceDraft.type === "credit_note" || state.invoiceDraft.type_code === "381"
+    ? "credit_note"
+    : state.invoiceDraft.type === "deposit" || state.invoiceDraft.type_code === "386"
+      ? "deposit"
+      : "final";
 
   const payload = {
     id: state.invoiceDraft.id || undefined,
@@ -6359,9 +6370,14 @@ case "invoices:save": {
     payment_term: state.invoiceDraft.payment_term || buyer.payment_term || "",
     payment_text: $("i-payment-text")?.value || state.invoiceDraft.payment_text || "",
     currency: "EUR",
-    type: "final",
+    type: documentType,
+    type_code: typeToTypeCode(documentType),
+    invoice_type_code: typeToTypeCode(documentType),
     status: "draft",
     prepaid_amount: Number(state.invoiceDraft.prepaid_amount || 0) || 0,
+    source_quote_id: state.invoiceDraft.source_quote_id || null,
+    source_invoice_id: state.invoiceDraft.source_invoice_id || null,
+    source_invoice_number: state.invoiceDraft.source_invoice_number || "",
     subtotal_ht: Number(totals.subtotal_ht || 0),
     allowance_percent: Number(state.invoiceDraft.allowance_percent || 0),
     allowance_amount: Number(totals.allowance_amount || 0),
@@ -6371,7 +6387,7 @@ case "invoices:save": {
     total_tva: Number(totals.total_tva || 0),
     total_ttc: Number(totals.total_ttc || 0),
     lines: state.invoiceDraft.lines,
-    meta_json: { kind: "final", totals_snapshot: totals },
+    meta_json: { kind: documentType, totals_snapshot: totals },
   };
 
   if (!state.invoiceDraft.id) {

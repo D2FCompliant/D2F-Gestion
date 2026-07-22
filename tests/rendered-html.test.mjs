@@ -38,7 +38,7 @@ test("ships a touch-first smartphone layout", async () => {
     readFile(new URL("../public/erp/index.html", import.meta.url), "utf8"),
   ]);
   assert.match(html, /styles\.css\?v=20260720-smtp-v337/);
-  assert.match(html, /app\.js\?v=20260720-smtp-v337/);
+  assert.match(html, /app\.js\?v=20260722-credit-v3310/);
   assert.match(styles, /@media \(max-width: 760px\)/);
   assert.match(styles, /platformPage\.is-active\{[^}]*overflow-y:auto[^}]*scrollbar-gutter:stable/s);
   assert.match(styles, /compact workspaces by default/);
@@ -74,8 +74,8 @@ test("makes the quote deposit unit explicit with no preset value", async () => {
   assert.match(app, /syncQuoteDepositModeUi\(\{ clearValue: true \}\)/);
   assert.match(styles, /\.depositModeOption input:checked \+ span/);
   assert.match(shell, /app-build-badge">\{D2F_PLATFORM_VERSION_LABEL\}/);
-  assert.match(platformVersion, /D2F_PLATFORM_VERSION = "3\.3\.9"/);
-  assert.equal(JSON.parse(pkg).version, "3.3.9");
+  assert.match(platformVersion, /D2F_PLATFORM_VERSION = "3\.3\.10"/);
+  assert.equal(JSON.parse(pkg).version, "3.3.10");
 });
 
 test("renders human-readable document lists on desktop and smartphone", async () => {
@@ -515,6 +515,23 @@ test("country-aware structured export fails closed and client PEPPOL lookup is a
   assert.match(ubl, /urn:peppol:france:billing:cius:1\.0/);
   assert.match(ubl, /cac:BillingReference/);
   assert.doesNotMatch(ubl, /meta\.peppol_endpoint_id \|\| party\.vat_id/);
+});
+
+test("preserves partial credit-note identity and source through save and issue", async () => {
+  const [app, route, issue, html] = await Promise.all([
+    readFile(new URL("../public/erp/app.js", import.meta.url), "utf8"),
+    readFile(new URL("../app/rpc/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../lib/platform/issue-invoice.ts", import.meta.url), "utf8"),
+    readFile(new URL("../public/erp/index.html", import.meta.url), "utf8"),
+  ]);
+  assert.match(app, /source_invoice_id \|\| state\.invoiceDraft\.type === "credit_note"/);
+  assert.match(app, /source_invoice_id: state\.invoiceDraft\.source_invoice_id \|\| null/);
+  assert.match(app, /meta_json: \{ kind: documentType, totals_snapshot: totals \}/);
+  assert.match(route, /type_code: "381", invoice_type_code: "381"/);
+  assert.match(route, /creditAmount > row\.remaining/);
+  assert.match(route, /rpcErrorMessage/);
+  assert.match(issue, /new Error\(error\.message/);
+  assert.match(html, /app\.js\?v=20260722-credit-v3310/);
 });
 
 test("removes issued credit notes from invoice balances", async () => {

@@ -32,7 +32,7 @@ export async function issueInvoiceAtomically(supabase: SupabaseClient, input: Is
     if (error.code === "PGRST202" || /d2f_issue_invoice_v1/i.test(error.message || "")) {
       throw new Error("La migration D2F Platform doit être appliquée avant l’émission atomique");
     }
-    throw error;
+    throw new Error(error.message || "Échec de l’émission atomique du document");
   }
 
   return data;

@@ -74,6 +74,12 @@ function object(value: unknown): JsonRecord {
   return value && typeof value === "object" && !Array.isArray(value) ? value as JsonRecord : {};
 }
 
+function rpcErrorMessage(error: unknown) {
+  if (error instanceof Error) return error.message;
+  const value = object(error);
+  return String(value.message || value.details || value.hint || "Erreur RPC");
+}
+
 function jsonObject(value: unknown): JsonRecord {
   if (value && typeof value === "object" && !Array.isArray(value)) return value as JsonRecord;
   if (typeof value !== "string" || !value.trim()) return {};
@@ -1585,6 +1591,23 @@ async function dispatch(ownerEmail: string, method: string, args: unknown[], ten
     if (entity === "invoices" && action === "issue") {
       const payload = object(first(args));
       const id = idFrom(payload);
+      const document = await getRecord(ownerEmail, "invoices", id);
+      if (!document) throw new Error("Document introuvable");
+      if (invoiceType(document) === "credit_note") {
+        const sourceId = creditSourceId(document);
+        if (!sourceId) throw new Error("L’avoir doit référencer la facture qu’il corrige");
+        const [source, invoices, payments] = await Promise.all([
+          getRecord(ownerEmail, "invoices", sourceId),
+          listRecords(ownerEmail, "invoices"),
+          listRecords(ownerEmail, "payments"),
+        ]);
+        if (!source || invoiceStatus(source) !== "issued" || invoiceType(source) === "credit_note") throw new Error("La facture corrigée doit être une facture émise");
+        const row = receivableRows(invoices, payments).find((candidate) => String(candidate.invoice.id || "") === sourceId);
+        const creditAmount = Math.abs(numberValue(document.total_ttc || document.amount_due));
+        if (!row || creditAmount <= .001 || creditAmount > row.remaining + .001) {
+          throw new Error(`Le montant de l’avoir doit être compris entre 0,01 et ${(row?.remaining || 0).toFixed(2)} EUR`);
+        }
+      }
       return issueInvoiceAtomically(getSupabaseAdmin(), {
         ownerKey: ownerEmail,
         tenantId: tenantIdentity?.tenantId || null,
@@ -1601,7 +1624,7 @@ async function dispatch(ownerEmail: string, method: string, args: unknown[], ten
     }
     if (entity === "invoices" && action === "createDeposit") {
       const payload = object(first(args));
-      return saveRecord(ownerEmail, "invoices", { ...payload, id: crypto.randomUUID(), type: "deposit", status: "draft" });
+      return saveRecord(ownerEmail, "invoices", { ...payload, id: crypto.randomUUID(), type: "deposit", type_code: "386", invoice_type_code: "386", status: "draft", meta_json: { ...jsonObject(payload.meta_json), kind: "deposit" } });
     }
     if (entity === "invoices" && action === "attachDeposit") {
       const payload = object(first(args));
@@ -1647,15 +1670,15 @@ async function dispatch(ownerEmail: string, method: string, args: unknown[], ten
       const reason = String(payload.reason || "Annulation partielle du contrat").trim();
       return saveRecord(ownerEmail, "invoices", {
         ...source, id: crypto.randomUUID(), source_invoice_id: source.id, source_invoice_number: source.invoice_number || source.number || source.id,
-        invoice_number: "", number: "", type: "credit_note", status: "draft", date: today(), reason, partial_credit: true,
+        invoice_number: "", number: "", type: "credit_note", type_code: "381", invoice_type_code: "381", status: "draft", date: today(), reason, partial_credit: true,
         lines: [{ description: reason, quantity: 1, unit_price_ht: totalHt, tva_percent: totalHt > .001 ? round2((totalTva / totalHt) * 100) : 0 }],
-        total_ht: -totalHt, total_tva: -totalTva, total_ttc: -amount, amount_due: -amount, prepaid_amount: 0, deposit_allocated_amount: 0, deposit_allocations: [],
+        total_ht: -totalHt, total_tva: -totalTva, total_ttc: -amount, amount_due: -amount, prepaid_amount: 0, deposit_allocated_amount: 0, deposit_allocations: [], meta_json: { ...jsonObject(source.meta_json), kind: "credit_note" },
       });
     }
     if (entity === "invoices" && action === "createCreditNote") {
       const source = await getRecord(ownerEmail, "invoices", idFrom(first(args)));
       if (!source) throw new Error("Facture introuvable");
-      return saveRecord(ownerEmail, "invoices", { ...source, id: crypto.randomUUID(), source_invoice_id: source.id, source_invoice_number: source.invoice_number || source.number || source.id, invoice_number: "", type: "credit_note", status: "draft", total_ht: -Math.abs(numberValue(source.total_ht)), total_tva: -Math.abs(numberValue(source.total_tva)), total_ttc: -Math.abs(numberValue(source.total_ttc)) });
+      return saveRecord(ownerEmail, "invoices", { ...source, id: crypto.randomUUID(), source_invoice_id: source.id, source_invoice_number: source.invoice_number || source.number || source.id, invoice_number: "", type: "credit_note", type_code: "381", invoice_type_code: "381", status: "draft", total_ht: -Math.abs(numberValue(source.total_ht)), total_tva: -Math.abs(numberValue(source.total_tva)), total_ttc: -Math.abs(numberValue(source.total_ttc)), meta_json: { ...jsonObject(source.meta_json), kind: "credit_note" } });
     }
     if (entity === "payments" && action === "sumByInvoice") {
       const id = idFrom(first(args));
@@ -1751,6 +1774,6 @@ export async function POST(request: Request) {
       if (fallback !== undefined) return reply(fallback, 200, responseHeaders);
       return reply("Supabase n’est pas encore configuré", 503, responseHeaders);
     }
-    return reply(error instanceof Error ? error.message : "Erreur RPC", 500, responseHeaders);
+    return reply(rpcErrorMessage(error), 500, responseHeaders);
   }
 }
