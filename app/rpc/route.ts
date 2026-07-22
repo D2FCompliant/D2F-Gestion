@@ -48,19 +48,35 @@ async function applicationAccessFor(tenantId: string | undefined, actorEmail: st
 
 async function countryPackCapability(countryValue: unknown) {
   const country = String(countryValue || "").trim().toUpperCase().slice(0, 2);
-  if (!country) return { country: "—", packId: "country.unqualified", version: null, status: "not_qualified", reason: "country_missing" };
+  const unavailable = (module: "platform" | "financial" | "expenses", reason: string) => ({
+    country: country || "—", packId: country ? `country.${country.toLowerCase()}.${module}` : "country.unqualified",
+    version: null, status: "not_qualified", reason,
+  });
+  if (!country) {
+    const missing = unavailable("platform", "country_missing");
+    return { ...missing, modules: { platform: missing, financial: unavailable("financial", "country_missing"), expenses: unavailable("expenses", "country_missing") } };
+  }
   const result = await getSupabaseAdmin().from("d2f_country_pack_versions")
-    .select("pack_id,pack_version,status,effective_from,effective_to,manifest_sha256")
-    .eq("country", country).eq("status", "published").order("effective_from", { ascending: false }).limit(10);
+    .select("pack_id,pack_version,status,effective_from,effective_to,manifest_sha256,manifest")
+    .eq("country", country).eq("status", "published").order("effective_from", { ascending: false }).limit(30);
   if (result.error) {
     const storageMissing = ["42P01", "PGRST204", "PGRST205"].includes(result.error.code || "") || /d2f_country_pack_versions/i.test(result.error.message || "");
     if (!storageMissing) console.warn("[country-pack] registry unavailable", result.error);
-    return { country, packId: `country.${country.toLowerCase()}.unqualified`, version: null, status: "not_qualified", reason: storageMissing ? "registry_not_initialized" : "registry_unavailable" };
+    const reason = storageMissing ? "registry_not_initialized" : "registry_unavailable";
+    const platform = unavailable("platform", reason);
+    return { ...platform, modules: { platform, financial: unavailable("financial", reason), expenses: unavailable("expenses", reason) } };
   }
   const now = new Date().toISOString();
-  const pack = (result.data || []).find((item) => (!item.effective_from || item.effective_from <= now) && (!item.effective_to || item.effective_to > now));
-  if (!pack) return { country, packId: `country.${country.toLowerCase()}.unqualified`, version: null, status: "not_qualified", reason: "no_published_pack" };
-  return { country, packId: pack.pack_id, version: pack.pack_version, status: "qualified", effectiveFrom: pack.effective_from, effectiveTo: pack.effective_to, manifestHash: pack.manifest_sha256 };
+  const active = (result.data || []).filter((item) => (!item.effective_from || item.effective_from <= now) && (!item.effective_to || item.effective_to > now));
+  const moduleName = (item: { manifest?: unknown }) => String((item.manifest as Record<string, unknown> | null)?.module || "").toLowerCase();
+  const select = (module: "platform" | "financial" | "expenses") => {
+    const aliases = module === "financial" ? ["financial", "accounting"] : module === "expenses" ? ["expenses", "expense"] : ["platform"];
+    const pack = active.find((item) => aliases.includes(moduleName(item)) || aliases.some((alias) => String(item.pack_id).toLowerCase().endsWith(`.${alias}`)));
+    if (!pack) return unavailable(module, `no_published_${module}_pack`);
+    return { country, packId: pack.pack_id, version: pack.pack_version, status: "qualified", effectiveFrom: pack.effective_from, effectiveTo: pack.effective_to, manifestHash: pack.manifest_sha256 };
+  };
+  const modules = { platform: select("platform"), financial: select("financial"), expenses: select("expenses") };
+  return { ...modules.platform, modules };
 }
 
 const dictionaries: Record<string, unknown> = { fr, en, es, it, sr };

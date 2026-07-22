@@ -3,6 +3,7 @@ import { isPlatformAdminEmail } from "./auth/server";
 import { getSupabaseAdmin } from "./supabase/server";
 import type { TenantAccount } from "./saas/accounts";
 import { sendSmtpMessage, smtpConfiguration } from "./support-mail";
+import { currentPlatformRelease } from "./platform-release";
 
 type JsonRecord = Record<string, unknown>;
 export type SupportLocale = "fr" | "en" | "sr" | "it" | "es";
@@ -366,9 +367,31 @@ async function queueNotification(ticket: JsonRecord, recipient: string, subject:
   }
 }
 
+async function ensureCurrentReleaseTicket(session: AppSession, rows: Array<{ ownerKey: string; ticket: JsonRecord }>) {
+  const release = currentPlatformRelease;
+  if (rows.some(({ ticket }) => ticket.external_provider === "d2f_release" && ticket.external_key === release.version)) return rows;
+  const now = new Date().toISOString();
+  const ticket: JsonRecord = {
+    id: release.ticketId, ticket_number: release.ticketNumber,
+    tenant_id: session.tenantId, owner_key: session.ownerKey, company_name: "D2F Platform",
+    requester_user_id: session.userId, requester_name: "D2F Platform Engineering", requester_email: session.email,
+    contact_email: mailConfiguration().supportEmail, locale: "fr", category: "technical", priority: "normal",
+    subject: release.subject, description: release.description, ticket_scope: "internal", request_type: "need",
+    status: "resolved", assigned_to: "D2F Platform Engineering", external_provider: "d2f_release",
+    external_key: release.version, external_url: `https://github.com/D2FCompliant/D2F-Gestion/releases/tag/v${release.version}`,
+    l1_mode: "deterministic_release", l1_summary: release.changes.join(" "), resolution: release.resolution,
+    resolved_at: release.releasedAt, closed_at: "", created_at: release.releasedAt, updated_at: now,
+    messages: [supportMessage(release.ticketId, "system", "D2F Release Bot", mailConfiguration().supportEmail, release.changes.map((change) => `• ${change}`).join("\n"), true)],
+  };
+  await saveSupportTicket(session.ownerKey, ticket);
+  return supportRows(session, true);
+}
+
 export async function listSupport(session: AppSession) {
   const admin = isPlatformAdminEmail(session.email);
-  return supportResponse(await supportRows(session, admin), admin);
+  let rows = await supportRows(session, admin);
+  if (admin) rows = await ensureCurrentReleaseTicket(session, rows);
+  return supportResponse(rows, admin);
 }
 
 export async function createSupportTicket(session: AppSession, account: TenantAccount, input: JsonRecord) {

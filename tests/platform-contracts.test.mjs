@@ -93,6 +93,23 @@ test("removes the ambiguous client_id reference from atomic invoice issuance", a
   assert.match(sql, /'invoice-service', '3\.3\.14'/);
 });
 
+test("scopes Country Pack qualification and publication by application", async () => {
+  const [route, ui, html, sql] = await Promise.all([
+    readFile(new URL("app/rpc/route.ts", root), "utf8"),
+    readFile(new URL("public/erp/financial-expense-ui.js", root), "utf8"),
+    readFile(new URL("public/erp/index.html", root), "utf8"),
+    readFile(new URL("supabase/migrations/20260722111500_scope_country_pack_publication.sql", root), "utf8"),
+  ]);
+  assert.match(route, /modules = \{ platform: select\("platform"\), financial: select\("financial"\), expenses: select\("expenses"\) \}/);
+  assert.match(ui, /capability\.modules\?\.financial/);
+  assert.match(ui, /Country Pack " \+ module \+ " non qualifié/);
+  assert.match(html, /data-application="country-pack-financial"/);
+  assert.match(html, /data-application="country-pack-expenses"/);
+  assert.match(sql, /where pack_id=v_pack\.pack_id and status='published'/);
+  assert.doesNotMatch(sql, /where country=v_pack\.country and status='published'/);
+  assert.match(sql, /review_type='security'/);
+});
+
 test("routes the legacy issue command through the atomic platform boundary", async () => {
   const [route, helper, app] = await Promise.all([
     readFile(new URL("app/rpc/route.ts", root), "utf8"),

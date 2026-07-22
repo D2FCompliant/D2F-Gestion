@@ -60,8 +60,9 @@
       setText("appStatus", tr("platform.activation.lifetime", "Inclus dans la licence D2F à vie · aucun ticket support créé"));
       return null;
     }
-    const isCountryPack = application === "country-pack";
-    const applicationLabel = isCountryPack ? "Country Pack " + (window.D2FPlatformCapabilities?.countryPack?.country || "") : (application === "expenses" ? "D2F Expenses" : "D2F Financial");
+    const isCountryPack = String(application || "").startsWith("country-pack");
+    const packModule = application === "country-pack-expenses" ? "Expenses" : application === "country-pack-financial" ? "Financial" : "Platform";
+    const applicationLabel = isCountryPack ? "Country Pack " + packModule + " " + (window.D2FPlatformCapabilities?.countryPack?.country || "") : (application === "expenses" ? "D2F Expenses" : "D2F Financial");
     const response = await fetch("/auth/support", {
       method: "POST", credentials: "same-origin", headers: { "content-type": "application/json" },
       body: JSON.stringify({
@@ -333,12 +334,21 @@
   }
 
   function renderPackState(workspacePack) {
-    const pack = workspacePack || window.D2FPlatformCapabilities?.countryPack || {};
-    const country = pack.country || "—", version = pack.version || "preview";
-    const label = country + " · " + (pack.status === "qualified" ? tr("expenses.country_pack.qualified", "Country Pack qualifié") : pack.status === "not_qualified" ? tr("expenses.country_pack.unqualified", "Règles pays non qualifiées") : tr("expenses.country_pack.validation", "Validation des règles pays requise"));
-    for (const id of ["expense-country-pack", "expenses-rules-pack", "financial-country-pack"]) setText(id, label);
-    setText("financial-pack-rule", "country." + String(country).toLowerCase() + ".accounting"); setText("expenses-pack-rule", "country." + String(country).toLowerCase() + ".expense");
-    setText("financial-pack-version", version + " · " + (pack.status || "policy_validation_required")); setText("expenses-pack-version", version + " · " + (pack.status || "policy_validation_required"));
+    const capability = window.D2FPlatformCapabilities?.countryPack || {};
+    const financial = capability.modules?.financial || { country: capability.country || "—", status: "not_qualified", reason: "no_published_financial_pack" };
+    const expenses = workspacePack || capability.modules?.expenses || { country: capability.country || "—", status: "not_qualified", reason: "no_published_expenses_pack" };
+    const stateLabel = (pack, module) => (pack.country || "—") + " · " + (pack.status === "qualified" ? "Country Pack " + module + " qualifié" : "Country Pack " + module + " non qualifié");
+    setText("financial-country-pack", stateLabel(financial, "Financial"));
+    setText("expense-country-pack", stateLabel(expenses, "Expenses"));
+    setText("expenses-rules-pack", stateLabel(expenses, "Expenses"));
+    setText("financial-pack-rule", financial.packId || "country." + String(financial.country || "").toLowerCase() + ".financial");
+    setText("expenses-pack-rule", expenses.packId || "country." + String(expenses.country || "").toLowerCase() + ".expenses");
+    setText("financial-pack-version", financial.version ? financial.version + " · qualified" : "Non publié · " + (financial.reason || "qualification_required"));
+    setText("expenses-pack-version", expenses.version ? expenses.version + " · " + expenses.status : "Non publié · " + (expenses.reason || "qualification_required"));
+    const financialStatus = byId("financial-pack-status");
+    if (financialStatus) { financialStatus.className = "platformStatus platformStatus--" + (financial.status === "qualified" ? "approved" : "submitted"); financialStatus.textContent = financial.status === "qualified" ? "Qualifié" : "Validation requise"; }
+    byId("financial-country-notice")?.toggleAttribute("hidden", financial.status === "qualified");
+    byId("expenses-country-notice")?.toggleAttribute("hidden", expenses.status === "qualified");
   }
 
   async function refreshFinancial() { renderFinancial(await loadFinancial()); }

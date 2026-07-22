@@ -1,6 +1,6 @@
 {
   "name": "d2f-gestion",
-  "version": "3.3.14",
+  "version": "3.3.15",
   "private": true,
   "engines": {
     "node": ">=22.13.0"

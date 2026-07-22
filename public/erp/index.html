@@ -15,7 +15,7 @@
                  object-src 'none';
                  base-uri 'none'">
 
-  <link rel="stylesheet" href="./styles.css?v=20260722-credit-source-sync-v3314" />
+  <link rel="stylesheet" href="./styles.css?v=20260722-country-pack-support-v3315" />
 </head>
 
 <body>
@@ -1035,9 +1035,9 @@
         <div class="platformRuleGrid">
           <article class="platformRuleCard"><div><span class="platformRuleType">VALIDATION</span><strong>accounting.entry.balance</strong></div><span class="platformStatus platformStatus--validated" data-i18n="rules.status.platform">Plateforme</span><p data-i18n="financial.rules.balance">Vérifie l’équilibre débit/crédit d’une proposition avant toute validation.</p><small>v1.0.0 · déterministe · sans effet de bord</small></article>
           <article class="platformRuleCard"><div><span class="platformRuleType">MATCHING</span><strong>financial.receivable.match</strong></div><span class="platformStatus platformStatus--validated" data-i18n="rules.status.platform">Plateforme</span><p data-i18n="financial.rules.match">Rapproche les règlements explicitement liés aux factures et signale les écarts.</p><small>v1.0.0 · source D2F Gestion</small></article>
-          <article class="platformRuleCard platformRuleCard--pending"><div><span class="platformRuleType">COUNTRY PACK</span><strong id="financial-pack-rule">country.*.accounting</strong></div><span class="platformStatus platformStatus--submitted" data-i18n="rules.status.review">Validation requise</span><p data-i18n="financial.rules.country">Les mappings comptables, fiscaux et légaux restent inactifs avant qualification locale.</p><small id="financial-pack-version">version preview</small></article>
+          <article class="platformRuleCard platformRuleCard--pending"><div><span class="platformRuleType">COUNTRY PACK</span><strong id="financial-pack-rule">country.*.accounting</strong></div><span id="financial-pack-status" class="platformStatus platformStatus--submitted" data-i18n="rules.status.review">Validation requise</span><p data-i18n="financial.rules.country">Les mappings comptables, fiscaux et légaux restent inactifs avant qualification locale.</p><small id="financial-pack-version">version preview</small></article>
         </div>
-        <div class="platformNotice"><div><strong data-i18n="platform.country_pack.action_title">Qualification locale requise</strong><span data-i18n="platform.country_pack.action_hint">Demandez la validation du Country Pack avant d’utiliser ses règles pour une décision.</span></div><button class="btn btn--secondary" type="button" data-platform-action="platform:requestActivation" data-application="country-pack" data-i18n="platform.country_pack.request">Demander la qualification</button></div>
+        <div id="financial-country-notice" class="platformNotice"><div><strong data-i18n="platform.country_pack.action_title">Qualification Financial requise</strong><span data-i18n="platform.country_pack.action_hint">Le socle Platform ne qualifie pas automatiquement les règles comptables locales.</span></div><button class="btn btn--secondary" type="button" data-platform-action="platform:requestActivation" data-application="country-pack-financial" data-i18n="platform.country_pack.request">Demander la qualification Financial</button></div>
         <article class="card platformPanel"><div class="platformPanel__head"><div><h2 data-i18n="financial.rules.simulation">Simulateur sans écriture</h2><p class="platformSubtitle" data-i18n="financial.rules.simulation_hint">Une simulation produit une explication et des constats ; elle ne modifie aucune donnée métier.</p></div></div><div class="platformSimulation"><label><span data-i18n="financial.rules.amount">Montant à contrôler</span><input id="financial-rule-amount" type="number" min="0" step="0.01" placeholder="0,00"></label><button class="btn" type="button" data-platform-action="financial:simulate" data-i18n="financial.rules.run">Simuler</button><div id="financial-rule-result" class="platformSimulation__result" data-i18n="financial.rules.waiting">Saisissez un montant pour lancer les contrôles génériques.</div></div></article>
       </section>
 
@@ -1100,7 +1100,7 @@
           <article class="platformRuleCard"><div><span class="platformRuleType">ANOMALY</span><strong>expense.duplicate.detect</strong></div><span class="platformStatus platformStatus--validated" data-i18n="rules.status.platform">Plateforme</span><p data-i18n="expenses.rules.duplicate">Recherche les doublons sans supprimer ni rejeter automatiquement une dépense.</p><small>v1.0.0 · constat explicable</small></article>
           <article class="platformRuleCard platformRuleCard--pending"><div><span class="platformRuleType">COUNTRY PACK</span><strong id="expenses-pack-rule">country.*.expense</strong></div><span class="platformStatus platformStatus--submitted" data-i18n="rules.status.review">Validation requise</span><p data-i18n="expenses.rules.country">Seuil de justificatif, TVA récupérable, indemnités kilométriques et per diem restent inactifs avant qualification.</p><small id="expenses-pack-version">version preview</small></article>
         </div>
-        <article class="card platformPanel"><div class="platformPanel__head"><div><h2>Country Pack applicable</h2><p class="platformSubtitle">Regles sourcees, versionnees et soumises a validation.</p></div></div><div id="expenses-country-rules" class="platformRuleGrid"></div><div id="expenses-country-sources" class="expenseReceiptList"></div></article><div class="platformNotice"><div><strong data-i18n="expenses.rules.no_default">Aucun seuil légal par défaut</strong><span data-i18n="expenses.rules.no_default_hint">Une donnée manquante ne devient jamais silencieusement zéro, faux ou vide. Le moteur renvoie « incomplet » et demande une validation.</span></div><button class="btn btn--secondary" type="button" data-platform-action="platform:requestActivation" data-application="country-pack" data-i18n="platform.country_pack.request">Demander la qualification</button></div>
+        <article class="card platformPanel"><div class="platformPanel__head"><div><h2>Country Pack applicable</h2><p class="platformSubtitle">Regles sourcees, versionnees et soumises a validation.</p></div></div><div id="expenses-country-rules" class="platformRuleGrid"></div><div id="expenses-country-sources" class="expenseReceiptList"></div></article><div id="expenses-country-notice" class="platformNotice"><div><strong data-i18n="expenses.rules.no_default">Aucun seuil légal par défaut</strong><span data-i18n="expenses.rules.no_default_hint">Une donnée manquante ne devient jamais silencieusement zéro, faux ou vide. Le moteur renvoie « incomplet » et demande une validation.</span></div><button class="btn btn--secondary" type="button" data-platform-action="platform:requestActivation" data-application="country-pack-expenses" data-i18n="platform.country_pack.request">Demander la qualification Expenses</button></div>
       </section>
 
 <section class="page" data-page="dashboard">
@@ -1736,13 +1736,13 @@
   </aside>
 
   <script src="./xp-z12-012.js"></script>
-  <script src="./receivables.js?v=20260722-credit-source-sync-v3314"></script>
-  <script src="./audit-ui.js?v=20260722-credit-source-sync-v3314"></script>
-  <script src="./renderer/web-electron-shim.js?v=20260722-credit-source-sync-v3314"></script>
-  <script src="./renderer/web-api-shim.js?v=20260722-credit-source-sync-v3314"></script>
-  <script src="./dashboard-ui.js?v=20260722-credit-source-sync-v3314"></script>
-  <script src="./financial-expense-ui.js?v=20260722-credit-source-sync-v3314"></script>
-  <script src="./app.js?v=20260722-credit-source-sync-v3314"></script>
+  <script src="./receivables.js?v=20260722-country-pack-support-v3315"></script>
+  <script src="./audit-ui.js?v=20260722-country-pack-support-v3315"></script>
+  <script src="./renderer/web-electron-shim.js?v=20260722-country-pack-support-v3315"></script>
+  <script src="./renderer/web-api-shim.js?v=20260722-country-pack-support-v3315"></script>
+  <script src="./dashboard-ui.js?v=20260722-country-pack-support-v3315"></script>
+  <script src="./financial-expense-ui.js?v=20260722-country-pack-support-v3315"></script>
+  <script src="./app.js?v=20260722-country-pack-support-v3315"></script>
 
   <div id="clientsImportModal" class="modal" aria-hidden="true">
     <div class="modal__backdrop" data-modal-close></div>
