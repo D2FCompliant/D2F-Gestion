@@ -38,7 +38,7 @@ test("ships a touch-first smartphone layout", async () => {
     readFile(new URL("../public/erp/index.html", import.meta.url), "utf8"),
   ]);
   assert.match(html, /styles\.css\?v=20260720-smtp-v337/);
-  assert.match(html, /app\.js\?v=20260722-credit-link-v3312/);
+  assert.match(html, /app\.js\?v=20260722-credit-source-v3313/);
   assert.match(styles, /@media \(max-width: 760px\)/);
   assert.match(styles, /platformPage\.is-active\{[^}]*overflow-y:auto[^}]*scrollbar-gutter:stable/s);
   assert.match(styles, /compact workspaces by default/);
@@ -74,8 +74,8 @@ test("makes the quote deposit unit explicit with no preset value", async () => {
   assert.match(app, /syncQuoteDepositModeUi\(\{ clearValue: true \}\)/);
   assert.match(styles, /\.depositModeOption input:checked \+ span/);
   assert.match(shell, /app-build-badge">\{D2F_PLATFORM_VERSION_LABEL\}/);
-  assert.match(platformVersion, /D2F_PLATFORM_VERSION = "3\.3\.12"/);
-  assert.equal(JSON.parse(pkg).version, "3.3.12");
+  assert.match(platformVersion, /D2F_PLATFORM_VERSION = "3\.3\.13"/);
+  assert.equal(JSON.parse(pkg).version, "3.3.13");
 });
 
 test("renders human-readable document lists on desktop and smartphone", async () => {
@@ -525,10 +525,10 @@ test("preserves partial credit-note identity and source through save and issue",
     readFile(new URL("../public/erp/index.html", import.meta.url), "utf8"),
   ]);
   assert.match(app, /source_invoice_id \|\| state\.invoiceDraft\.type === "credit_note"/);
-  assert.match(app, /source_invoice_id: state\.invoiceDraft\.source_invoice_id \|\| null/);
-  assert.match(app, /meta_json: \{ kind: documentType, totals_snapshot: totals \}/);
+  assert.match(app, /source_invoice_id: sourceInvoiceId/);
+  assert.match(app, /credit_link_mode: creditLinkMode/);
   assert.match(route, /type_code: "381", invoice_type_code: "381"/);
-  assert.match(route, /creditAmount > row\.remaining/);
+  assert.match(route, /creditAmount > available/);
   assert.match(route, /rpcErrorMessage/);
   assert.match(route, /function nextCreditNoteNumber/);
   assert.match(route, /return `AV\$\{year\}-/);
@@ -536,7 +536,12 @@ test("preserves partial credit-note identity and source through save and issue",
   assert.match(route, /document_number: invoiceNumber/);
   assert.match(route, /d2f_financial_invoice_projections/);
   assert.match(issue, /new Error\(error\.message/);
-  assert.match(html, /app\.js\?v=20260722-credit-link-v3312/);
+  assert.match(html, /app\.js\?v=20260722-credit-source-v3313/);
+  assert.match(html, /id="i-credit-link-mode"/);
+  assert.match(html, /id="i-credit-source"/);
+  assert.match(app, /function syncInvoiceCreditSourceUi/);
+  assert.match(app, /status === "historical"/);
+  assert.match(route, /function creditableRemaining/);
 });
 
 test("removes issued credit notes from invoice balances", async () => {
@@ -595,7 +600,7 @@ test("uses the shared receivable engine in Financial and secures deposit and par
   assert.match(route, /action === "attachDeposit"/);
   assert.match(route, /action === "createPartialCreditNote"/);
   assert.match(route, /alreadyUsed/);
-  assert.match(route, /amount > row\.remaining/);
+  assert.match(route, /amount > available/);
 });
 
 test("ships an immutable Supabase audit trail instead of an empty web stub", async () => {
@@ -800,6 +805,10 @@ test("provides tenant-scoped support tickets with guided level-1 triage and trac
   assert.match(center, /D2F COMPLIANT · VERSION \{D2F_PLATFORM_VERSION\}/);
   assert.match(center, /copy\.adminTitle/);
   assert.match(center, /copy\.newInternalTicket/);
+  assert.match(center, /function exportTickets/);
+  assert.match(center, /text\/csv;charset=utf-8/);
+  assert.match(center, /externalProvider === "d2f_release"/);
+  assert.match(center, /copy\.exportTickets/);
   assert.match(center, /supportApi\("PATCH"/);
   assert.match(center, /action: "reanalyze"/);
   assert.match(center, /copy\.reanalyze/);

@@ -2,7 +2,7 @@ export type SupportLanguage = "fr" | "en" | "sr" | "it" | "es";
 
 type SupportCopy = {
   title: string; subtitle: string; newTicket: string; tickets: string; noTickets: string; supportByEmail: string;
-  adminTitle: string; adminSubtitle: string; newInternalTicket: string;
+  adminTitle: string; adminSubtitle: string; newInternalTicket: string; exportTickets: string;
   category: string; priority: string; subject: string; description: string; contactEmail: string; create: string; creating: string;
   assistantTitle: string; assistantText: string; emailActive: string; emailPending: string; reply: string; sendReply: string;
   internalNote: string; status: string; assignedTo: string; resolution: string; apply: string; close: string; back: string;
@@ -15,7 +15,7 @@ type SupportCopy = {
 export const supportCopies: Record<SupportLanguage, SupportCopy> = {
   fr: {
     title: "Support D2F", subtitle: "Créez et suivez vos demandes jusqu’à leur résolution.", newTicket: "Nouveau ticket", tickets: "Tickets", noTickets: "Aucun ticket pour le moment.", supportByEmail: "Support par e-mail",
-    adminTitle: "Centre de traitement D2F", adminSubtitle: "Traitez les tickets clients : attribution, réponse, statut, solution et clôture.", newInternalTicket: "Créer un ticket interne",
+    adminTitle: "Centre de traitement D2F", adminSubtitle: "Traitez les tickets clients : attribution, réponse, statut, solution et clôture.", newInternalTicket: "Créer un ticket interne", exportTickets: "Exporter CSV",
     category: "Catégorie", priority: "Priorité", subject: "Objet", description: "Décrivez le problème et les étapes pour le reproduire", contactEmail: "Adresse e-mail à informer", create: "Créer le ticket", creating: "Création…",
     assistantTitle: "Analyse guidée D2F", assistantText: "Une analyse déterministe fondée sur le contexte du ticket sera ajoutée. Ce n’est pas une IA générative : elle ne clôture jamais le ticket et D2F garde la décision finale.", emailActive: "Notifications e-mail actives", emailPending: "Suivi dans l’application actif ; raccordement d’envoi e-mail à finaliser.", reply: "Votre réponse", sendReply: "Envoyer la réponse",
     internalNote: "Note interne D2F (non visible par le client)", status: "Statut", assignedTo: "Attribué à", resolution: "Solution apportée", apply: "Mettre à jour", close: "Confirmer que le ticket est soldé", back: "Retour aux tickets",
@@ -29,7 +29,7 @@ export const supportCopies: Record<SupportLanguage, SupportCopy> = {
   },
   en: {
     title: "D2F Support", subtitle: "Create and track requests through resolution.", newTicket: "New ticket", tickets: "Tickets", noTickets: "No tickets yet.", supportByEmail: "Email support",
-    adminTitle: "D2F processing centre", adminSubtitle: "Handle customer tickets: assignment, reply, status, resolution and closure.", newInternalTicket: "Create internal ticket",
+    adminTitle: "D2F processing centre", adminSubtitle: "Handle customer tickets: assignment, reply, status, resolution and closure.", newInternalTicket: "Create internal ticket", exportTickets: "Export CSV",
     category: "Category", priority: "Priority", subject: "Subject", description: "Describe the issue and steps to reproduce it", contactEmail: "Email address to notify", create: "Create ticket", creating: "Creating…",
     assistantTitle: "D2F guided analysis", assistantText: "A deterministic analysis based on the ticket context will be added. This is not generative AI: it never closes a ticket and D2F retains the final decision.", emailActive: "Email notifications active", emailPending: "In-app tracking is active; outbound email delivery still needs configuration.", reply: "Your reply", sendReply: "Send reply",
     internalNote: "Internal D2F note (not visible to customer)", status: "Status", assignedTo: "Assigned to", resolution: "Resolution", apply: "Update", close: "Confirm that the ticket is closed", back: "Back to tickets",
@@ -43,7 +43,7 @@ export const supportCopies: Record<SupportLanguage, SupportCopy> = {
   },
   sr: {
     title: "D2F podrška", subtitle: "Kreirajte i pratite zahteve do rešenja.", newTicket: "Novi tiket", tickets: "Tiketi", noTickets: "Još nema tiketa.", supportByEmail: "Podrška e-poštom",
-    adminTitle: "D2F centar za obradu", adminSubtitle: "Obradite klijentske tikete: dodela, odgovor, status, rešenje i zatvaranje.", newInternalTicket: "Kreiraj interni tiket",
+    adminTitle: "D2F centar za obradu", adminSubtitle: "Obradite klijentske tikete: dodela, odgovor, status, rešenje i zatvaranje.", newInternalTicket: "Kreiraj interni tiket", exportTickets: "Izvezi CSV",
     category: "Kategorija", priority: "Prioritet", subject: "Naslov", description: "Opišite problem i korake za ponavljanje", contactEmail: "E-adresa za obaveštenja", create: "Kreiraj tiket", creating: "Kreiranje…",
     assistantTitle: "D2F vođena analiza", assistantText: "Dodaje se deterministička analiza zasnovana na kontekstu tiketa. To nije generativna AI: ne zatvara tiket, a D2F donosi konačnu odluku.", emailActive: "E-mail obaveštenja su aktivna", emailPending: "Praćenje u aplikaciji je aktivno; slanje e-pošte treba povezati.", reply: "Vaš odgovor", sendReply: "Pošalji odgovor",
     internalNote: "Interna D2F beleška (nije vidljiva klijentu)", status: "Status", assignedTo: "Dodeljeno", resolution: "Rešenje", apply: "Ažuriraj", close: "Potvrdi da je tiket zatvoren", back: "Nazad na tikete",
@@ -57,7 +57,7 @@ export const supportCopies: Record<SupportLanguage, SupportCopy> = {
   },
   it: {
     title: "Supporto D2F", subtitle: "Create e seguite le richieste fino alla risoluzione.", newTicket: "Nuovo ticket", tickets: "Ticket", noTickets: "Nessun ticket.", supportByEmail: "Supporto via e-mail",
-    adminTitle: "Centro di gestione D2F", adminSubtitle: "Gestite i ticket clienti: assegnazione, risposta, stato, soluzione e chiusura.", newInternalTicket: "Crea ticket interno",
+    adminTitle: "Centro di gestione D2F", adminSubtitle: "Gestite i ticket clienti: assegnazione, risposta, stato, soluzione e chiusura.", newInternalTicket: "Crea ticket interno", exportTickets: "Esporta CSV",
     category: "Categoria", priority: "Priorità", subject: "Oggetto", description: "Descrivete il problema e i passaggi per riprodurlo", contactEmail: "E-mail da informare", create: "Crea ticket", creating: "Creazione…",
     assistantTitle: "Analisi guidata D2F", assistantText: "Viene aggiunta un’analisi deterministica basata sul contesto del ticket. Non è IA generativa: non chiude mai il ticket e D2F mantiene la decisione finale.", emailActive: "Notifiche e-mail attive", emailPending: "Il monitoraggio nell’app è attivo; l’invio e-mail deve essere configurato.", reply: "La vostra risposta", sendReply: "Invia risposta",
     internalNote: "Nota interna D2F (non visibile al cliente)", status: "Stato", assignedTo: "Assegnato a", resolution: "Soluzione", apply: "Aggiorna", close: "Conferma chiusura ticket", back: "Torna ai ticket",
@@ -71,7 +71,7 @@ export const supportCopies: Record<SupportLanguage, SupportCopy> = {
   },
   es: {
     title: "Soporte D2F", subtitle: "Cree y siga sus solicitudes hasta su resolución.", newTicket: "Nuevo ticket", tickets: "Tickets", noTickets: "Aún no hay tickets.", supportByEmail: "Soporte por correo",
-    adminTitle: "Centro de gestión D2F", adminSubtitle: "Gestione tickets de clientes: asignación, respuesta, estado, solución y cierre.", newInternalTicket: "Crear ticket interno",
+    adminTitle: "Centro de gestión D2F", adminSubtitle: "Gestione tickets de clientes: asignación, respuesta, estado, solución y cierre.", newInternalTicket: "Crear ticket interno", exportTickets: "Exportar CSV",
     category: "Categoría", priority: "Prioridad", subject: "Asunto", description: "Describa el problema y los pasos para reproducirlo", contactEmail: "Correo a notificar", create: "Crear ticket", creating: "Creando…",
     assistantTitle: "Análisis guiado D2F", assistantText: "Se añade un análisis determinista basado en el contexto del ticket. No es IA generativa: nunca cierra el ticket y D2F conserva la decisión final.", emailActive: "Notificaciones por correo activas", emailPending: "El seguimiento en la aplicación está activo; falta configurar el envío de correo.", reply: "Su respuesta", sendReply: "Enviar respuesta",
     internalNote: "Nota interna D2F (no visible para el cliente)", status: "Estado", assignedTo: "Asignado a", resolution: "Solución", apply: "Actualizar", close: "Confirmar cierre del ticket", back: "Volver a tickets",

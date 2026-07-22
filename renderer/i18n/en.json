@@ -1587,5 +1587,15 @@
   "payments.error.credit_missing_id": "Credit note created without a returned identifier.",
   "payments.status.deposit_attached": "Deposit invoice attached.",
   "payments.status.partial_credit_created": "Partial credit note created as a draft for review.",
-  "financial.action.view_credits": "View credit notes"
+  "financial.action.view_credits": "View credit notes",
+  "invoices.credit_source.title": "Corrected invoice",
+  "invoices.credit_source.mode": "Linking mode",
+  "invoices.credit_source.automatic": "Automatic — source invoice",
+  "invoices.credit_source.manual": "Manual — choose an invoice",
+  "invoices.credit_source.invoice": "Source invoice",
+  "invoices.credit_source.hint": "Invoices issued in D2F and imported invoices can be selected.",
+  "invoices.credit_source.required": "Select the corrected invoice before saving the credit note.",
+  "invoices.credit_source.choose": "— select —",
+  "invoices.credit_source.imported": "imported",
+  "invoices.credit_source.issued": "issued"
 }

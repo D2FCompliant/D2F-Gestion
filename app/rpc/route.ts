@@ -604,7 +604,7 @@ function recognizedRevenueHt(invoices: JsonRecord[], datePrefix = "") {
     if (invoiceType(invoice) === "final") return sum + Math.max(0, numberValue(invoice.total_ht));
     if (invoiceType(invoice) !== "credit_note") return sum;
     const source = byId.get(creditSourceId(invoice));
-    return source && invoiceType(source) === "final" ? sum - Math.abs(numberValue(invoice.total_ht)) : sum;
+    return source && invoiceStatus(source) === "issued" && invoiceType(source) === "final" ? sum - Math.abs(numberValue(invoice.total_ht)) : sum;
   }, 0));
 }
 
@@ -625,6 +625,16 @@ function creditSourceId(creditNote: JsonRecord) {
   const links = Array.isArray(creditNote.links_from) ? creditNote.links_from : [];
   const link = links.map(object).find((item) => String(item.link_type || "").toLowerCase() === "credit_of");
   return link?.to_invoice_id ? String(link.to_invoice_id) : "";
+}
+
+function creditableRemaining(source: JsonRecord, invoices: JsonRecord[]) {
+  const sourceId = String(source.id || "");
+  const sourceTotal = Math.abs(numberValue(source.total_ttc || source.amount_due));
+  const credited = invoices.reduce((sum, invoice) => {
+    if (invoiceStatus(invoice) !== "issued" || invoiceType(invoice) !== "credit_note" || creditSourceId(invoice) !== sourceId) return sum;
+    return sum + Math.abs(numberValue(invoice.total_ttc || invoice.amount_due));
+  }, 0);
+  return Math.max(0, round2(sourceTotal - credited));
 }
 
 function invoiceGrossAmount(invoice: JsonRecord) {
@@ -1652,16 +1662,16 @@ async function dispatch(ownerEmail: string, method: string, args: unknown[], ten
       if (invoiceType(document) === "credit_note") {
         const sourceId = creditSourceId(document);
         if (!sourceId) throw new Error("L’avoir doit référencer la facture qu’il corrige");
-        const [source, invoices, payments] = await Promise.all([
+        const [source, invoices] = await Promise.all([
           getRecord(ownerEmail, "invoices", sourceId),
           listRecords(ownerEmail, "invoices"),
-          listRecords(ownerEmail, "payments"),
         ]);
-        if (!source || invoiceStatus(source) !== "issued" || invoiceType(source) === "credit_note") throw new Error("La facture corrigée doit être une facture émise");
-        const row = receivableRows(invoices, payments).find((candidate) => String(candidate.invoice.id || "") === sourceId);
+        const sourceStatus = source ? invoiceStatus(source) : "";
+        if (!source || !["issued", "historical"].includes(sourceStatus) || invoiceType(source) === "credit_note") throw new Error("La facture corrigée doit être une facture émise ou importée");
+        const available = creditableRemaining(source, invoices);
         const creditAmount = Math.abs(numberValue(document.total_ttc || document.amount_due));
-        if (!row || creditAmount <= .001 || creditAmount > row.remaining + .001) {
-          throw new Error(`Le montant de l’avoir doit être compris entre 0,01 et ${(row?.remaining || 0).toFixed(2)} EUR`);
+        if (creditAmount <= .001 || creditAmount > available + .001) {
+          throw new Error(`Le montant de l’avoir doit être compris entre 0,01 et ${available.toFixed(2)} EUR`);
         }
         if (!String(document.invoice_number || document.number || "").trim()) {
           const invoiceNumber = nextCreditNoteNumber(invoices, document);
@@ -1718,11 +1728,11 @@ async function dispatch(ownerEmail: string, method: string, args: unknown[], ten
     if (entity === "invoices" && action === "createPartialCreditNote") {
       const payload = object(first(args));
       const source = await getRecord(ownerEmail, "invoices", String(payload.invoiceId || payload.invoice_id || ""));
-      if (!source || invoiceStatus(source) !== "issued" || invoiceType(source) === "credit_note") throw new Error("La facture source doit être émise");
-      const [invoices, payments] = await Promise.all([listRecords(ownerEmail, "invoices"), listRecords(ownerEmail, "payments")]);
-      const row = receivableRows(invoices, payments).find((candidate) => String(candidate.invoice.id || "") === String(source.id || ""));
+      if (!source || !["issued", "historical"].includes(invoiceStatus(source)) || invoiceType(source) === "credit_note") throw new Error("La facture source doit être émise ou importée");
+      const invoices = await listRecords(ownerEmail, "invoices");
+      const available = creditableRemaining(source, invoices);
       const amount = round2(Math.abs(numberValue(payload.amount)));
-      if (!row || amount <= .001 || amount > row.remaining + .001) throw new Error(`Le montant de l’avoir doit être compris entre 0,01 et ${(row?.remaining || 0).toFixed(2)} EUR`);
+      if (amount <= .001 || amount > available + .001) throw new Error(`Le montant de l’avoir doit être compris entre 0,01 et ${available.toFixed(2)} EUR`);
       const sourceTtc = Math.abs(numberValue(source.total_ttc || source.amount_due));
       const ratio = sourceTtc > .001 ? amount / sourceTtc : 1;
       const totalHt = round2(Math.abs(numberValue(source.total_ht)) * ratio);
@@ -1730,15 +1740,16 @@ async function dispatch(ownerEmail: string, method: string, args: unknown[], ten
       const reason = String(payload.reason || "Annulation partielle du contrat").trim();
       return saveRecord(ownerEmail, "invoices", {
         ...source, id: crypto.randomUUID(), source_invoice_id: source.id, source_invoice_number: source.invoice_number || source.number || source.id,
-        invoice_number: "", number: "", type: "credit_note", type_code: "381", invoice_type_code: "381", status: "draft", date: today(), reason, partial_credit: true,
+        invoice_number: "", number: "", type: "credit_note", type_code: "381", invoice_type_code: "381", status: "draft", date: today(), reason, partial_credit: true, historical_import: false, credit_link_mode: "automatic",
         lines: [{ description: reason, quantity: 1, unit_price_ht: totalHt, tva_percent: totalHt > .001 ? round2((totalTva / totalHt) * 100) : 0 }],
-        total_ht: -totalHt, total_tva: -totalTva, total_ttc: -amount, amount_due: -amount, prepaid_amount: 0, deposit_allocated_amount: 0, deposit_allocations: [], meta_json: { ...jsonObject(source.meta_json), kind: "credit_note" },
+        total_ht: -totalHt, total_tva: -totalTva, total_ttc: -amount, amount_due: -amount, prepaid_amount: 0, deposit_allocated_amount: 0, deposit_allocations: [], meta_json: { ...jsonObject(source.meta_json), kind: "credit_note", source: { invoice_id: source.id, invoice_number: source.invoice_number || source.number || source.id }, credit_link_mode: "automatic" },
       });
     }
     if (entity === "invoices" && action === "createCreditNote") {
       const source = await getRecord(ownerEmail, "invoices", idFrom(first(args)));
       if (!source) throw new Error("Facture introuvable");
-      return saveRecord(ownerEmail, "invoices", { ...source, id: crypto.randomUUID(), source_invoice_id: source.id, source_invoice_number: source.invoice_number || source.number || source.id, invoice_number: "", type: "credit_note", type_code: "381", invoice_type_code: "381", status: "draft", total_ht: -Math.abs(numberValue(source.total_ht)), total_tva: -Math.abs(numberValue(source.total_tva)), total_ttc: -Math.abs(numberValue(source.total_ttc)), meta_json: { ...jsonObject(source.meta_json), kind: "credit_note" } });
+      if (!["issued", "historical"].includes(invoiceStatus(source)) || invoiceType(source) === "credit_note") throw new Error("La facture source doit être émise ou importée");
+      return saveRecord(ownerEmail, "invoices", { ...source, id: crypto.randomUUID(), source_invoice_id: source.id, source_invoice_number: source.invoice_number || source.number || source.id, invoice_number: "", type: "credit_note", type_code: "381", invoice_type_code: "381", status: "draft", historical_import: false, credit_link_mode: "automatic", total_ht: -Math.abs(numberValue(source.total_ht)), total_tva: -Math.abs(numberValue(source.total_tva)), total_ttc: -Math.abs(numberValue(source.total_ttc)), meta_json: { ...jsonObject(source.meta_json), kind: "credit_note", source: { invoice_id: source.id, invoice_number: source.invoice_number || source.number || source.id }, credit_link_mode: "automatic" } });
     }
     if (entity === "payments" && action === "sumByInvoice") {
       const id = idFrom(first(args));

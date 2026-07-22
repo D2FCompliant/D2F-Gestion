@@ -1522,5 +1522,15 @@
   "payments.error.credit_missing_id": "Nota di credito creata senza identificativo restituito.",
   "payments.status.deposit_attached": "Fattura di acconto collegata.",
   "payments.status.partial_credit_created": "Nota di credito parziale creata in bozza per la verifica.",
-  "financial.action.view_credits": "Vedi note di credito"
+  "financial.action.view_credits": "Vedi note di credito",
+  "invoices.credit_source.title": "Fattura rettificata",
+  "invoices.credit_source.mode": "Modalità di collegamento",
+  "invoices.credit_source.automatic": "Automatica — fattura di origine",
+  "invoices.credit_source.manual": "Manuale — scegli una fattura",
+  "invoices.credit_source.invoice": "Fattura di origine",
+  "invoices.credit_source.hint": "È possibile selezionare fatture emesse in D2F e fatture importate.",
+  "invoices.credit_source.required": "Selezionare la fattura rettificata prima di salvare la nota di credito.",
+  "invoices.credit_source.choose": "— selezionare —",
+  "invoices.credit_source.imported": "importata",
+  "invoices.credit_source.issued": "emessa"
 }

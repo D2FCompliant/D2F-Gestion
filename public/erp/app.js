@@ -583,6 +583,7 @@ function invoiceFullToDraft(full) {
     source_quote_id: inv.quote_id ?? inv.source_quote_id ?? null,
     source_invoice_id: inv.source_invoice_id ?? inv.sourceInvoiceId ?? null,
     source_invoice_number: inv.source_invoice_number ?? inv.sourceInvoiceNumber ?? "",
+    credit_link_mode: inv.credit_link_mode ?? inv.meta_json?.credit_link_mode ?? "automatic",
     vat_mode: inv.vat_mode ?? "AUTO",
     vat_effective: inv.vat_effective ?? "AUTO",
     allowance_percent: Number(inv.allowance_percent || 0),
@@ -869,7 +870,7 @@ function toolbarDirectActionIds(moduleKey) {
   }
 
   if (moduleKey === "invoices") {
-    if (state.invoiceDraft?.historical_import) return ["invoices:new"];
+    if (state.invoiceDraft?.historical_import) return ["invoices:toCreditNote", "invoices:new"];
     if (state.invoiceDraft?.id && isDraftInvoice()) return ["invoices:save", "invoices:issue"];
     if (state.invoiceDraft?.id) return ["invoices:toCreditNote", "invoices:recordPayment"];
     return ["invoices:save", "invoices:new"];
@@ -906,7 +907,7 @@ function createToolbarActionButton(action, moduleKey, inOverflow = false) {
 
 function isToolbarActionDisabled(actionId, moduleKey) {
   if (moduleKey === "quotes" && state.quoteDraft?.historical_import) return !["quotes:new", "quotes:importCsv"].includes(actionId);
-  if (moduleKey === "invoices" && state.invoiceDraft?.historical_import) return !["invoices:new", "invoices:importCsv"].includes(actionId);
+  if (moduleKey === "invoices" && state.invoiceDraft?.historical_import) return !["invoices:new", "invoices:importCsv", "invoices:toCreditNote"].includes(actionId);
   if (moduleKey === "quotes") {
     const hasId = !!state.quoteDraft?.id;
     const quoteState = canonicalQuoteStatus(state.quoteDraft);
@@ -1086,6 +1087,7 @@ const state = {
   },
 
   invoices: [],
+  invoiceSourceCandidates: [],
   selectedInvoiceId: null,
 
   invoiceDraft: {
@@ -1100,6 +1102,9 @@ const state = {
     type_code: "380",
     prepaid_amount: 0,
     source_quote_id: null,
+    source_invoice_id: null,
+    source_invoice_number: "",
+    credit_link_mode: "automatic",
     vat_mode: "AUTO",
     vat_effective: "AUTO",
   },
@@ -4825,6 +4830,77 @@ function renderQuoteDraft() {
   };
 })();
 
+function invoiceCreditSourceCandidates() {
+  const currentId = String(state.invoiceDraft?.id || "");
+  return (state.invoiceSourceCandidates || state.invoices || [])
+    .map(normalizeInvoice)
+    .filter((invoice) => {
+      const status = invoiceStatus(invoice);
+      return String(invoice?.id || "") !== currentId
+        && invoiceKind(invoice) !== "credit_note"
+        && (status === "issued" || status === "historical" || Boolean(invoice?.historical_import));
+    });
+}
+
+function invoiceCreditSourceLabel(invoice) {
+  const number = invoice?.invoice_number || invoice?.number || invoice?.id || "—";
+  const imported = invoiceStatus(invoice) === "historical" || invoice?.historical_import
+    ? t("invoices.credit_source.imported", "importée")
+    : t("invoices.credit_source.issued", "émise");
+  const client = invoice?.client_name || invoice?.buyer_name || invoice?.customer_name || "—";
+  const total = money(Math.abs(Number(invoice?.total_ttc || invoice?.amount_due || 0)));
+  return number + " — " + client + " — " + total + " EUR (" + imported + ")";
+}
+
+function syncInvoiceCreditSourceUi(readOnly = false) {
+  const box = $("i-credit-source-box");
+  const modeSelect = $("i-credit-link-mode");
+  const sourceSelect = $("i-credit-source");
+  if (!box || !modeSelect || !sourceSelect) return;
+
+  const isCreditNote = Boolean(
+    state.invoiceDraft?.source_invoice_id
+    || state.invoiceDraft?.type === "credit_note"
+    || String(state.invoiceDraft?.type_code || "") === "381"
+  );
+  box.hidden = !isCreditNote;
+  if (!isCreditNote) return;
+
+  const candidates = invoiceCreditSourceCandidates();
+  const currentSourceId = String(state.invoiceDraft?.source_invoice_id || "");
+  sourceSelect.innerHTML = "";
+  const emptyOption = document.createElement("option");
+  emptyOption.value = "";
+  emptyOption.textContent = t("invoices.credit_source.choose", "— sélectionner —");
+  sourceSelect.appendChild(emptyOption);
+  candidates.forEach((invoice) => {
+    const option = document.createElement("option");
+    option.value = String(invoice.id);
+    option.textContent = invoiceCreditSourceLabel(invoice);
+    sourceSelect.appendChild(option);
+  });
+  sourceSelect.value = candidates.some((invoice) => String(invoice.id) === currentSourceId) ? currentSourceId : "";
+
+  const mode = state.invoiceDraft?.credit_link_mode === "manual" ? "manual" : "automatic";
+  modeSelect.value = mode;
+  modeSelect.disabled = readOnly;
+  sourceSelect.disabled = readOnly || mode === "automatic";
+
+  modeSelect.onchange = () => {
+    state.invoiceDraft.credit_link_mode = modeSelect.value === "manual" ? "manual" : "automatic";
+    sourceSelect.disabled = readOnly || state.invoiceDraft.credit_link_mode === "automatic";
+  };
+  sourceSelect.onchange = () => {
+    const source = candidates.find((invoice) => String(invoice.id) === String(sourceSelect.value));
+    state.invoiceDraft.source_invoice_id = source?.id || null;
+    state.invoiceDraft.source_invoice_number = source?.invoice_number || source?.number || "";
+    if (source?.client_id) {
+      state.invoiceDraft.client_id = source.client_id;
+      if ($("i-client")) $("i-client").value = source.client_id;
+    }
+  };
+}
+
 function renderInvoiceDraft() {
   const readOnly = Boolean(state.invoiceDraft?.id && !isDraftInvoice());
   if ($("i-id")) $("i-id").value = state.invoiceDraft.id || "";
@@ -4856,6 +4932,7 @@ function renderInvoiceDraft() {
     $("i-discount-reason").oninput = (event) => { state.invoiceDraft.allowance_reason = event.target.value; };
   }
   for (const id of ["i-date", "i-client", "i-vat-mode"]) if ($(id)) $(id).disabled = readOnly;
+  syncInvoiceCreditSourceUi(readOnly);
 
   renderLines(
     $("i-lines"),
@@ -5129,6 +5206,7 @@ renderQuoteDraft();
     const invoiceStatusSource = q.trim()
       ? (await window.api.invoices.list({ q: "" })).map(normalizeInvoice)
       : state.invoices;
+    state.invoiceSourceCandidates = invoiceStatusSource;
 
     try {
       state.payments.all = (await window.api.payments.listAll({})) || [];
@@ -5177,6 +5255,7 @@ renderQuoteDraft();
       source_quote_id: full.invoice.source_quote_id || null,
       source_invoice_id: full.invoice.source_invoice_id || full.invoice.sourceInvoiceId || null,
       source_invoice_number: full.invoice.source_invoice_number || full.invoice.sourceInvoiceNumber || "",
+      credit_link_mode: full.invoice.credit_link_mode || full.invoice.meta_json?.credit_link_mode || "automatic",
       vat_mode: full.invoice.vat_mode || "AUTO",
       vat_effective: "AUTO",
       allowance_percent: Number(full.invoice.allowance_percent || 0),
@@ -6297,6 +6376,9 @@ case "invoices:new":
     type_code: "380",
     prepaid_amount: 0,
     source_quote_id: null,
+    source_invoice_id: null,
+    source_invoice_number: "",
+    credit_link_mode: "automatic",
     vat_mode: "AUTO",
     vat_effective: "AUTO",
     allowance_percent: 0,
@@ -6361,6 +6443,17 @@ case "invoices:save": {
     : state.invoiceDraft.type === "deposit" || state.invoiceDraft.type_code === "386"
       ? "deposit"
       : "final";
+  const creditLinkMode = state.invoiceDraft.credit_link_mode === "manual" ? "manual" : "automatic";
+  let sourceInvoiceId = state.invoiceDraft.source_invoice_id || null;
+  let sourceInvoiceNumber = state.invoiceDraft.source_invoice_number || "";
+  if (documentType === "credit_note") {
+    sourceInvoiceId = $("i-credit-source")?.value || sourceInvoiceId;
+    const source = invoiceCreditSourceCandidates().find((invoice) => String(invoice.id) === String(sourceInvoiceId));
+    if (!sourceInvoiceId || !source) {
+      throw new Error(t("invoices.credit_source.required", "Sélectionnez la facture corrigée avant d’enregistrer l’avoir."));
+    }
+    sourceInvoiceNumber = source.invoice_number || source.number || sourceInvoiceNumber || sourceInvoiceId;
+  }
 
   const payload = {
     id: state.invoiceDraft.id || undefined,
@@ -6376,8 +6469,9 @@ case "invoices:save": {
     status: "draft",
     prepaid_amount: Number(state.invoiceDraft.prepaid_amount || 0) || 0,
     source_quote_id: state.invoiceDraft.source_quote_id || null,
-    source_invoice_id: state.invoiceDraft.source_invoice_id || null,
-    source_invoice_number: state.invoiceDraft.source_invoice_number || "",
+    source_invoice_id: sourceInvoiceId,
+    source_invoice_number: sourceInvoiceNumber,
+    credit_link_mode: creditLinkMode,
     subtotal_ht: Number(totals.subtotal_ht || 0),
     allowance_percent: Number(state.invoiceDraft.allowance_percent || 0),
     allowance_amount: Number(totals.allowance_amount || 0),
@@ -6387,7 +6481,14 @@ case "invoices:save": {
     total_tva: Number(totals.total_tva || 0),
     total_ttc: Number(totals.total_ttc || 0),
     lines: state.invoiceDraft.lines,
-    meta_json: { kind: documentType, totals_snapshot: totals },
+    meta_json: {
+      kind: documentType,
+      totals_snapshot: totals,
+      ...(documentType === "credit_note" ? {
+        source: { invoice_id: sourceInvoiceId, invoice_number: sourceInvoiceNumber },
+        credit_link_mode: creditLinkMode,
+      } : {}),
+    },
   };
 
   if (!state.invoiceDraft.id) {
@@ -6422,6 +6523,9 @@ case "invoices:delete": {
     type_code: "380",
     prepaid_amount: 0,
     source_quote_id: null,
+    source_invoice_id: null,
+    source_invoice_number: "",
+    credit_link_mode: "automatic",
     vat_mode: "AUTO",
     vat_effective: "AUTO",
   };

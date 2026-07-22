@@ -1522,5 +1522,15 @@
   "payments.error.credit_missing_id": "Књижно одобрење је креирано без враћеног идентификатора.",
   "payments.status.deposit_attached": "Авансни рачун је повезан.",
   "payments.status.partial_credit_created": "Делимично књижно одобрење је креирано као нацрт за проверу.",
-  "financial.action.view_credits": "Прикажи књижна одобрења"
+  "financial.action.view_credits": "Прикажи књижна одобрења",
+  "invoices.credit_source.title": "Ispravljena faktura",
+  "invoices.credit_source.mode": "Način povezivanja",
+  "invoices.credit_source.automatic": "Automatski — izvorna faktura",
+  "invoices.credit_source.manual": "Ručno — izaberite fakturu",
+  "invoices.credit_source.invoice": "Izvorna faktura",
+  "invoices.credit_source.hint": "Mogu se izabrati fakture izdate u D2F-u i uvezene fakture.",
+  "invoices.credit_source.required": "Izaberite ispravljenu fakturu pre čuvanja knjižnog odobrenja.",
+  "invoices.credit_source.choose": "— izaberite —",
+  "invoices.credit_source.imported": "uvezena",
+  "invoices.credit_source.issued": "izdata"
 }

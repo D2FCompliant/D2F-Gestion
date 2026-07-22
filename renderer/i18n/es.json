@@ -1522,5 +1522,15 @@
   "payments.error.credit_missing_id": "El abono se creó sin devolver un identificador.",
   "payments.status.deposit_attached": "Factura de anticipo vinculada.",
   "payments.status.partial_credit_created": "Abono parcial creado como borrador para revisión.",
-  "financial.action.view_credits": "Ver abonos"
+  "financial.action.view_credits": "Ver abonos",
+  "invoices.credit_source.title": "Factura corregida",
+  "invoices.credit_source.mode": "Modo de vinculación",
+  "invoices.credit_source.automatic": "Automático — factura de origen",
+  "invoices.credit_source.manual": "Manual — elegir una factura",
+  "invoices.credit_source.invoice": "Factura de origen",
+  "invoices.credit_source.hint": "Se pueden seleccionar facturas emitidas en D2F y facturas importadas.",
+  "invoices.credit_source.required": "Seleccione la factura corregida antes de guardar el abono.",
+  "invoices.credit_source.choose": "— seleccionar —",
+  "invoices.credit_source.imported": "importada",
+  "invoices.credit_source.issued": "emitida"
 }

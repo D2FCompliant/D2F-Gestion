@@ -1532,5 +1532,15 @@
   "payments.error.credit_missing_id": "Avoir créé mais identifiant non retourné.",
   "payments.status.deposit_attached": "Facture d’acompte rattachée.",
   "payments.status.partial_credit_created": "Avoir partiel créé en brouillon pour contrôle.",
-  "financial.action.view_credits": "Voir les avoirs"
+  "financial.action.view_credits": "Voir les avoirs",
+  "invoices.credit_source.title": "Facture corrigée",
+  "invoices.credit_source.mode": "Mode de rattachement",
+  "invoices.credit_source.automatic": "Automatique — facture d’origine",
+  "invoices.credit_source.manual": "Manuel — choisir une facture",
+  "invoices.credit_source.invoice": "Facture d’origine",
+  "invoices.credit_source.hint": "Les factures émises dans D2F et les factures importées peuvent être sélectionnées.",
+  "invoices.credit_source.required": "Sélectionnez la facture corrigée avant d’enregistrer l’avoir.",
+  "invoices.credit_source.choose": "— sélectionner —",
+  "invoices.credit_source.imported": "importée",
+  "invoices.credit_source.issued": "émise"
 }

@@ -867,6 +867,24 @@
                 <label><span data-i18n="invoices.client">Client (BG-7)</span><select id="i-client"></select></label>
               </div>
 
+              <div id="i-credit-source-box" class="creditSourceBox" hidden>
+                <div class="card__title" data-i18n="invoices.credit_source.title">Facture corrigée</div>
+                <div class="row2">
+                  <label>
+                    <span data-i18n="invoices.credit_source.mode">Mode de rattachement</span>
+                    <select id="i-credit-link-mode">
+                      <option value="automatic" data-i18n="invoices.credit_source.automatic">Automatique — facture d’origine</option>
+                      <option value="manual" data-i18n="invoices.credit_source.manual">Manuel — choisir une facture</option>
+                    </select>
+                  </label>
+                  <label>
+                    <span data-i18n="invoices.credit_source.invoice">Facture d’origine</span>
+                    <select id="i-credit-source"></select>
+                  </label>
+                </div>
+                <div class="hint" id="i-credit-source-hint" data-i18n="invoices.credit_source.hint">Les factures émises dans D2F et les factures importées peuvent être sélectionnées.</div>
+              </div>
+
               <div class="row2">
                 <label>
                   <span data-i18n="vat.mode.label">TVA (mode)</span>
@@ -1724,7 +1742,7 @@
   <script src="./renderer/web-api-shim.js?v=20260720-smtp-v337"></script>
   <script src="./dashboard-ui.js?v=20260720-smtp-v337"></script>
   <script src="./financial-expense-ui.js?v=20260720-smtp-v337"></script>
-  <script src="./app.js?v=20260722-credit-link-v3312"></script>
+  <script src="./app.js?v=20260722-credit-source-v3313"></script>
 
   <div id="clientsImportModal" class="modal" aria-hidden="true">
     <div class="modal__backdrop" data-modal-close></div>
