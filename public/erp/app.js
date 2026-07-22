@@ -1001,7 +1001,9 @@ function showPage(key) {
   state.currentSubview = "";
   activeNavItem?.closest(".navProduct")?.classList.add("is-open");
   renderWorkflowCompanion(key);
-  refreshModule(key).catch((error) => setStatus(`Erreur: ${error.message}`));
+  const refreshPromise = refreshModule(key);
+  refreshPromise.catch((error) => setStatus(`Erreur: ${error.message}`));
+  return refreshPromise;
 }
 
 window.D2FShowPage = showPage;
@@ -6556,8 +6558,11 @@ case "invoices:toCreditNote": {
   const newId = res?.id || res?.invoice_id || null;
   if (!newId) throw new Error("Avoir créé mais id non retourné.");
   state.selectedInvoiceId = newId;
-  showPage("invoices");
-  setStatus(t("status.creditnote_created", "Credit note (381) created from invoice."));
+  await showPage("invoices");
+  if (String(state.invoiceDraft?.source_invoice_id || "") !== String(srcId)) {
+    throw new Error("Le rattachement automatique de l’avoir à la facture source n’a pas été conservé.");
+  }
+  setStatus(t("status.creditnote_created", "Credit note (381) created and linked to the source invoice."));
   break;
 }
 

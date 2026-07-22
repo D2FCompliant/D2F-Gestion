@@ -82,6 +82,17 @@ test("creates separated Financial projections and Expense aggregates", async () 
   assert.doesNotMatch(sql, /^as \$$|^\$;$/m);
 });
 
+test("removes the ambiguous client_id reference from atomic invoice issuance", async () => {
+  const sql = await readFile(new URL("supabase/migrations/20260722103000_fix_invoice_issue_client_reference.sql", root), "utf8");
+  assert.match(sql, /create or replace function public\.d2f_issue_invoice_v1/);
+  assert.match(sql, /v_client_id text/);
+  assert.match(sql, /preference\.client_id = v_client_id/);
+  assert.match(sql, /'buyer',[\s\S]*'id', v_client_id/);
+  assert.doesNotMatch(sql, /preference\.client_id = client_id/);
+  assert.doesNotMatch(sql, /\n  client_id text;/);
+  assert.match(sql, /'invoice-service', '3\.3\.14'/);
+});
+
 test("routes the legacy issue command through the atomic platform boundary", async () => {
   const [route, helper, app] = await Promise.all([
     readFile(new URL("app/rpc/route.ts", root), "utf8"),
