@@ -418,10 +418,10 @@ function nextCreditNoteNumber(records: JsonRecord[], document: JsonRecord) {
   const candidateYear = String(document.date || document.document_date || document.created_at || "").slice(0, 4);
   const year = /^\d{4}$/.test(candidateYear) ? candidateYear : String(new Date().getUTCFullYear());
   const maximum = records.reduce((current, record) => {
-    const match = String(record.invoice_number || record.number || "").match(new RegExp(`^(?:AC|AV)${year}-(\\d+)$`, "i"));
+    const match = String(record.invoice_number || record.number || "").match(new RegExp(`^AV${year}-(\\d+)$`, "i"));
     return match ? Math.max(current, Number(match[1]) || 0) : current;
   }, 0);
-  return `AC${year}-${String(maximum + 1).padStart(4, "0")}`;
+  return `AV${year}-${String(maximum + 1).padStart(4, "0")}`;
 }
 
 async function repairIssuedCreditNotes(supabase: ReturnType<typeof getSupabaseAdmin>, ownerEmail: string, records: JsonRecord[]) {

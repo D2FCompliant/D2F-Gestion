@@ -38,7 +38,7 @@ test("ships a touch-first smartphone layout", async () => {
     readFile(new URL("../public/erp/index.html", import.meta.url), "utf8"),
   ]);
   assert.match(html, /styles\.css\?v=20260720-smtp-v337/);
-  assert.match(html, /app\.js\?v=20260722-credit-sync-v3311/);
+  assert.match(html, /app\.js\?v=20260722-credit-link-v3312/);
   assert.match(styles, /@media \(max-width: 760px\)/);
   assert.match(styles, /platformPage\.is-active\{[^}]*overflow-y:auto[^}]*scrollbar-gutter:stable/s);
   assert.match(styles, /compact workspaces by default/);
@@ -74,8 +74,8 @@ test("makes the quote deposit unit explicit with no preset value", async () => {
   assert.match(app, /syncQuoteDepositModeUi\(\{ clearValue: true \}\)/);
   assert.match(styles, /\.depositModeOption input:checked \+ span/);
   assert.match(shell, /app-build-badge">\{D2F_PLATFORM_VERSION_LABEL\}/);
-  assert.match(platformVersion, /D2F_PLATFORM_VERSION = "3\.3\.11"/);
-  assert.equal(JSON.parse(pkg).version, "3.3.11");
+  assert.match(platformVersion, /D2F_PLATFORM_VERSION = "3\.3\.12"/);
+  assert.equal(JSON.parse(pkg).version, "3.3.12");
 });
 
 test("renders human-readable document lists on desktop and smartphone", async () => {
@@ -531,11 +531,12 @@ test("preserves partial credit-note identity and source through save and issue",
   assert.match(route, /creditAmount > row\.remaining/);
   assert.match(route, /rpcErrorMessage/);
   assert.match(route, /function nextCreditNoteNumber/);
+  assert.match(route, /return `AV\$\{year\}-/);
   assert.match(route, /repairIssuedCreditNotes/);
   assert.match(route, /document_number: invoiceNumber/);
   assert.match(route, /d2f_financial_invoice_projections/);
   assert.match(issue, /new Error\(error\.message/);
-  assert.match(html, /app\.js\?v=20260722-credit-sync-v3311/);
+  assert.match(html, /app\.js\?v=20260722-credit-link-v3312/);
 });
 
 test("removes issued credit notes from invoice balances", async () => {
