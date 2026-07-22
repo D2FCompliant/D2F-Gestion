@@ -414,6 +414,61 @@ function searchText(data: JsonRecord) {
     .filter(Boolean).join(" ").toLowerCase().slice(0, 2000);
 }
 
+function nextCreditNoteNumber(records: JsonRecord[], document: JsonRecord) {
+  const candidateYear = String(document.date || document.document_date || document.created_at || "").slice(0, 4);
+  const year = /^\d{4}$/.test(candidateYear) ? candidateYear : String(new Date().getUTCFullYear());
+  const maximum = records.reduce((current, record) => {
+    const match = String(record.invoice_number || record.number || "").match(new RegExp(`^(?:AC|AV)${year}-(\\d+)$`, "i"));
+    return match ? Math.max(current, Number(match[1]) || 0) : current;
+  }, 0);
+  return `AC${year}-${String(maximum + 1).padStart(4, "0")}`;
+}
+
+async function repairIssuedCreditNotes(supabase: ReturnType<typeof getSupabaseAdmin>, ownerEmail: string, records: JsonRecord[]) {
+  const repaired = [...records];
+  const missing = repaired
+    .filter((record) => invoiceStatus(record) === "issued" && Boolean(creditSourceId(record)) && (!String(record.invoice_number || record.number || "").trim() || invoiceType(record) !== "credit_note"))
+    .sort((left, right) => String(left.created_at || left.date || left.id || "").localeCompare(String(right.created_at || right.date || right.id || "")));
+
+  for (const record of missing) {
+    const index = repaired.findIndex((candidate) => String(candidate.id || "") === String(record.id || ""));
+    const invoiceNumber = String(record.invoice_number || record.number || "").trim() || nextCreditNoteNumber(repaired, record);
+    const normalized = normalizeRecord("invoices", {
+      ...record,
+      type: "credit_note",
+      type_code: "381",
+      invoice_type_code: "381",
+      invoice_number: invoiceNumber,
+      number: invoiceNumber,
+      status: "issued",
+      total_ht: -Math.abs(numberValue(record.total_ht)),
+      total_tva: -Math.abs(numberValue(record.total_tva)),
+      total_ttc: -Math.abs(numberValue(record.total_ttc)),
+      amount_due: -Math.abs(numberValue(record.amount_due || record.total_ttc)),
+      meta_json: { ...jsonObject(record.meta_json), kind: "credit_note" },
+    });
+    const updated = await supabase.from("d2f_records").update({
+      data: normalized,
+      status: "issued",
+      document_number: invoiceNumber,
+      search_text: searchText(normalized),
+      updated_at: new Date().toISOString(),
+    }).eq("owner_email", ownerEmail).eq("entity", "invoices").eq("id", String(record.id));
+    if (updated.error) throw updated.error;
+    const projection = await supabase.from("d2f_financial_invoice_projections").update({
+      invoice_number: invoiceNumber,
+      invoice_type: "credit_note",
+      net_amount: numberValue(normalized.total_ht),
+      tax_amount: numberValue(normalized.total_tva),
+      gross_amount: numberValue(normalized.total_ttc),
+      projected_at: new Date().toISOString(),
+    }).eq("owner_key", ownerEmail).eq("invoice_id", String(record.id));
+    if (projection.error && !["42P01", "PGRST204", "PGRST205"].includes(projection.error.code || "")) throw projection.error;
+    if (index >= 0) repaired[index] = { ...normalized, id: record.id, created_at: record.created_at, updated_at: new Date().toISOString() };
+  }
+  return repaired;
+}
+
 async function listRecords(ownerEmail: string, entity: Entity, query: JsonRecord = {}) {
   const supabase = getSupabaseAdmin();
   let request = supabase.from("d2f_records").select("id,data,created_at,updated_at")
@@ -425,8 +480,9 @@ async function listRecords(ownerEmail: string, entity: Entity, query: JsonRecord
   }
   const { data, error } = await request;
   if (error) throw error;
-  const records = (data || []).map((row) => ({ ...object(row.data), id: row.id, created_at: row.created_at, updated_at: row.updated_at }));
-  if (!['quotes', 'invoices'].includes(entity)) return records;
+  let records = (data || []).map((row) => ({ ...object(row.data), id: row.id, created_at: row.created_at, updated_at: row.updated_at }));
+  if (entity === "invoices" && !q) records = await repairIssuedCreditNotes(supabase, ownerEmail, records);
+  if (!["quotes", "invoices"].includes(entity)) return records;
   const clientIds = [...new Set(records.map((record) => String(record.client_id || "")).filter(Boolean))];
   if (!clientIds.length) return records;
   const { data: clients, error: clientError } = await supabase.from("d2f_records").select("id,data")
@@ -1606,6 +1662,10 @@ async function dispatch(ownerEmail: string, method: string, args: unknown[], ten
         const creditAmount = Math.abs(numberValue(document.total_ttc || document.amount_due));
         if (!row || creditAmount <= .001 || creditAmount > row.remaining + .001) {
           throw new Error(`Le montant de l’avoir doit être compris entre 0,01 et ${(row?.remaining || 0).toFixed(2)} EUR`);
+        }
+        if (!String(document.invoice_number || document.number || "").trim()) {
+          const invoiceNumber = nextCreditNoteNumber(invoices, document);
+          await saveRecord(ownerEmail, "invoices", { ...document, id, invoice_number: invoiceNumber, number: invoiceNumber, type: "credit_note", type_code: "381", invoice_type_code: "381" });
         }
       }
       return issueInvoiceAtomically(getSupabaseAdmin(), {
