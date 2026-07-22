@@ -90,7 +90,7 @@ test("removes the ambiguous client_id reference from atomic invoice issuance", a
   assert.match(sql, /'buyer',[\s\S]*'id', v_client_id/);
   assert.doesNotMatch(sql, /preference\.client_id = client_id/);
   assert.doesNotMatch(sql, /\n  client_id text;/);
-  assert.match(sql, /'invoice-service', '3\.3\.14'/);
+  assert.match(sql, /'invoice-service', '3\.3\.16'/);
 });
 
 test("scopes Country Pack qualification and publication by application", async () => {
@@ -338,4 +338,18 @@ test("issues one-time D2F password links valid for 24 hours", async () => {
   assert.match(completion, /Lien d’activation déjà utilisé ou remplacé/);
   assert.match(completion, /delete userMetadata\.d2f_password_activation_nonce/);
   assert.match(shell, /d2f_activation/);
+});
+
+test("locks every runtime to the official Supabase project", async () => {
+  const [server, wrangler, env] = await Promise.all([
+    readFile(new URL("lib/supabase/server.ts", root), "utf8"),
+    readFile(new URL("wrangler.cloudflare.jsonc", root), "utf8"),
+    readFile(new URL(".env.local", root), "utf8"),
+  ]);
+  for (const source of [server, wrangler, env]) {
+    assert.match(source, /eafnemhzrvcdavjdbtpy/);
+  }
+  assert.match(server, /assertOfficialSupabaseUrl\(url\)/);
+  assert.match(server, /assertOfficialServiceRoleKey\(serviceRoleKey\)/);
+  assert.match(server, /payload\.ref !== OFFICIAL_SUPABASE_PROJECT_ID/);
 });

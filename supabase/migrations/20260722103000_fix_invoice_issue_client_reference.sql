@@ -157,7 +157,7 @@ begin
 
   event_envelope := public.d2f_canonical_event_v1(
     p_event_id, 'InvoiceIssued', 1, issued_at,
-    'd2f-gestion', 'invoice-service', '3.3.14',
+    'd2f-gestion', 'invoice-service', '3.3.16',
     'CustomerInvoice', p_invoice_id, 1,
     coalesce(nullif(p_tenant_id, ''), p_owner_key),
     'user', p_actor_id, p_correlation_id, null,
