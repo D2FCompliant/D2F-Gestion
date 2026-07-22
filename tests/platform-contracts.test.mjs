@@ -90,7 +90,7 @@ test("removes the ambiguous client_id reference from atomic invoice issuance", a
   assert.match(sql, /'buyer',[\s\S]*'id', v_client_id/);
   assert.doesNotMatch(sql, /preference\.client_id = client_id/);
   assert.doesNotMatch(sql, /\n  client_id text;/);
-  assert.match(sql, /'invoice-service', '3\.3\.16'/);
+  assert.match(sql, /'invoice-service', '3\.3\.17'/);
 });
 
 test("scopes Country Pack qualification and publication by application", async () => {
@@ -350,6 +350,5 @@ test("locks every runtime to the official Supabase project", async () => {
     assert.match(source, /eafnemhzrvcdavjdbtpy/);
   }
   assert.match(server, /assertOfficialSupabaseUrl\(url\)/);
-  assert.match(server, /assertOfficialServiceRoleKey\(serviceRoleKey\)/);
-  assert.match(server, /payload\.ref !== OFFICIAL_SUPABASE_PROJECT_ID/);
+  assert.doesNotMatch(server, /assertOfficialServiceRoleKey/);
 });
