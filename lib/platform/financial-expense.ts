@@ -104,6 +104,80 @@ export async function listFinancialWorkspace(supabase: SupabaseClient, ownerKey:
   };
 }
 
+function csvCell(value: unknown) {
+  return `"${String(value ?? "").replace(/"/g, '""')}"`;
+}
+
+export async function createFinancialAccountingCsv(
+  supabase: SupabaseClient,
+  ownerKey: string,
+  companyValue: unknown,
+) {
+  await refreshFinancialProjections(supabase, ownerKey);
+  const workspace = await listFinancialWorkspace(supabase, ownerKey);
+  const company = object(companyValue);
+  const accountant = object(company.accountant_firm);
+  const headers = [
+    "source_type", "source_reference", "status", "currency", "amount",
+    "journal", "account", "rule_status", "created_at",
+  ];
+  const rows = workspace.proposals.map((proposal) => {
+    const details = object(proposal.proposal);
+    return [
+      proposal.source_type,
+      details.sourceNumber || proposal.source_id,
+      proposal.status,
+      proposal.currency,
+      proposal.amount,
+      details.journal,
+      details.account,
+      details.status || "requires_validation",
+      proposal.created_at,
+    ].map(csvCell).join(",");
+  });
+  const metadata = [
+    ["company", company.legal_name || company.name],
+    ["company_identifier", company.legal_id],
+    ["accounting_firm", accountant.name],
+    ["accounting_contact", accountant.contact_name],
+    ["accounting_email", accountant.email],
+    ["export_scope", "pre_accounting_proposals_human_validation_required"],
+    ["generated_at", new Date().toISOString()],
+  ].map((row) => row.map(csvCell).join(","));
+  const format = String(accountant.export_format || "csv").toLowerCase() === "json" ? "json" : "csv";
+  const jsonContent = {
+    metadata: {
+      company: company.legal_name || company.name,
+      companyIdentifier: company.legal_id,
+      accountingFirm: accountant.name,
+      accountingContact: accountant.contact_name,
+      accountingEmail: accountant.email,
+      scope: "pre_accounting_proposals_human_validation_required",
+      generatedAt: new Date().toISOString(),
+    },
+    proposals: workspace.proposals.map((proposal) => {
+      const details = object(proposal.proposal);
+      return {
+        sourceType: proposal.source_type,
+        sourceReference: details.sourceNumber || proposal.source_id,
+        status: proposal.status,
+        currency: proposal.currency,
+        amount: proposal.amount,
+        journal: details.journal,
+        account: details.account,
+        ruleStatus: details.status || "requires_validation",
+        createdAt: proposal.created_at,
+      };
+    }),
+  };
+  return {
+    content: format === "json" ? JSON.stringify(jsonContent, null, 2) : [...metadata, "", headers.map(csvCell).join(","), ...rows].join("\r\n"),
+    fileName: `d2f-financial-accounting-${new Date().toISOString().slice(0, 10)}.${format}`,
+    mimeType: format === "json" ? "application/json" : "text/csv",
+    proposalCount: rows.length,
+  };
+}
+
 export async function listExpenseWorkspace(
   supabase: SupabaseClient,
   ownerKey: string,
@@ -136,7 +210,7 @@ export async function listExpenseWorkspace(
       .select("id,report_id,occurred_on,merchant,description,category,business_purpose,country,currency,net_amount,tax_amount,gross_amount,payment_method,original_currency,original_gross_amount,personal_amount,reimbursable_amount,reimbursable,vat_recoverability,receipt_required,policy_version,policy_evaluated_at,policy_result,created_at")
       .in("report_id", ids).order("occurred_on", { ascending: false }),
     supabase.from("d2f_expense_receipts")
-      .select("id,report_id,expense_line_id,original_filename,media_type,verified_media_type,byte_size,sha256,captured_at,uploaded_by,origin,extraction_status,security_status,immutable_original,retention_until,capture_context,capture_location,created_at")
+      .select("id,report_id,expense_line_id,original_filename,media_type,verified_media_type,byte_size,sha256,captured_at,uploaded_by,origin,extraction_status,extraction,correction_history,security_status,immutable_original,retention_until,capture_context,capture_location,created_at")
       .in("report_id", ids).order("created_at", { ascending: false }),
   ]);
   throwDatabase(lines.error); throwDatabase(receipts.error);
@@ -409,6 +483,69 @@ export async function getExpenseReceiptAccess(
   return { id: receipt.data.id, url: signedUrl, expiresIn: 120, filename: receipt.data.original_filename, mediaType: receipt.data.verified_media_type || receipt.data.media_type, sha256: receipt.data.sha256 };
 }
 
+export async function analyzeExpenseReceipt(
+  supabase: SupabaseClient,
+  ownerKey: string,
+  actorId: string,
+  inputValue: unknown,
+) {
+  const input = object(inputValue);
+  const receiptId = text(input.id || input.receiptId || input.receipt_id);
+  const endpoint = text(process.env.D2F_DOCUMENT_AI_URL);
+  const apiKey = text(process.env.D2F_DOCUMENT_AI_KEY);
+  if (!endpoint || !apiKey) throw new Error("L’extraction documentaire doit être configurée par D2F avant l’analyse automatique");
+  const receipt = await supabase.from("d2f_expense_receipts")
+    .select("id,report_id,original_filename,verified_media_type,storage_reference,security_status")
+    .eq("id", receiptId).maybeSingle();
+  throwDatabase(receipt.error);
+  if (!receipt.data) throw new Error("Justificatif introuvable");
+  const report = await supabase.from("d2f_expense_reports").select("id,owner_key,claimant_id,currency,document_type")
+    .eq("id", receipt.data.report_id).eq("owner_key", ownerKey).maybeSingle();
+  throwDatabase(report.error);
+  if (!report.data || String(report.data.claimant_id) !== actorId) throw new Error("Analyse du justificatif refusée");
+  if (receipt.data.security_status !== "verified") throw new Error("Le justificatif doit terminer ses contrôles de sécurité");
+  const signed = await supabase.storage.from(EXPENSE_RECEIPT_BUCKET).createSignedUrl(receipt.data.storage_reference, 120);
+  if (signed.error || !signed.data?.signedUrl) throwDatabase(signed.error || { message: "Lien temporaire indisponible" });
+  await supabase.from("d2f_expense_receipts").update({ extraction_status: "pending" }).eq("id", receiptId);
+  try {
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: { "content-type": "application/json", authorization: `Bearer ${apiKey}` },
+      body: JSON.stringify({
+        documentUrl: signed.data.signedUrl,
+        mediaType: receipt.data.verified_media_type,
+        fileName: receipt.data.original_filename,
+        accountingCurrency: report.data.currency,
+        documentType: report.data.document_type,
+      }),
+    });
+    const raw = object(await response.json().catch(() => ({})));
+    if (!response.ok) throw new Error(text(raw.error || raw.message || `Document AI HTTP ${response.status}`));
+    const fields = object(raw.fields || raw.extraction || raw);
+    const suggestion = {
+      occurredOn: text(fields.occurredOn || fields.date).slice(0, 10),
+      merchant: text(fields.merchant || fields.supplier).slice(0, 250),
+      description: text(fields.description).slice(0, 500),
+      category: text(fields.category).slice(0, 80),
+      country: text(fields.country).toUpperCase().slice(0, 2),
+      originalCurrency: text(fields.currency || fields.originalCurrency).toUpperCase().slice(0, 3),
+      originalGrossAmount: Number(fields.grossAmount || fields.total || 0),
+      netAmount: Number(fields.netAmount || fields.net || 0),
+      taxAmount: Number(fields.taxAmount || fields.tax || 0),
+      confidence: Number(raw.confidence || fields.confidence || 0),
+      provider: text(raw.provider || "configured_document_ai"),
+      suggestedAt: new Date().toISOString(),
+    };
+    const updated = await supabase.from("d2f_expense_receipts").update({ extraction_status: "suggested", extraction: suggestion })
+      .eq("id", receiptId).select("id,extraction_status,extraction").single();
+    throwDatabase(updated.error);
+    return updated.data;
+  } catch (error) {
+    await supabase.from("d2f_expense_receipts").update({ extraction_status: "failed" }).eq("id", receiptId);
+    throw error;
+  }
+}
+
 export async function submitExpenseReport(
   supabase: SupabaseClient,
   ownerKey: string,
@@ -470,5 +607,8 @@ export async function decideExpenseReport(
     p_correlation_id: crypto.randomUUID(),
   });
   throwDatabase(error);
-  return data;
+  const projection = decision === "approved"
+    ? await refreshFinancialProjections(supabase, ownerKey)
+    : { scanned: 0, processed: 0 };
+  return { ...object(data), financialProjection: projection };
 }

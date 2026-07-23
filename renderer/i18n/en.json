@@ -1768,5 +1768,22 @@
   "expenses.ticket.country_subject": "{label} qualification",
   "expenses.ticket.activation_subject": "{label} activation",
   "expenses.ticket.country_description": "Please qualify and publish the Country Pack applicable to this establishment before any regulatory decision.",
-  "expenses.ticket.activation_description": "Please activate the {application} data foundation to enable D2F Platform processing."
+  "expenses.ticket.activation_description": "Please activate the {application} data foundation to enable D2F Platform processing.",
+  "company.accountant.title": "Accounting firm and financial recipients",
+  "company.accountant.hint": "These details identify the recipient of Financial and Expenses exports. Nothing is sent without an explicit action.",
+  "company.accountant.name": "Firm name",
+  "company.accountant.contact": "Contact person",
+  "company.accountant.email": "Accounting email",
+  "company.accountant.phone": "Phone",
+  "company.accountant.address": "Address",
+  "company.accountant.city": "Postal code and city",
+  "company.accountant.country": "Country",
+  "company.accountant.format": "Preferred exchange format",
+  "company.bank.contact": "Bank contact",
+  "company.bank.email": "Bank email",
+  "financial.export.accounting": "Export for accountant",
+  "expenses.receipt.extracted": "suggested fields to review",
+  "expenses.action.apply_extraction": "Apply fields",
+  "expenses.action.analyze": "Analyze",
+  "expenses.travel.exchange_rate_hint": "Explicit convention: 1 EUR = 117.20 RSD. EUR to RSD multiplies; RSD to EUR divides. The official source and fingerprint are retained."
 }

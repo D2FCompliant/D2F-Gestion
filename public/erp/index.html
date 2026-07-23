@@ -15,7 +15,7 @@
                  object-src 'none';
                  base-uri 'none'">
 
-  <link rel="stylesheet" href="./styles.css?v=20260723-expenses-v343" />
+  <link rel="stylesheet" href="./styles.css?v=20260723-expenses-v344" />
 </head>
 
 <body>
@@ -315,6 +315,35 @@
               <div class="companySmtpActions">
                 <button id="company-smtp-test" class="btn btn--secondary" type="button" data-action="company:testSmtp" data-i18n="company.smtp.test">Tester la connexion</button>
                 <span id="company-smtp-test-status" class="hint" role="status" aria-live="polite"></span>
+              </div>
+            </div>
+          </details>
+
+          <details class="card companyDisclosureCard" id="company-accountant-card">
+            <summary class="companySectionSummary">
+              <span data-i18n="company.accountant.title">Cabinet comptable et destinataires financiers</span>
+            </summary>
+            <div class="form companyDisclosureBody">
+              <p class="hint" data-i18n="company.accountant.hint">Ces coordonnées identifient le destinataire des exports Financial et Expenses. Aucun envoi n’est effectué sans action explicite.</p>
+              <div class="row2">
+                <label><span data-i18n="company.accountant.name">Nom du cabinet</span><input id="company-accountant-name" type="text"></label>
+                <label><span data-i18n="company.accountant.contact">Interlocuteur</span><input id="company-accountant-contact" type="text"></label>
+              </div>
+              <div class="row2">
+                <label><span data-i18n="company.accountant.email">Adresse e-mail comptable</span><input id="company-accountant-email" type="email"></label>
+                <label><span data-i18n="company.accountant.phone">Téléphone</span><input id="company-accountant-phone" type="tel"></label>
+              </div>
+              <div class="row2">
+                <label><span data-i18n="company.accountant.address">Adresse</span><input id="company-accountant-address" type="text"></label>
+                <label><span data-i18n="company.accountant.city">Code postal et ville</span><input id="company-accountant-city" type="text"></label>
+              </div>
+              <div class="row2">
+                <label><span data-i18n="company.accountant.country">Pays</span><input id="company-accountant-country" type="text" maxlength="2"></label>
+                <label><span data-i18n="company.accountant.format">Format d’échange préféré</span><select id="company-accountant-format"><option value="csv">CSV</option><option value="json">JSON</option></select></label>
+              </div>
+              <div class="row2">
+                <label><span data-i18n="company.bank.contact">Contact banque</span><input id="company-bank-contact" type="text"></label>
+                <label><span data-i18n="company.bank.email">Adresse e-mail banque</span><input id="company-bank-email" type="email"></label>
               </div>
             </div>
           </details>
@@ -1016,7 +1045,7 @@
           <article class="platformKpi"><span data-i18n="financial.kpi.findings">Anomalies à traiter</span><strong id="financial-findings-count">0</strong><small data-i18n="financial.kpi.findings_hint">Résultats de règles explicables</small></article>
         </div>
         <article class="card platformPanel">
-          <div class="platformPanel__head"><div><h2 data-i18n="financial.proposals.queue">File de validation</h2><p class="platformSubtitle" data-i18n="financial.proposals.queue_hint">Chaque décision conserve l’auteur, la date, la règle et sa version.</p></div></div>
+          <div class="platformPanel__head"><div><h2 data-i18n="financial.proposals.queue">File de validation</h2><p class="platformSubtitle" data-i18n="financial.proposals.queue_hint">Chaque décision conserve l’auteur, la date, la règle et sa version.</p></div><div class="platformActions"><button id="financial-export-accounting" class="btn btn--secondary" type="button" data-platform-action="financial:exportAccounting" data-i18n="financial.export.accounting">Exporter pour le comptable</button></div></div>
           <div class="platformTableWrap"><table class="platformTable"><thead><tr><th data-i18n="common.source">Source</th><th data-i18n="common.reference">Référence</th><th data-i18n="financial.proposals.journal">Journal / compte</th><th class="numeric" data-i18n="common.amount">Montant</th><th data-i18n="common.status">Statut</th><th data-i18n="financial.proposals.trace">Trace</th></tr></thead><tbody id="financial-proposals-body"></tbody></table><div class="platformEmpty platformEmpty--rich" id="financial-proposals-empty"><strong data-i18n="financial.proposals.empty_title">Aucune proposition à valider</strong><span data-i18n="financial.proposals.empty">Les propositions apparaîtront après activation du socle Financial et réception d’événements métier validés.</span><button class="btn btn--secondary" type="button" data-platform-action="platform:requestActivation" data-application="financial" data-i18n="financial.activation.proposals">Activer les propositions comptables</button></div></div>
         </article>
       </section>
@@ -1736,13 +1765,13 @@
   </aside>
 
   <script src="./xp-z12-012.js"></script>
-  <script src="./receivables.js?v=20260723-expenses-v343"></script>
-  <script src="./audit-ui.js?v=20260723-expenses-v343"></script>
-  <script src="./renderer/web-electron-shim.js?v=20260723-expenses-v343"></script>
-  <script src="./renderer/web-api-shim.js?v=20260723-expenses-v343"></script>
-  <script src="./dashboard-ui.js?v=20260723-expenses-v343"></script>
-  <script src="./financial-expense-ui.js?v=20260723-expenses-v343"></script>
-  <script src="./app.js?v=20260723-expenses-v343"></script>
+  <script src="./receivables.js?v=20260723-expenses-v344"></script>
+  <script src="./audit-ui.js?v=20260723-expenses-v344"></script>
+  <script src="./renderer/web-electron-shim.js?v=20260723-expenses-v344"></script>
+  <script src="./renderer/web-api-shim.js?v=20260723-expenses-v344"></script>
+  <script src="./dashboard-ui.js?v=20260723-expenses-v344"></script>
+  <script src="./financial-expense-ui.js?v=20260723-expenses-v344"></script>
+  <script src="./app.js?v=20260723-expenses-v344"></script>
 
   <div id="clientsImportModal" class="modal" aria-hidden="true">
     <div class="modal__backdrop" data-modal-close></div>

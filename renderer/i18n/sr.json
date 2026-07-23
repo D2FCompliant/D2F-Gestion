@@ -1703,5 +1703,22 @@
   "expenses.ticket.country_subject": "Kvalifikacija: {label}",
   "expenses.ticket.activation_subject": "Aktivacija: {label}",
   "expenses.ticket.country_description": "Molimo kvalifikujte i objavite Country Pack koji važi za ovaj poslovni prostor pre bilo koje regulatorne odluke.",
-  "expenses.ticket.activation_description": "Molimo aktivirajte bazu podataka {application} da bi obrada u D2F Platform bila operativna."
+  "expenses.ticket.activation_description": "Molimo aktivirajte bazu podataka {application} da bi obrada u D2F Platform bila operativna.",
+  "company.accountant.title": "Računovodstvena agencija i finansijski primaoci",
+  "company.accountant.hint": "Ovi podaci određuju primaoca Financial i Expenses izvoza. Ništa se ne šalje bez izričite radnje.",
+  "company.accountant.name": "Naziv agencije",
+  "company.accountant.contact": "Kontakt osoba",
+  "company.accountant.email": "E-adresa računovođe",
+  "company.accountant.phone": "Telefon",
+  "company.accountant.address": "Adresa",
+  "company.accountant.city": "Poštanski broj i grad",
+  "company.accountant.country": "Država",
+  "company.accountant.format": "Željeni format razmene",
+  "company.bank.contact": "Kontakt banke",
+  "company.bank.email": "E-adresa banke",
+  "financial.export.accounting": "Izvezi za računovođu",
+  "expenses.receipt.extracted": "predložena polja za proveru",
+  "expenses.action.apply_extraction": "Primeni polja",
+  "expenses.action.analyze": "Analiziraj",
+  "expenses.travel.exchange_rate_hint": "Jasna konvencija: 1 EUR = 117,20 RSD. EUR u RSD se množi; RSD u EUR se deli. Zvanični izvor i otisak se čuvaju."
 }

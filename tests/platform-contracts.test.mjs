@@ -418,3 +418,29 @@ test("separates company expenses from governed travel orders with validation-tim
   assert.match(ui, /expenses\.necessity\.template/);
   assert.match(ui, /expenses:exportBank/);
 });
+
+test("feeds approved expenses into Financial and preserves the explicit FX convention", async () => {
+  const [financial, documents, route, html, ui, companyUi] = await Promise.all([
+    readFile(new URL("lib/platform/financial-expense.ts", root), "utf8"),
+    readFile(new URL("lib/platform/expense-documents.ts", root), "utf8"),
+    readFile(new URL("app/rpc/route.ts", root), "utf8"),
+    readFile(new URL("public/erp/index.html", root), "utf8"),
+    readFile(new URL("public/erp/financial-expense-ui.js", root), "utf8"),
+    readFile(new URL("public/erp/app.js", root), "utf8"),
+  ]);
+  assert.match(financial, /createFinancialAccountingCsv/);
+  assert.match(financial, /await refreshFinancialProjections\(supabase, ownerKey\)/);
+  assert.match(financial, /D2F_DOCUMENT_AI_URL/);
+  assert.match(financial, /extraction_status: "suggested"/);
+  assert.match(documents, /base_currency: foreignCurrency, quote_currency: accountingCurrency/);
+  assert.match(documents, /convention: `1 \$\{foreignCurrency\} = \$\{rate\} \$\{accountingCurrency\}`/);
+  assert.match(documents, /Versions before 3\.4\.4 stored the column names in reverse/);
+  assert.match(route, /financial:exportAccounting/);
+  assert.match(route, /expenses:analyzeReceipt/);
+  assert.match(html, /financial-export-accounting/);
+  assert.match(html, /company-accountant-email/);
+  assert.match(companyUi, /accountant_firm/);
+  assert.match(ui, /ensureCompanyExpenseRateField/);
+  assert.match(ui, /applyPerDiemCurrencyForDestination/);
+  assert.match(ui, /corporate_card/);
+});

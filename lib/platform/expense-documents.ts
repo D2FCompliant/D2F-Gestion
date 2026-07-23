@@ -23,7 +23,7 @@ async function sha256(value: string | Uint8Array) {
 }
 
 const NBS_AUTHORITY = "National Bank of Serbia";
-const NBS_SOURCE = "https://webappcenter.nbs.rs/ExchangeRateWebApp/ExchangeRate/IndexByDate?isSearchExecuted=false";
+const NBS_SOURCE = "https://webappcenter.nbs.rs/ExchangeRateWebApp/ExchangeRate/CurrentMiddleRate";
 const ECB_SOURCE = "https://data.ecb.europa.eu/key-figures/ecb-interest-rates-and-exchange-rates/exchange-rates";
 
 function exportLocale(countryValue: unknown): ExportLocale {
@@ -114,6 +114,23 @@ function exportTranslator(countryValue: unknown) {
   return { locale, t: (key: string) => dictionary[key] || exportText.en[key] || key };
 }
 
+function exchangeRateConvention(rate: JsonRecord, reportCurrency: unknown) {
+  const accountingCurrency = txt(reportCurrency).toUpperCase();
+  const base = txt(rate.base_currency).toUpperCase();
+  const quote = txt(rate.quote_currency).toUpperCase();
+  // Versions before 3.4.4 stored the column names in reverse while the numeric
+  // value already meant "one foreign unit in accounting currency".
+  return base === accountingCurrency && quote && quote !== accountingCurrency
+    ? { foreignCurrency: quote, accountingCurrency: base, rate: rate.rate }
+    : { foreignCurrency: base, accountingCurrency: quote, rate: rate.rate };
+}
+
+function exchangeRateEvidence(rate: JsonRecord, reportCurrency: unknown) {
+  const convention = exchangeRateConvention(rate, reportCurrency);
+  return "1 " + convention.foreignCurrency + " = " + txt(convention.rate) + " " + convention.accountingCurrency
+    + " · " + txt(rate.source) + " · " + txt(rate.rate_date) + " · " + txt(rate.snapshot_sha256).slice(0, 16);
+}
+
 export async function updateExpenseWorkflow(
   supabase: SupabaseClient,
   ownerKey: string,
@@ -186,25 +203,34 @@ export async function validateExpenseDocument(
     .select("id,currency,original_currency,original_gross_amount,gross_amount").eq("report_id", id);
   if (linesResult.error) throw new Error(linesResult.error.message);
   if (!(linesResult.data || []).length) throw new Error("Ajoutez au moins une dépense avant validation");
-  const baseCurrency = txt(report.currency).toUpperCase();
-  const foreignCurrencies = [...new Set((linesResult.data || []).map((line) => txt(line.original_currency || line.currency).toUpperCase()).filter((currency) => currency && currency !== baseCurrency))];
+  const accountingCurrency = txt(report.currency).toUpperCase();
+  const foreignCurrencies = [...new Set((linesResult.data || []).map((line) => txt(line.original_currency || line.currency).toUpperCase()).filter((currency) => currency && currency !== accountingCurrency))];
   const rates = obj(input.rates);
   const validationDate = isoDate();
   const sourceExpected = establishmentCountry.toUpperCase() === "RS" ? "NBS" : "ECB";
   for (const foreignCurrency of foreignCurrencies) {
     const rateInput = obj(rates[foreignCurrency]);
     const rate = Number(rateInput.rate);
-    if (!Number.isFinite(rate) || rate <= 0) throw new Error("Renseignez le taux officiel " + foreignCurrency + "/" + baseCurrency + " au " + validationDate);
+    if (!Number.isFinite(rate) || rate <= 0) throw new Error("Renseignez le taux officiel : 1 " + foreignCurrency + " = … " + accountingCurrency + " au " + validationDate);
     const source = txt(rateInput.source || sourceExpected).toUpperCase();
     const sourceUri = txt(rateInput.sourceUri || rateInput.source_uri || (source === "NBS" ? NBS_SOURCE : ECB_SOURCE));
     if (establishmentCountry.toUpperCase() === "RS" && (source !== "NBS" || !/nbs\.rs/i.test(sourceUri))) {
       throw new Error("Pour la Serbie, le taux validé doit provenir de la Banque nationale de Serbie (NBS)");
     }
-    const snapshot = { rateDate: validationDate, source, authority: source === "NBS" ? NBS_AUTHORITY : "European Central Bank or local authority", sourceUri, baseCurrency, quoteCurrency: foreignCurrency, rate };
+    const snapshot = {
+      rateDate: validationDate,
+      source,
+      authority: source === "NBS" ? NBS_AUTHORITY : "European Central Bank or local authority",
+      sourceUri,
+      baseCurrency: foreignCurrency,
+      quoteCurrency: accountingCurrency,
+      rate,
+      convention: `1 ${foreignCurrency} = ${rate} ${accountingCurrency}`,
+    };
     const digest = await sha256(JSON.stringify(snapshot));
     const inserted = await supabase.from("d2f_expense_exchange_rates").upsert({
       report_id: id, rate_date: validationDate, source, source_uri: sourceUri,
-      base_currency: baseCurrency, quote_currency: foreignCurrency, rate,
+      base_currency: foreignCurrency, quote_currency: accountingCurrency, rate,
       snapshot_sha256: digest, raw_snapshot: snapshot, validated_at: new Date().toISOString(), validated_by: actorId,
     }, { onConflict: "report_id,rate_date,base_currency,quote_currency" });
     if (inserted.error) throw new Error(inserted.error.message);
@@ -241,7 +267,10 @@ export async function createExpenseAccountantCsv(
   const bundle = await exportBundle(supabase, ownerKey, actorId, actorRole, id);
   const header = ["report_number","document_type","status","claimant","validation_date","country_pack","expense_date","merchant","category","business_purpose","original_currency","original_gross","report_currency","gross","tax","payment_method","fx_rate_date","fx_source","fx_rate","fx_snapshot_sha256","receipt_sha256"].map(t);
   const receipts = new Map(bundle.receipts.map((item) => [String(item.expense_line_id || ""), item]));
-  const rates = new Map(bundle.rates.map((item) => [String(item.quote_currency || "").toUpperCase(), item]));
+  const rates = new Map(bundle.rates.map((item) => {
+    const convention = exchangeRateConvention(item, bundle.report.currency);
+    return [convention.foreignCurrency, item];
+  }));
   const rows = bundle.lines.map((line) => {
     const receipt = receipts.get(String(line.id));
     const originalCurrency = txt(line.original_currency || line.currency).toUpperCase();
@@ -293,14 +322,14 @@ export async function createExpenseDocumentPdf(
     [t("corporate_card"),settlement.corporateCardAmount],[t("advance"),settlement.advanceAmount],
     [t("reimburse_rsd"),settlement.reimbursementRsd],[t("reimburse_fx"),txt(settlement.reimbursementForeign)+" "+txt(settlement.reimbursementForeignCurrency)],
     [t("reimbursable_total"),bundle.report.reimbursable_amount+" "+bundle.report.currency],[t("attachments"),bundle.receipts.length],
-    [t("rate_snapshots"),bundle.rates.map((rate)=>txt(rate.quote_currency)+"/"+txt(rate.base_currency)+"="+txt(rate.rate)+" · "+txt(rate.source)+" · "+txt(rate.rate_date)+" · "+txt(rate.snapshot_sha256).slice(0,16)).join(" | ") || t("no_fx")],
+    [t("rate_snapshots"),bundle.rates.map((rate)=>exchangeRateEvidence(rate,bundle.report.currency)).join(" | ") || t("no_fx")],
     ...bundle.lines.map((line,index)=>[t("expense")+" "+(index+1),[line.occurred_on,line.merchant,txt(line.original_gross_amount || line.gross_amount)+" "+txt(line.original_currency || line.currency),"base "+txt(line.gross_amount)+" "+txt(bundle.report.currency),line.payment_method].filter(Boolean).join(" | ")] as [string,unknown]),
     [t("mission_report"),bundle.report.mission_report],[t("business_necessity"),bundle.report.business_necessity],
   ] : [
     [t("report"),bundle.report.report_number],[t("beneficiary"),bundle.report.claimant_name],[t("rsd_account"),order.rsdAccount],
     [t("fx_account"),order.fxAccount],[t("approved_amount"),bundle.report.reimbursable_amount+" "+bundle.report.currency],
     [t("reimburse_rsd"),settlement.reimbursementRsd],[t("reimburse_fx"),txt(settlement.reimbursementForeign)+" "+txt(settlement.reimbursementForeignCurrency)],
-    [t("rate_evidence"),bundle.rates.map((rate)=>txt(rate.quote_currency)+"/"+txt(rate.base_currency)+"="+txt(rate.rate)+" · "+txt(rate.source)+" · "+txt(rate.rate_date)+" · "+txt(rate.snapshot_sha256).slice(0,16)).join(" | ") || t("no_fx")],
+    [t("rate_evidence"),bundle.rates.map((rate)=>exchangeRateEvidence(rate,bundle.report.currency)).join(" | ") || t("no_fx")],
     [t("approved_by"),bundle.report.approver_id],[t("approval_date"),bundle.report.decided_at],[t("evidence_count"),bundle.receipts.length],
     [t("evidence_fingerprints"),bundle.receipts.map((item)=>String(item.sha256).slice(0,16)).join(", ")],
   ];

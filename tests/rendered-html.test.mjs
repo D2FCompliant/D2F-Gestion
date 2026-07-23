@@ -26,7 +26,7 @@ test("server-renders the D2F Platform cockpit", async () => {
   assert.doesNotMatch(html, /codex-preview|Your site is taking shape|react-loading-skeleton/i);
 
   const shell = await readFile(new URL("../app/session-shell.tsx", import.meta.url), "utf8");
-  assert.match(shell, /src="\/erp\/index\.html\?v=20260723-expenses-v343"/);
+  assert.match(shell, /src="\/erp\/index\.html\?v=20260723-expenses-v344"/);
   assert.match(shell, /aria-label="D2F Platform"/);
   assert.doesNotMatch(shell, /<iframe[^>]+title="D2F Platform"/);
 });
@@ -38,8 +38,8 @@ test("ships a touch-first smartphone layout", async () => {
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
     readFile(new URL("../public/erp/index.html", import.meta.url), "utf8"),
   ]);
-  assert.match(html, /styles\.css\?v=20260723-expenses-v343/);
-  assert.match(html, /app\.js\?v=20260723-expenses-v343/);
+  assert.match(html, /styles\.css\?v=20260723-expenses-v344/);
+  assert.match(html, /app\.js\?v=20260723-expenses-v344/);
   assert.match(styles, /@media \(max-width: 760px\)/);
   assert.match(styles, /platformPage\.is-active\{[^}]*overflow-y:auto[^}]*scrollbar-gutter:stable/s);
   assert.match(styles, /compact workspaces by default/);
@@ -75,8 +75,8 @@ test("makes the quote deposit unit explicit with no preset value", async () => {
   assert.match(app, /syncQuoteDepositModeUi\(\{ clearValue: true \}\)/);
   assert.match(styles, /\.depositModeOption input:checked \+ span/);
   assert.match(shell, /app-build-badge">\{D2F_PLATFORM_VERSION_LABEL\}/);
-  assert.match(platformVersion, /D2F_PLATFORM_VERSION = "3\.4\.3"/);
-  assert.equal(JSON.parse(pkg).version, "3.4.3");
+  assert.match(platformVersion, /D2F_PLATFORM_VERSION = "3\.4\.4"/);
+  assert.equal(JSON.parse(pkg).version, "3.4.4");
 });
 
 test("renders human-readable document lists on desktop and smartphone", async () => {
@@ -544,7 +544,7 @@ test("preserves partial credit-note identity and source through save and issue",
   assert.match(route, /document_number: invoiceNumber/);
   assert.match(route, /d2f_financial_invoice_projections/);
   assert.match(issue, /new Error\(error\.message/);
-  assert.match(html, /app\.js\?v=20260723-expenses-v343/);
+  assert.match(html, /app\.js\?v=20260723-expenses-v344/);
   assert.match(html, /id="i-credit-link-mode"/);
   assert.match(html, /id="i-credit-source"/);
   assert.match(app, /function syncInvoiceCreditSourceUi/);
@@ -895,8 +895,8 @@ test("creates one idempotent internal release ticket automatically", async () =>
   assert.match(support, /external_provider === "d2f_release"/);
   assert.match(support, /external_key === release\.version/);
   assert.match(support, /if \(admin\) rows = await ensureCurrentReleaseTicket/);
-  assert.match(release, /version: "3\.4\.3"/);
-  assert.match(release, /D2F-REL-3430/);
+  assert.match(release, /version: "3\.4\.4"/);
+  assert.match(release, /D2F-REL-3440/);
 });
 
 test("keeps every workspace scrollable and text contained on 13-inch screens", async () => {
@@ -913,6 +913,6 @@ test("keeps every workspace scrollable and text contained on 13-inch screens", a
   assert.match(styles, /\.platformTableWrap\{[\s\S]*overflow:auto/);
   assert.match(styles, /\.platformDetailPanel\{[\s\S]*overflow:visible/);
   assert.doesNotMatch(styles, /\.platformDetailPanel\{[^}]*overflow:hidden/);
-  assert.match(html, /styles\.css\?v=20260723-expenses-v343/);
-  assert.match(shell, /erp\/index\.html\?v=20260723-expenses-v343/);
+  assert.match(html, /styles\.css\?v=20260723-expenses-v344/);
+  assert.match(shell, /erp\/index\.html\?v=20260723-expenses-v344/);
 });

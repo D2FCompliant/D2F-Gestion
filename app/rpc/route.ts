@@ -13,7 +13,7 @@ import { accountAllowsApplication, getAccountById, memberFor } from "../../lib/s
 import { validateEstablishmentIdentifier } from "../../lib/company-identifiers";
 import { preflightInvoice } from "../../lib/country-compliance";
 import { issueInvoiceAtomically } from "../../lib/platform/issue-invoice";
-import { addExpenseLine, createExpenseReport, decideExpenseReport, getExpenseReceiptAccess, listExpenseWorkspace, listFinancialWorkspace, refreshFinancialProjections, submitExpenseReport, uploadExpenseReceipt } from "../../lib/platform/financial-expense";
+import { addExpenseLine, analyzeExpenseReceipt, createExpenseReport, createFinancialAccountingCsv, decideExpenseReport, getExpenseReceiptAccess, listExpenseWorkspace, listFinancialWorkspace, refreshFinancialProjections, submitExpenseReport, uploadExpenseReceipt } from "../../lib/platform/financial-expense";
 import { expenseCountryPolicy } from "../../lib/platform/expense-country-policy";
 import { createExpenseAccountantCsv, createExpenseDocumentPdf, updateExpenseWorkflow, validateExpenseDocument } from "../../lib/platform/expense-documents";
 import { registerCustomerPaymentAtomically } from "../../lib/platform/register-customer-payment";
@@ -899,7 +899,8 @@ function isMutationMethod(method: string) {
     "setStatus", "issue", "createFromQuote", "createDeposit", "createCreditNote", "createPartialCreditNote", "attachDeposit", "setInboundConfig",
     "setConformityConfig", "saveConfig", "setLogo", "clearLogo", "accept", "reject", "dispute",
     "send", "sendInvoice", "sendNow", "archive", "importFile", "uploadEvidence", "deleteEvidence", "archiveEvidence",
-    "createReport", "addLine", "uploadReceipt", "submit", "decide", "refreshProjections",
+    "createReport", "addLine", "uploadReceipt", "analyzeReceipt", "updateWorkflow", "validate", "submit", "decide", "refreshProjections",
+    "exportAccounting", "exportAccountant", "exportDocument",
   ].includes(action);
 }
 
@@ -1405,6 +1406,10 @@ async function dispatch(ownerEmail: string, method: string, args: unknown[], ten
   if (method === "xpReject:load" || method === "rejectionReasons:load") return rejectionReasons;
   if (method === "financial:workspace") return listFinancialWorkspace(getSupabaseAdmin(), ownerEmail);
   if (method === "financial:refreshProjections") return refreshFinancialProjections(getSupabaseAdmin(), ownerEmail);
+  if (method === "financial:exportAccounting") {
+    const exported = await createFinancialAccountingCsv(getSupabaseAdmin(), ownerEmail, await getCompany(ownerEmail));
+    return { fileName: exported.fileName, mimeType: exported.mimeType, downloadBase64: textToBase64(exported.content), proposalCount: exported.proposalCount };
+  }
   if (method === "expenses:workspace") return listExpenseWorkspace(getSupabaseAdmin(), ownerEmail, actorId, actorRole, tenantIdentity?.country || "");
   if (method === "expenses:createReport") return createExpenseReport(getSupabaseAdmin(), ownerEmail, tenantIdentity?.tenantId || ownerEmail, actorId, first(args));
   if (method === "expenses:updateWorkflow") {
@@ -1435,6 +1440,7 @@ async function dispatch(ownerEmail: string, method: string, args: unknown[], ten
   }
   if (method === "expenses:addLine") return addExpenseLine(getSupabaseAdmin(), ownerEmail, tenantIdentity?.country || "", actorId, first(args));
   if (method === "expenses:uploadReceipt") return uploadExpenseReceipt(getSupabaseAdmin(), ownerEmail, actorId, first(args));
+  if (method === "expenses:analyzeReceipt") return analyzeExpenseReceipt(getSupabaseAdmin(), ownerEmail, actorId, first(args));
   if (method === "expenses:receiptAccess") return getExpenseReceiptAccess(getSupabaseAdmin(), ownerEmail, actorId, actorRole, first(args));
   if (method === "expenses:submit") return submitExpenseReport(getSupabaseAdmin(), ownerEmail, tenantIdentity?.country || "", actorId, first(args));
   if (method === "expenses:decide") {

@@ -1,5 +1,5 @@
 (function () {
-  const local = { financial: null, expenses: null, selectedReportId: "", pendingReceipt: null, expenseFoundationReady: true, financialFoundationReady: true, financialFilter: "all", lifetimeLicense: false, licenseResolved: false };
+  const local = { financial: null, expenses: null, selectedReportId: "", pendingReceipt: null, expenseFoundationReady: true, financialFoundationReady: true, financialFilter: "all", lifetimeLicense: false, licenseResolved: false, companyCurrency: "EUR", companyCountry: "" };
   const tr = (key, fallback, vars) => window.__d2fT?.(key, fallback, vars) || fallback;
   const locale = () => (document.documentElement.lang || "en").toLowerCase().slice(0, 2);
   const byId = (id) => document.getElementById(id);
@@ -266,6 +266,7 @@
     const editable = report.can_edit === true;
     if (lineForm) lineForm.hidden = !editable;
     const travel = byId("expense-travel-workflow"); if (travel) travel.hidden = report.document_type !== "travel_order" || !editable;
+    ensureCompanyExpenseRateField(report, editable);
     const exportAccountant = byId("expense-export-accountant"), exportTravel = byId("expense-export-travel"), exportBank = byId("expense-export-bank");
     if (exportAccountant) {
       exportAccountant.hidden = false; exportAccountant.disabled = report.status !== "approved"; exportAccountant.dataset.reportId = report.id;
@@ -295,6 +296,7 @@
         "expense-travel-company-activity": order.companyActivity, "expense-travel-necessity": report.business_necessity, "expense-travel-report": report.mission_report
       };
       Object.entries(values).forEach(([id,value])=>{ if (byId(id)) byId(id).value = value || ""; });
+      autoCalculateTravelSettlement();
     }
     if (submit) {
       submit.hidden = false; submit.dataset.reportId = report.id; submit.dataset.platformAction = "expenses:validate";
@@ -334,8 +336,12 @@
     const receiptList = byId("expense-receipts-list"); clear(receiptList);
     for (const receipt of receipts) {
       const card = document.createElement("article"); const meta = document.createElement("div"); const name = document.createElement("strong"); const info = document.createElement("small");
-      name.textContent = receipt.original_filename; info.textContent = Math.max(1, Math.round(number(receipt.byte_size) / 1024)) + " " + tr("common.kilobyte", "KB") + " · " + String(receipt.sha256 || "").slice(0, 12) + "… · " + (receipt.security_status === "verified" ? tr("expenses.receipt.verified", "vérifié") : tr("expenses.receipt.checking", "en contrôle")); meta.append(name, info);
-      card.append(meta, actionButton(tr("expenses.action.consult", "Consulter"), "expenses:viewReceipt", receipt.id, "secondary")); receiptList?.append(card);
+      name.textContent = receipt.original_filename; info.textContent = Math.max(1, Math.round(number(receipt.byte_size) / 1024)) + " " + tr("common.kilobyte", "KB") + " · " + String(receipt.sha256 || "").slice(0, 12) + "… · " + (receipt.extraction_status === "suggested" ? tr("expenses.receipt.extracted", "champs suggérés à contrôler") : receipt.security_status === "verified" ? tr("expenses.receipt.verified", "vérifié") : tr("expenses.receipt.checking", "en contrôle")); meta.append(name, info);
+      const actions = document.createElement("div"); actions.className = "platformActions";
+      actions.append(actionButton(tr("expenses.action.consult", "Consulter"), "expenses:viewReceipt", receipt.id, "secondary"));
+      if (receipt.extraction_status === "suggested") actions.append(actionButton(tr("expenses.action.apply_extraction", "Reprendre les champs"), "expenses:applyExtraction", receipt.id, "primary"));
+      else if (editable && receipt.security_status === "verified") actions.append(actionButton(tr("expenses.action.analyze", "Analyser"), "expenses:analyzeReceipt", receipt.id, "secondary"));
+      card.append(meta, actions); receiptList?.append(card);
     }
     if (!receipts.length) { const empty = document.createElement("p"); empty.className = "platformEmpty"; empty.textContent = tr("expenses.receipt.none", "Aucun justificatif enregistré."); receiptList?.append(empty); }
   }
@@ -435,7 +441,15 @@
   async function refreshExpenses() {
     if (byId("expense-line-date") && !byId("expense-line-date").value) byId("expense-line-date").value = new Date().toISOString().slice(0, 10);
     if (window.D2FPlatformPreview) { local.expenseFoundationReady = false; showFoundation("expenses", false); renderExpenses({ reports: [], lines: [], receipts: [], summary: {} }); return; }
-    try { local.expenseFoundationReady = true; showFoundation("expenses", true); renderExpenses(await window.api.expenses.workspace()); }
+    try {
+      local.expenseFoundationReady = true;
+      showFoundation("expenses", true);
+      const [workspace, company] = await Promise.all([window.api.expenses.workspace(), window.api.company.get().catch(() => ({}))]);
+      local.companyCurrency = String(company?.currency || "EUR").toUpperCase();
+      local.companyCountry = String(company?.country || "").toUpperCase();
+      if (byId("expense-report-currency") && !byId("expense-report-currency").dataset.userEdited) byId("expense-report-currency").value = local.companyCurrency;
+      renderExpenses(workspace);
+    }
     catch (error) {
       const message = String(error?.message || error || "");
       const foundationMissing = /socle .*Expenses|relation .*d2f_expense_reports.*does not exist|d2f_expense_reports.*introuvable/i.test(message);
@@ -448,6 +462,23 @@
   }
 
   function selectedExpenseReport() { return (local.expenses?.reports || []).find((item) => String(item.id) === String(local.selectedReportId)); }
+  function applyReceiptExtraction(receiptId) {
+    const receipt = (local.expenses?.receipts || []).find((item) => String(item.id) === String(receiptId));
+    const fields = receipt?.extraction || {};
+    const values = {
+      "expense-line-date": fields.occurredOn,
+      "expense-line-merchant": fields.merchant,
+      "expense-line-description": fields.description || fields.merchant,
+      "expense-line-country": fields.country,
+      "expense-line-original-currency": fields.originalCurrency,
+      "expense-line-original-gross": fields.originalGrossAmount,
+      "expense-line-net": fields.netAmount,
+      "expense-line-tax": fields.taxAmount,
+    };
+    Object.entries(values).forEach(([id, value]) => { if (byId(id) && value !== undefined && value !== null && value !== "") byId(id).value = value; });
+    if (fields.category && byId("expense-line-category")?.querySelector(`option[value="${CSS.escape(String(fields.category))}"]`)) byId("expense-line-category").value = fields.category;
+    byId("expense-line-merchant")?.focus();
+  }
   function expenseInput() {
     const report = selectedExpenseReport();
     return { reportId: local.selectedReportId, occurredOn: byId("expense-line-date")?.value, merchant: byId("expense-line-merchant")?.value, description: byId("expense-line-description")?.value,
@@ -478,11 +509,86 @@
   }
   function validationRates() {
     const rates = {};
-    String(byId("expense-validation-rates")?.value || "").split(",").map((part) => part.trim()).filter(Boolean).forEach((part) => {
+    const values = [byId("expense-validation-rates")?.value, byId("expense-company-validation-rates")?.value].filter(Boolean).join(",");
+    String(values).split(",").map((part) => part.trim()).filter(Boolean).forEach((part) => {
       const [currency, rawRate] = part.split("="); const rate = Number(rawRate);
       if (currency && Number.isFinite(rate) && rate > 0) rates[currency.trim().toUpperCase()] = { rate };
     });
     return rates;
+  }
+  function ensureCompanyExpenseRateField(report, editable) {
+    let box = byId("expense-company-rate-box");
+    if (!box) {
+      box = document.createElement("div");
+      box.id = "expense-company-rate-box";
+      box.className = "platformFieldWide expenseRateBox";
+      const title = document.createElement("strong");
+      title.textContent = tr("expenses.travel.exchange_rate_title", "Taux de change à la validation");
+      const hint = document.createElement("p");
+      hint.textContent = tr("expenses.travel.exchange_rate_hint", "Indiquez le taux officiel sous la forme EUR=117.20 : 1 EUR = 117,20 RSD.");
+      const input = document.createElement("input");
+      input.id = "expense-company-validation-rates";
+      input.type = "text";
+      input.placeholder = "EUR=117.20";
+      input.addEventListener("input", autoConvertExpenseLine);
+      input.addEventListener("change", autoConvertExpenseLine);
+      box.append(title, hint, input);
+      byId("expense-line-form")?.insertBefore(box, byId("expense-line-form")?.querySelector("button") || null);
+    }
+    box.hidden = !editable || report?.document_type === "travel_order";
+  }
+  function autoCalculateTravelSettlement() {
+    const report = selectedExpenseReport();
+    if (!report || report.document_type !== "travel_order") return;
+    const accountingCurrency = String(report.currency || "EUR").toUpperCase();
+    const rates = validationRates();
+    const lines = reportLines(report.id);
+    const corporateCard = lines
+      .filter((line) => line.payment_method === "corporate_card")
+      .reduce((sum, line) => sum + number(line.gross_amount), 0);
+    const personallyPaid = lines
+      .filter((line) => ["personal_card", "personal_cash", "other"].includes(line.payment_method))
+      .reduce((sum, line) => sum + Math.max(0, number(line.gross_amount) - number(line.personal_amount)), 0);
+    const days = number(byId("expense-travel-perdiem-days")?.value);
+    const daily = number(byId("expense-travel-perdiem-rate")?.value);
+    const perDiemCurrency = String(byId("expense-travel-perdiem-currency")?.value || accountingCurrency).toUpperCase();
+    const perDiemTotal = Math.round(days * daily * 100) / 100;
+    const advance = number(byId("expense-travel-advance")?.value);
+    let localReimbursement = Math.max(0, personallyPaid - advance);
+    let foreignReimbursement = 0;
+    if (perDiemCurrency === accountingCurrency) {
+      localReimbursement += perDiemTotal;
+    } else {
+      foreignReimbursement = perDiemTotal;
+      const rate = number(rates[perDiemCurrency]?.rate);
+      if (rate > 0 && advance > personallyPaid) {
+        foreignReimbursement = Math.max(0, foreignReimbursement - (advance - personallyPaid) / rate);
+      }
+    }
+    if (byId("expense-travel-corporate-card")) byId("expense-travel-corporate-card").value = corporateCard.toFixed(2);
+    if (byId("expense-travel-reimbursement-rsd")) byId("expense-travel-reimbursement-rsd").value = localReimbursement.toFixed(2);
+    if (byId("expense-travel-reimbursement-fx")) byId("expense-travel-reimbursement-fx").value = foreignReimbursement.toFixed(2);
+    if (byId("expense-travel-reimbursement-fx-currency")) byId("expense-travel-reimbursement-fx-currency").value = foreignReimbursement > 0 ? perDiemCurrency : accountingCurrency;
+  }
+  function applyPerDiemCurrencyForDestination() {
+    const destination = String(byId("expense-travel-destination-country")?.value || "").toUpperCase();
+    if (!destination) return;
+    const currency = destination === local.companyCountry ? local.companyCurrency : "EUR";
+    if (byId("expense-travel-perdiem-currency")) byId("expense-travel-perdiem-currency").value = currency;
+    if (byId("expense-travel-reimbursement-fx-currency")) byId("expense-travel-reimbursement-fx-currency").value = currency;
+    autoCalculateTravelSettlement();
+  }
+  function autoConvertExpenseLine() {
+    const report = selectedExpenseReport();
+    const accountingCurrency = String(report?.currency || local.companyCurrency || "EUR").toUpperCase();
+    const originalCurrency = String(byId("expense-line-original-currency")?.value || accountingCurrency).toUpperCase();
+    const originalGross = number(byId("expense-line-original-gross")?.value);
+    if (!originalGross) return;
+    const rate = originalCurrency === accountingCurrency ? 1 : number(validationRates()[originalCurrency]?.rate);
+    if (!rate) return;
+    const converted = Math.round(originalGross * rate * 100) / 100;
+    if (byId("expense-line-net")) byId("expense-line-net").value = converted.toFixed(2);
+    if (byId("expense-line-tax") && !number(byId("expense-line-tax").value)) byId("expense-line-tax").value = "0.00";
   }
   function downloadRpcFile(file) {
     if (!file?.downloadBase64) throw new Error(tr("expenses.error.file_unavailable", "Fichier indisponible"));
@@ -515,6 +621,10 @@
   async function handleAction(action, reportId, application) {
     if (reportId) { local.selectedReportId = reportId; local.selectedFinancialInvoiceId = reportId; }
     if (action === "financial:refresh") return refreshFinancial();
+    if (action === "financial:exportAccounting") {
+      downloadRpcFile(await window.api.financial.exportAccounting({ locale: locale() }));
+      return;
+    }
     if (action === "platform:requestActivation") return requestActivation(application || "financial");
     if (action === "financial:filterOpen" || action === "financial:filterOverdue") { local.financialFilter = action.endsWith("Overdue") ? "overdue" : "open"; renderFinancial(local.financial); window.D2FShowPage?.("financial-reconciliation"); return; }
     if (action === "financial:recordPayment" || action === "financial:viewPayments") { window.D2FOpenPayment?.(local.selectedFinancialInvoiceId || reportId); return; }
@@ -528,6 +638,8 @@
     }
     if (action === "expenses:pickReceipt") { byId("expense-receipt-file")?.click(); return; }
     if (action === "expenses:viewReceipt") { const access = await window.api.expenses.receiptAccess({ id: reportId }); const opened = window.open(access.url, "_blank", "noopener,noreferrer"); if (!opened) setText("appStatus", tr("expenses.error.popup_blocked", "Autorisez l’ouverture du justificatif dans un nouvel onglet.")); return; }
+    if (action === "expenses:analyzeReceipt") { await window.api.expenses.analyzeReceipt({ id: reportId }); return refreshExpenses(); }
+    if (action === "expenses:applyExtraction") { applyReceiptExtraction(reportId); return; }
     if (action === "expenses:openCapture") { renderExpenses(local.expenses || { reports: [], lines: [], receipts: [], summary: {} }); window.D2FShowPage?.("expenses-capture"); return; }
     if (action === "expenses:openApproval") { window.D2FShowPage?.("expenses-approvals"); return; }
     if (action === "expenses:focusLine") { byId("expense-line-merchant")?.focus(); return; }
@@ -590,6 +702,16 @@
   drop?.addEventListener("drop", (event) => selectReceiptFile(event.dataTransfer?.files?.[0]).catch((error) => setText("appStatus", error.message)));
 
   for (const id of ["expense-report-search", "expense-claimant-filter", "expense-status-filter"]) byId(id)?.addEventListener(id === "expense-report-search" ? "input" : "change", () => { if (local.expenses) renderExpenses(local.expenses); });
+  for (const id of ["expense-travel-perdiem-days", "expense-travel-perdiem-rate", "expense-travel-perdiem-currency", "expense-travel-advance", "expense-validation-rates"]) {
+    byId(id)?.addEventListener("input", autoCalculateTravelSettlement);
+    byId(id)?.addEventListener("change", autoCalculateTravelSettlement);
+  }
+  for (const id of ["expense-line-original-currency", "expense-line-original-gross", "expense-validation-rates"]) {
+    byId(id)?.addEventListener("input", autoConvertExpenseLine);
+    byId(id)?.addEventListener("change", autoConvertExpenseLine);
+  }
+  byId("expense-travel-destination-country")?.addEventListener("change", applyPerDiemCurrencyForDestination);
+  byId("expense-report-currency")?.addEventListener("input", (event) => { event.currentTarget.dataset.userEdited = "true"; });
 
   document.addEventListener("click", async (event) => {
     const go = event.target.closest("[data-platform-go]");

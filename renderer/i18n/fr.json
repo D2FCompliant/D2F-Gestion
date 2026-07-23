@@ -1713,5 +1713,22 @@
   "expenses.ticket.country_subject": "Qualification du {label}",
   "expenses.ticket.activation_subject": "Activation de {label}",
   "expenses.ticket.country_description": "Merci de qualifier et publier le Country Pack applicable à cet établissement avant toute décision réglementaire.",
-  "expenses.ticket.activation_description": "Merci d’activer le socle de données {application} afin de rendre les traitements D2F Platform opérationnels."
+  "expenses.ticket.activation_description": "Merci d’activer le socle de données {application} afin de rendre les traitements D2F Platform opérationnels.",
+  "company.accountant.title": "Cabinet comptable et destinataires financiers",
+  "company.accountant.hint": "Ces coordonnées identifient le destinataire des exports Financial et Expenses. Aucun envoi n’est effectué sans action explicite.",
+  "company.accountant.name": "Nom du cabinet",
+  "company.accountant.contact": "Interlocuteur",
+  "company.accountant.email": "Adresse e-mail comptable",
+  "company.accountant.phone": "Téléphone",
+  "company.accountant.address": "Adresse",
+  "company.accountant.city": "Code postal et ville",
+  "company.accountant.country": "Pays",
+  "company.accountant.format": "Format d’échange préféré",
+  "company.bank.contact": "Contact banque",
+  "company.bank.email": "Adresse e-mail banque",
+  "financial.export.accounting": "Exporter pour le comptable",
+  "expenses.receipt.extracted": "champs suggérés à contrôler",
+  "expenses.action.apply_extraction": "Reprendre les champs",
+  "expenses.action.analyze": "Analyser",
+  "expenses.travel.exchange_rate_hint": "Convention explicite : 1 EUR = 117,20 RSD. EUR vers RSD multiplie ; RSD vers EUR divise. La source officielle et son empreinte sont conservées."
 }

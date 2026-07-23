@@ -2162,6 +2162,20 @@ function companyPayloadFromForm() {
     smtp_user: $("company-smtp-user")?.value?.trim() || "",
     smtp_password: $("company-smtp-password")?.value || "",
     smtp_from_name: $("company-smtp-from-name")?.value?.trim() || "",
+    accountant_firm: {
+      name: $("company-accountant-name")?.value?.trim() || "",
+      contact_name: $("company-accountant-contact")?.value?.trim() || "",
+      email: $("company-accountant-email")?.value?.trim() || "",
+      phone: $("company-accountant-phone")?.value?.trim() || "",
+      address: $("company-accountant-address")?.value?.trim() || "",
+      city: $("company-accountant-city")?.value?.trim() || "",
+      country: $("company-accountant-country")?.value?.trim().toUpperCase() || "",
+      export_format: $("company-accountant-format")?.value || "csv",
+    },
+    bank_delivery: {
+      contact_name: $("company-bank-contact")?.value?.trim() || "",
+      email: $("company-bank-email")?.value?.trim() || "",
+    },
 
     cgv_text: $("co-cgv-text")?.value || "",
 
@@ -2207,6 +2221,18 @@ function fillCompanyForm(c) {
 
   if ($("company-smtp-from-name")) { $("company-smtp-from-name").value = c?.smtp_from_name || "";
 }
+  const accountant = c?.accountant_firm || {};
+  if ($("company-accountant-name")) $("company-accountant-name").value = accountant.name || "";
+  if ($("company-accountant-contact")) $("company-accountant-contact").value = accountant.contact_name || "";
+  if ($("company-accountant-email")) $("company-accountant-email").value = accountant.email || "";
+  if ($("company-accountant-phone")) $("company-accountant-phone").value = accountant.phone || "";
+  if ($("company-accountant-address")) $("company-accountant-address").value = accountant.address || "";
+  if ($("company-accountant-city")) $("company-accountant-city").value = accountant.city || "";
+  if ($("company-accountant-country")) $("company-accountant-country").value = accountant.country || c?.country || "";
+  if ($("company-accountant-format")) $("company-accountant-format").value = accountant.export_format || "csv";
+  const bankDelivery = c?.bank_delivery || {};
+  if ($("company-bank-contact")) $("company-bank-contact").value = bankDelivery.contact_name || "";
+  if ($("company-bank-email")) $("company-bank-email").value = bankDelivery.email || "";
 
   if ($("co-vat-regime")) $("co-vat-regime").value = c?.vat_regime || "REAL_NORMAL_MONTHLY";
 

@@ -1703,5 +1703,22 @@
   "expenses.ticket.country_subject": "Cualificación de {label}",
   "expenses.ticket.activation_subject": "Activación de {label}",
   "expenses.ticket.country_description": "Cualifique y publique el Country Pack aplicable a este establecimiento antes de cualquier decisión normativa.",
-  "expenses.ticket.activation_description": "Active la base de datos {application} para habilitar los procesos de D2F Platform."
+  "expenses.ticket.activation_description": "Active la base de datos {application} para habilitar los procesos de D2F Platform.",
+  "company.accountant.title": "Asesoría contable y destinatarios financieros",
+  "company.accountant.hint": "Estos datos identifican al destinatario de las exportaciones Financial y Expenses. No se envía nada sin una acción explícita.",
+  "company.accountant.name": "Nombre de la asesoría",
+  "company.accountant.contact": "Persona de contacto",
+  "company.accountant.email": "Correo contable",
+  "company.accountant.phone": "Teléfono",
+  "company.accountant.address": "Dirección",
+  "company.accountant.city": "Código postal y ciudad",
+  "company.accountant.country": "País",
+  "company.accountant.format": "Formato de intercambio preferido",
+  "company.bank.contact": "Contacto bancario",
+  "company.bank.email": "Correo del banco",
+  "financial.export.accounting": "Exportar para contabilidad",
+  "expenses.receipt.extracted": "campos sugeridos para revisar",
+  "expenses.action.apply_extraction": "Aplicar campos",
+  "expenses.action.analyze": "Analizar",
+  "expenses.travel.exchange_rate_hint": "Convención explícita: 1 EUR = 117,20 RSD. De EUR a RSD se multiplica; de RSD a EUR se divide. Se conservan la fuente oficial y su huella."
 }
