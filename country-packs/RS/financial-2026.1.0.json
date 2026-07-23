@@ -1,0 +1,73 @@
+{
+  "schemaVersion": "1.0",
+  "packId": "country.rs.financial",
+  "country": "RS",
+  "module": "financial",
+  "version": "2026.1.0",
+  "lifecycleStatus": "regulatory_review",
+  "automaticPublication": false,
+  "currency": "RSD",
+  "languages": [
+    "sr",
+    "en"
+  ],
+  "capabilities": {
+    "accountingMappings": "human_validation_required",
+    "taxRules": "human_validation_required",
+    "reportingMappings": "human_validation_required",
+    "receivableMatching": "platform_baseline_only"
+  },
+  "financial": {
+    "chartOfAccounts": {
+      "status": "human_validation_required",
+      "mappings": []
+    },
+    "vat": {
+      "status": "human_validation_required",
+      "rates": [],
+      "exemptions": []
+    },
+    "reporting": {
+      "status": "human_validation_required",
+      "declarations": [],
+      "calendar": []
+    }
+  },
+  "unresolvedDecisions": [
+    "Validate the applicable Serbian chart-of-accounts mappings for the target entity type.",
+    "Validate VAT treatments, rates, exemptions and effective dates before enabling local decisions.",
+    "Validate declaration mappings, filing calendar and evidence requirements."
+  ],
+  "sources": [
+    {
+      "id": "rs-accounting-law",
+      "title": "Accounting law",
+      "authority": "Ministry of Finance of the Republic of Serbia",
+      "url": "https://mfin.gov.rs/propisi/-zakon-o-racunovodstvu-sluzbeni-glasnik-rs-br-732019"
+    },
+    {
+      "id": "rs-chart-of-accounts",
+      "title": "Chart of accounts regulation for companies, cooperatives and entrepreneurs",
+      "authority": "Ministry of Finance of the Republic of Serbia",
+      "url": "https://mfin.gov.rs/sr/propisi-1/pravilnik-o-kontnom-okviru-i-sadrzini-racuna-u-kontnom-okviru-za-privredna-drustva-zadruge-i-preduzetnike-sluzbeni-glasnik-rs-br-892020-1"
+    },
+    {
+      "id": "rs-vat-law",
+      "title": "Value Added Tax Law",
+      "authority": "Tax Administration of the Republic of Serbia",
+      "url": "https://purs.gov.rs/preduzetnici/pregled-propisa/zakoni/202/zakon-o-porezu-na-dodatu-vrednost.html"
+    },
+    {
+      "id": "rs-vat-secondary-legislation",
+      "title": "VAT subordinate legislation",
+      "authority": "Tax Administration of the Republic of Serbia",
+      "url": "https://www.purs.gov.rs/fizicka-lica/pdv/podzakonska-akta.html"
+    }
+  ],
+  "governance": {
+    "regulatoryApprovalRequired": true,
+    "technicalApprovalRequired": true,
+    "securityApprovalRequired": true,
+    "evidenceVerificationRequired": true
+  }
+}

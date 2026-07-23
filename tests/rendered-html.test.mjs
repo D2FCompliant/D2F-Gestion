@@ -74,8 +74,8 @@ test("makes the quote deposit unit explicit with no preset value", async () => {
   assert.match(app, /syncQuoteDepositModeUi\(\{ clearValue: true \}\)/);
   assert.match(styles, /\.depositModeOption input:checked \+ span/);
   assert.match(shell, /app-build-badge">\{D2F_PLATFORM_VERSION_LABEL\}/);
-  assert.match(platformVersion, /D2F_PLATFORM_VERSION = "3\.3\.17"/);
-  assert.equal(JSON.parse(pkg).version, "3.3.17");
+  assert.match(platformVersion, /D2F_PLATFORM_VERSION = "3\.3\.18"/);
+  assert.equal(JSON.parse(pkg).version, "3.3.18");
 });
 
 test("renders human-readable document lists on desktop and smartphone", async () => {
@@ -894,8 +894,8 @@ test("creates one idempotent internal release ticket automatically", async () =>
   assert.match(support, /external_provider === "d2f_release"/);
   assert.match(support, /external_key === release\.version/);
   assert.match(support, /if \(admin\) rows = await ensureCurrentReleaseTicket/);
-  assert.match(release, /version: "3\.3\.17"/);
-  assert.match(release, /D2F-REL-3317/);
+  assert.match(release, /version: "3\.3\.18"/);
+  assert.match(release, /D2F-REL-3318/);
 });
 
 test("keeps every workspace scrollable and text contained on 13-inch screens", async () => {

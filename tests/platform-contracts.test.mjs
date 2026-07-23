@@ -324,6 +324,32 @@ test("ships four sourced Country Packs without automatic publication", async () 
 });
 
 
+test("provides a governed Serbian Financial Country Pack without silent local rules", async () => {
+  const [pack, migration, route] = await Promise.all([
+    json("country-packs/RS/financial-2026.1.0.json"),
+    readFile(new URL("supabase/migrations/20260723120000_seed_rs_financial_country_pack.sql", root), "utf8"),
+    readFile(new URL("app/rpc/route.ts", root), "utf8"),
+  ]);
+  assert.equal(pack.packId, "country.rs.financial");
+  assert.equal(pack.country, "RS");
+  assert.equal(pack.module, "financial");
+  assert.equal(pack.lifecycleStatus, "regulatory_review");
+  assert.equal(pack.automaticPublication, false);
+  assert.deepEqual(pack.financial.chartOfAccounts.mappings, []);
+  assert.deepEqual(pack.financial.vat.rates, []);
+  assert.ok(pack.sources.length >= 4);
+  assert.ok(pack.sources.every((source) => /^https:\/\//.test(source.url)));
+  assert.equal(pack.governance.regulatoryApprovalRequired, true);
+  assert.equal(pack.governance.technicalApprovalRequired, true);
+  assert.equal(pack.governance.securityApprovalRequired, true);
+  assert.match(migration, /'country\.rs\.financial'/);
+  assert.match(migration, /'regulatory_review'/);
+  assert.match(migration, /verification_status[\s\S]*'pending'/);
+  assert.doesNotMatch(migration, /d2f_publish_country_pack_v1/);
+  assert.match(route, /no_published_\$\{module\}_pack/);
+});
+
+
 test("issues one-time D2F password links valid for 24 hours", async () => {
   const [auth, reset, completion, shell] = await Promise.all([
     readFile(new URL("lib/auth/server.ts", root), "utf8"),
