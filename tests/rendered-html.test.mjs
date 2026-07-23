@@ -26,7 +26,7 @@ test("server-renders the D2F Platform cockpit", async () => {
   assert.doesNotMatch(html, /codex-preview|Your site is taking shape|react-loading-skeleton/i);
 
   const shell = await readFile(new URL("../app/session-shell.tsx", import.meta.url), "utf8");
-  assert.match(shell, /src="\/erp\/index\.html\?v=20260723-expenses-v340"/);
+  assert.match(shell, /src="\/erp\/index\.html\?v=20260723-i18n-v341"/);
   assert.match(shell, /title="D2F Platform"/);
 });
 
@@ -37,8 +37,8 @@ test("ships a touch-first smartphone layout", async () => {
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
     readFile(new URL("../public/erp/index.html", import.meta.url), "utf8"),
   ]);
-  assert.match(html, /styles\.css\?v=20260723-expenses-v340/);
-  assert.match(html, /app\.js\?v=20260723-expenses-v340/);
+  assert.match(html, /styles\.css\?v=20260723-i18n-v341/);
+  assert.match(html, /app\.js\?v=20260723-i18n-v341/);
   assert.match(styles, /@media \(max-width: 760px\)/);
   assert.match(styles, /platformPage\.is-active\{[^}]*overflow-y:auto[^}]*scrollbar-gutter:stable/s);
   assert.match(styles, /compact workspaces by default/);
@@ -75,7 +75,7 @@ test("makes the quote deposit unit explicit with no preset value", async () => {
   assert.match(styles, /\.depositModeOption input:checked \+ span/);
   assert.match(shell, /app-build-badge">\{D2F_PLATFORM_VERSION_LABEL\}/);
   assert.match(platformVersion, /D2F_PLATFORM_VERSION = "3\.4\.0"/);
-  assert.equal(JSON.parse(pkg).version, "3.4.0");
+  assert.equal(JSON.parse(pkg).version, "3.4.1");
 });
 
 test("renders human-readable document lists on desktop and smartphone", async () => {
@@ -543,7 +543,7 @@ test("preserves partial credit-note identity and source through save and issue",
   assert.match(route, /document_number: invoiceNumber/);
   assert.match(route, /d2f_financial_invoice_projections/);
   assert.match(issue, /new Error\(error\.message/);
-  assert.match(html, /app\.js\?v=20260723-expenses-v340/);
+  assert.match(html, /app\.js\?v=20260723-i18n-v341/);
   assert.match(html, /id="i-credit-link-mode"/);
   assert.match(html, /id="i-credit-source"/);
   assert.match(app, /function syncInvoiceCreditSourceUi/);
@@ -910,6 +910,6 @@ test("keeps every workspace scrollable and text contained on 13-inch screens", a
   assert.match(styles, /\.platformExpenseForm\{grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
   assert.match(styles, /overflow-wrap:anywhere/);
   assert.match(styles, /\.platformTableWrap\{[\s\S]*overflow:auto/);
-  assert.match(html, /styles\.css\?v=20260723-expenses-v340/);
-  assert.match(shell, /erp\/index\.html\?v=20260723-expenses-v340/);
+  assert.match(html, /styles\.css\?v=20260723-i18n-v341/);
+  assert.match(shell, /erp\/index\.html\?v=20260723-i18n-v341/);
 });

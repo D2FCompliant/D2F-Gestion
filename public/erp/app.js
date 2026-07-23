@@ -50,7 +50,7 @@ async function loadI18n(lang) {
   try {
     if (!window.api?.i18n?.load) throw new Error("window.api.i18n.load manquant");
     const json = await window.api.i18n.load(l);
-    I18N[l] = json || {};
+      I18N[l] = json || {};
     return I18N[l];
   } catch (e) {
     console.warn(`[i18n] load failed for ${l}`, e);
@@ -3646,19 +3646,19 @@ function openDocumentCsvImport(entity) {
   const report = $("documentCsvReport");
   const analyzeButton = $("documentCsvAnalyzeBtn");
   const runButton = $("documentCsvRunBtn");
-  if (![fileInput, dropzone, fileName, preview, report, analyzeButton, runButton].every(Boolean)) throw new Error("Interface d’import CSV indisponible.");
+  if (![fileInput, dropzone, fileName, preview, report, analyzeButton, runButton].every(Boolean)) throw new Error(t("documents.csv.interface_unavailable", "Interface d’import CSV indisponible."));
   let selectedFile = null;
   let importRows = [];
-  const entityLabel = entity === "quotes" ? "devis" : "factures";
-  $("documentCsvImportTitle").textContent = entity === "quotes" ? "Importer des devis historiques CSV" : "Importer des factures historiques CSV";
-  $("documentCsvDropzoneTitle").textContent = "Cliquez pour choisir un fichier CSV";
-  $("documentCsvDropzoneHint").textContent = "ou déposez-le ici · 10 Mo maximum";
-  $("documentCsvExpectedTitle").textContent = "Colonnes reconnues";
-  $("documentCsvExpectedColumns").textContent = "numéro, date, client, total TTC · HT, TVA, échéance et devise sont optionnels";
-  $("documentCsvPreviewTitle").textContent = "Prévisualisation";
-  $("documentCsvReportTitle").textContent = "Rapport";
-  analyzeButton.textContent = "Analyser";
-  runButton.textContent = "Importer";
+  const entityLabel = entity === "quotes" ? t("documents.csv.entity_quotes", "devis") : t("documents.csv.entity_invoices", "factures");
+  $("documentCsvImportTitle").textContent = entity === "quotes" ? t("documents.csv.quotes_title", "Importer des devis historiques CSV") : t("documents.csv.invoices_title", "Importer des factures historiques CSV");
+  $("documentCsvDropzoneTitle").textContent = t("clients.import.choose_or_drop", "Cliquez pour choisir un fichier CSV");
+  $("documentCsvDropzoneHint").textContent = t("clients.import.drop_hint", "ou déposez-le ici · 10 Mo maximum");
+  $("documentCsvExpectedTitle").textContent = t("clients.import.recognized_columns", "Colonnes reconnues");
+  $("documentCsvExpectedColumns").textContent = t("documents.csv.columns_hint", "numéro, date, client, total TTC · HT, TVA, échéance et devise sont optionnels");
+  $("documentCsvPreviewTitle").textContent = t("clients.import.preview", "Prévisualisation");
+  $("documentCsvReportTitle").textContent = t("clients.import.report", "Rapport");
+  analyzeButton.textContent = t("clients.import.analyze", "Analyser");
+  runButton.textContent = t("clients.import.run", "Importer");
 
   const resetAnalysis = () => {
     importRows = [];
@@ -3673,16 +3673,16 @@ function openDocumentCsvImport(entity) {
     if (!/\.csv$/i.test(selectedFile.name) && !/csv|text/i.test(selectedFile.type || "")) {
       selectedFile = null;
       fileName.textContent = "";
-      report.textContent = "❌ Utilisez un fichier CSV.";
+      report.textContent = "❌ " + t("clients.import.err_csv_only", "Utilisez un fichier CSV.");
       return;
     }
     if (selectedFile.size > 10 * 1024 * 1024) {
       selectedFile = null;
       fileName.textContent = "";
-      report.textContent = "❌ Le fichier dépasse la taille maximale de 10 Mo.";
+      report.textContent = "❌ " + t("clients.import.err_too_large", "Le fichier dépasse la taille maximale de 10 Mo.");
       return;
     }
-    fileName.textContent = selectedFile.name + " · " + Math.max(1, Math.round(selectedFile.size / 1024)) + " Ko";
+    fileName.textContent = selectedFile.name + " · " + Math.max(1, Math.round(selectedFile.size / 1024)) + " " + t("common.kilobyte", "KB");
   };
 
   fileInput.value = "";
@@ -3698,20 +3698,20 @@ function openDocumentCsvImport(entity) {
   };
   analyzeButton.onclick = async () => {
     try {
-      if (!selectedFile) throw new Error("Choisissez ou déposez d’abord un fichier CSV.");
+      if (!selectedFile) throw new Error(t("documents.csv.choose_first", "Choisissez ou déposez d’abord un fichier CSV."));
       const parsed = parseCsv(await selectedFile.text(), "auto", true);
       const prepared = documentRowsFromCsv(parsed, entity, selectedFile.name);
       importRows = prepared.rows;
       if (!importRows.length) throw new Error(t("import.csv_no_rows", "Le fichier CSV ne contient aucune ligne exploitable."));
       preview.textContent = [
-        importRows.length + " " + entityLabel + " prêt(s) à importer",
-        prepared.rejected.length ? prepared.rejected.length + " ligne(s) ignorée(s) : " + prepared.rejected.join(", ") : "Toutes les lignes sont valides.",
+        t("documents.csv.valid_rows", "{count} {entity} prêt(s) à importer", { count: importRows.length, entity: entityLabel }),
+        prepared.rejected.length ? t("documents.csv.rejected_rows", "{count} ligne(s) ignorée(s) : {reasons}", { count: prepared.rejected.length, reasons: prepared.rejected.join(", ") }) : t("documents.csv.all_valid", "Toutes les lignes sont valides."),
         "",
         ...importRows.slice(0, 8).map((row) => (row.number || row.invoice_number) + " · " + row.date + " · " + row.client_name + " · " + Number(row.total_ttc).toFixed(2) + " " + row.currency),
-        ...(importRows.length > 8 ? ["… et " + (importRows.length - 8) + " autre(s)"] : []),
+        ...(importRows.length > 8 ? [t("documents.csv.more_rows", "… et {count} autre(s)", { count: importRows.length - 8 })] : []),
       ].join("\n");
-      report.textContent = "✅ Analyse terminée. Vérifiez les " + importRows.length + " ligne(s), puis cliquez sur Importer.";
-      runButton.textContent = "Importer " + importRows.length;
+      report.textContent = "✅ " + t("documents.csv.analysis_done", "Analyse terminée. Vérifiez les {count} ligne(s), puis cliquez sur Importer.", { count: importRows.length });
+      runButton.textContent = t("documents.csv.import_count", "Importer {count}", { count: importRows.length });
       runButton.disabled = false;
     } catch (error) {
       importRows = [];

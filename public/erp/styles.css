@@ -5431,7 +5431,7 @@ body{
   .platformTableWrap{max-height:min(52dvh,520px)!important}
 }
 
-/* D2F Platform 3.4.0 - Expenses document workflows */
+/* D2F Platform 3.4.1 - Expenses document workflows */
 .expenseTravelWorkflow{margin:0 16px 18px;padding:18px;border:1px solid #cbdaf0;border-radius:16px;background:#f7faff}
 .expenseTravelWorkflow .platformPanel__head{align-items:flex-start;gap:16px;flex-wrap:wrap}
 .expenseTravelWorkflow textarea{width:100%;resize:vertical;min-height:82px}

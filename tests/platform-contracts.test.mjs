@@ -399,6 +399,10 @@ test("separates company expenses from governed travel orders with validation-tim
   assert.match(service, /rate_date: validationDate/);
   assert.match(service, /business_necessity/);
   assert.match(service, /bank_reimbursement/);
+  assert.match(service, /FR: "fr", RS: "sr", IT: "it", ES: "es"/);
+  assert.match(service, /establishmentCountry/);
+  assert.match(service, /PUTNI RAČUN/);
+  assert.match(service, /locale \}/);
   assert.match(route, /expenses:validate/);
   assert.match(route, /expenses:exportAccountant/);
   assert.match(route, /expenses:exportDocument/);
@@ -406,5 +410,7 @@ test("separates company expenses from governed travel orders with validation-tim
   assert.match(html, /expense-travel-order-number/);
   assert.match(html, /expense-validation-rates/);
   assert.match(ui, /Valider et soumettre/);
+  assert.match(ui, /expenses\.action\.validate_submit/);
+  assert.match(ui, /expenses\.necessity\.template/);
   assert.match(ui, /expenses:exportBank/);
 });

@@ -1,6 +1,7 @@
 (function () {
   const local = { financial: null, expenses: null, selectedReportId: "", pendingReceipt: null, expenseFoundationReady: true, financialFoundationReady: true, financialFilter: "all", lifetimeLicense: false, licenseResolved: false };
   const tr = (key, fallback, vars) => window.__d2fT?.(key, fallback, vars) || fallback;
+  const locale = () => (document.documentElement.lang || "en").toLowerCase().slice(0, 2);
   const byId = (id) => document.getElementById(id);
   const money = (value, currency = "EUR") => new Intl.NumberFormat(document.documentElement.lang || "fr", {
     style: "currency", currency: currency || "EUR", maximumFractionDigits: 2,
@@ -9,6 +10,29 @@
   function clear(element) { if (element) element.replaceChildren(); }
   function setText(id, value) { const element = byId(id); if (element) element.textContent = String(value ?? ""); }
   function number(value) { const parsed = Number(value || 0); return Number.isFinite(parsed) ? parsed : 0; }
+  function categoryLabel(value) {
+    const keys = {
+      meal: "meals", accommodation: "lodging", fuel: "fuel", toll: "toll", parking: "parking", train: "train",
+      flight: "flight", taxi: "taxi", ride_hailing: "ride_hailing", public_transport: "public_transport",
+      vehicle_rental: "vehicle_rental", mileage: "mileage", per_diem: "per_diem",
+      telecommunications: "telecommunications", office_supplies: "office_supplies", equipment: "equipment",
+      software: "software", subscriptions: "subscriptions", professional_services: "professional_services",
+      rent: "rent", utilities: "utilities", insurance: "insurance", bank_fees: "bank_fees",
+      representation: "representation", training: "training", conference: "conference",
+      home_working: "home_working", miscellaneous: "other",
+    };
+    const key = keys[String(value || "")];
+    return key ? tr("expenses.category." + key, String(value || "")) : String(value || "—");
+  }
+  function paymentLabel(value) {
+    const key = String(value || "");
+    return key ? tr("expenses.payment." + key, key) : "—";
+  }
+  function reportTypeLabel(value) {
+    return value === "travel_order"
+      ? tr("expenses.type.travel_order", "Ordre de mission / voyage")
+      : tr("expenses.type.company_expense", "Dépense d’entreprise / achat");
+  }
   function cell(text, className = "") {
     const td = document.createElement("td"); td.textContent = String(text ?? ""); if (className) td.className = className; return td;
   }
@@ -67,8 +91,12 @@
       method: "POST", credentials: "same-origin", headers: { "content-type": "application/json" },
       body: JSON.stringify({
         category: isCountryPack ? "compliance" : "billing", priority: "normal", requestType: "need", locale: document.documentElement.lang || "fr",
-        subject: (isCountryPack ? "Qualification du " : "Activation de ") + applicationLabel,
-        description: isCountryPack ? "Merci de qualifier et publier le Country Pack applicable à cet établissement avant toute décision réglementaire." : "Merci d’activer le socle de données " + application + " pour rendre opérationnels les traitements proposés dans D2F Platform.",
+        subject: isCountryPack
+          ? tr("expenses.ticket.country_subject", "Qualification du {label}", { label: applicationLabel })
+          : tr("expenses.ticket.activation_subject", "Activation de {label}", { label: applicationLabel }),
+        description: isCountryPack
+          ? tr("expenses.ticket.country_description", "Merci de qualifier et publier le Country Pack applicable à cet établissement avant toute décision réglementaire.")
+          : tr("expenses.ticket.activation_description", "Merci d’activer le socle de données {application} afin de rendre les traitements D2F Platform opérationnels.", { application }),
       }),
     });
     const payload = await response.json().catch(() => ({}));
@@ -263,25 +291,25 @@
       submit.hidden = !editable; submit.dataset.reportId = report.id;
       if (!lines.length) { submit.dataset.platformAction = "expenses:focusLine"; submit.textContent = tr("expenses.action.add_first_line", "Ajouter la première dépense"); }
       else if (missingReceipts.length) { submit.dataset.platformAction = "expenses:openCapture"; submit.textContent = tr("expenses.action.add_receipts", "Ajouter " + missingReceipts.length + " justificatif(s)"); }
-      else { submit.dataset.platformAction = "expenses:validate"; submit.textContent = "Valider et soumettre"; }
+      else { submit.dataset.platformAction = "expenses:validate"; submit.textContent = tr("expenses.action.validate_submit", "Valider et soumettre"); }
     }
     const proofByLine = new Map(receipts.filter((receipt) => receipt.expense_line_id).map((receipt) => [String(receipt.expense_line_id), receipt]));
     const body = byId("expense-lines-body"); clear(body);
     for (const line of lines) {
       const row = document.createElement("tr");
-      row.append(cell(line.occurred_on), cell(line.merchant), cell(line.category), cell(line.payment_method || "—"), cell(line.business_purpose), cell(money(line.gross_amount, line.currency), "numeric"), cell(money(line.personal_amount, line.currency), "numeric"));
+      row.append(cell(line.occurred_on), cell(line.merchant), cell(categoryLabel(line.category)), cell(paymentLabel(line.payment_method)), cell(line.business_purpose), cell(money(line.gross_amount, line.currency), "numeric"), cell(money(line.personal_amount, line.currency), "numeric"));
       const proof = document.createElement("td"); const receipt = proofByLine.get(String(line.id));
-      if (receipt) proof.append(actionButton("Voir", "expenses:viewReceipt", receipt.id, "secondary"));
+      if (receipt) proof.append(actionButton(tr("expenses.action.view", "Voir"), "expenses:viewReceipt", receipt.id, "secondary"));
       else proof.append(badge(line.receipt_required === false ? "approved" : "returned"));
       row.append(proof); body?.append(row);
     }
     const receiptList = byId("expense-receipts-list"); clear(receiptList);
     for (const receipt of receipts) {
       const card = document.createElement("article"); const meta = document.createElement("div"); const name = document.createElement("strong"); const info = document.createElement("small");
-      name.textContent = receipt.original_filename; info.textContent = Math.max(1, Math.round(number(receipt.byte_size) / 1024)) + " Ko · " + String(receipt.sha256 || "").slice(0, 12) + "… · " + (receipt.security_status === "verified" ? "vérifié" : "en contrôle"); meta.append(name, info);
-      card.append(meta, actionButton("Consulter", "expenses:viewReceipt", receipt.id, "secondary")); receiptList?.append(card);
+      name.textContent = receipt.original_filename; info.textContent = Math.max(1, Math.round(number(receipt.byte_size) / 1024)) + " " + tr("common.kilobyte", "KB") + " · " + String(receipt.sha256 || "").slice(0, 12) + "… · " + (receipt.security_status === "verified" ? tr("expenses.receipt.verified", "vérifié") : tr("expenses.receipt.checking", "en contrôle")); meta.append(name, info);
+      card.append(meta, actionButton(tr("expenses.action.consult", "Consulter"), "expenses:viewReceipt", receipt.id, "secondary")); receiptList?.append(card);
     }
-    if (!receipts.length) { const empty = document.createElement("p"); empty.className = "platformEmpty"; empty.textContent = "Aucun justificatif enregistré."; receiptList?.append(empty); }
+    if (!receipts.length) { const empty = document.createElement("p"); empty.className = "platformEmpty"; empty.textContent = tr("expenses.receipt.none", "Aucun justificatif enregistré."); receiptList?.append(empty); }
   }
 
   function reportNumberButton(report) {
@@ -294,7 +322,7 @@
     const allReports = data.reports || [];
     const claimantSelect = byId("expense-claimant-filter");
     if (claimantSelect) {
-      const value = claimantSelect.value; clear(claimantSelect); const all = document.createElement("option"); all.value = ""; all.textContent = data.access?.scope === "personal" ? "Mes notes" : "Tous les utilisateurs"; claimantSelect.append(all);
+      const value = claimantSelect.value; clear(claimantSelect); const all = document.createElement("option"); all.value = ""; all.textContent = data.access?.scope === "personal" ? tr("expenses.reports.mine", "Mes notes") : tr("expenses.reports.all_users", "Tous les utilisateurs"); claimantSelect.append(all);
       for (const claimant of data.claimants || []) { const option = document.createElement("option"); option.value = claimant.id; option.textContent = claimant.name; claimantSelect.append(option); }
       claimantSelect.value = [...claimantSelect.options].some((option) => option.value === value) ? value : ""; claimantSelect.disabled = data.access?.scope === "personal";
     }
@@ -311,20 +339,20 @@
     for (const report of reports) {
       const lines = reportLines(report.id), receipts = reportReceipts(report.id), missing = missingReceiptLines(report.id);
       const row = document.createElement("tr"); if (String(report.id) === String(local.selectedReportId)) row.classList.add("is-selected");
-      row.append(reportNumberButton(report), cell(report.claimant_name || report.claimant_id), cell(report.document_type === "travel_order" ? "Ordre de mission" : "Dépense entreprise"), cell(report.title), cell(String(report.updated_at || "").slice(0, 10)), cell(money(report.total_gross, report.currency), "numeric"), cell(money(report.personal_amount, report.currency), "numeric"), cell(money(report.reimbursable_amount, report.currency), "numeric"), cell(receipts.length + "/" + lines.filter((line) => line.receipt_required !== false).length));
+      row.append(reportNumberButton(report), cell(report.claimant_name || report.claimant_id), cell(reportTypeLabel(report.document_type)), cell(report.title), cell(String(report.updated_at || "").slice(0, 10)), cell(money(report.total_gross, report.currency), "numeric"), cell(money(report.personal_amount, report.currency), "numeric"), cell(money(report.reimbursable_amount, report.currency), "numeric"), cell(receipts.length + "/" + lines.filter((line) => line.receipt_required !== false).length));
       const status = document.createElement("td"); status.append(badge(report.status)); row.append(status);
       const actions = document.createElement("td"); actions.className = "platformActions";
       if (report.can_edit && !lines.length) actions.append(actionButton(tr("expenses.action.add_expense", "Ajouter une dépense"), "expenses:select", report.id, "primary"));
       else if (report.can_edit && missing.length) actions.append(actionButton(tr("expenses.action.add_receipt", "Ajouter un justificatif"), "expenses:openCapture", report.id, "primary"));
-      else if (report.can_edit) actions.append(actionButton("Valider et soumettre", "expenses:validate", report.id, "primary"));
+      else if (report.can_edit) actions.append(actionButton(tr("expenses.action.validate_submit", "Valider et soumettre"), "expenses:validate", report.id, "primary"));
       else if (report.can_approve) actions.append(actionButton(tr("expenses.action.review", "Examiner"), "expenses:openApproval", report.id, "secondary"));
       else actions.append(actionButton(tr("expenses.action.open", "Ouvrir"), "expenses:select", report.id, "secondary"));
       row.append(actions); body?.append(row);
 
       const card = document.createElement("article"); card.className = "expenseMobileCard"; const head = document.createElement("header"); const headText = document.createElement("div"); const numberLabel = document.createElement("strong"); const purpose = document.createElement("span");
       numberLabel.textContent = report.report_number; purpose.textContent = report.title; headText.append(numberLabel, purpose); head.append(headText, badge(report.status));
-      const stats = document.createElement("div"); stats.className = "expenseMobileCard__stats"; stats.append(Object.assign(document.createElement("span"), { textContent: money(report.total_gross, report.currency) }), Object.assign(document.createElement("span"), { textContent: receipts.length + " preuve(s)" }), Object.assign(document.createElement("span"), { textContent: String(report.updated_at || "").slice(0, 10) }));
-      const mobileActions = document.createElement("footer"); mobileActions.append(actionButton("Ouvrir", "expenses:select", report.id, "secondary")); if (report.can_edit) mobileActions.append(actionButton(missing.length ? "Ajouter une preuve" : "Compléter", missing.length ? "expenses:openCapture" : "expenses:select", report.id, "primary"));
+      const stats = document.createElement("div"); stats.className = "expenseMobileCard__stats"; stats.append(Object.assign(document.createElement("span"), { textContent: money(report.total_gross, report.currency) }), Object.assign(document.createElement("span"), { textContent: receipts.length + " " + tr("expenses.mobile.evidence_count", "preuve(s)") }), Object.assign(document.createElement("span"), { textContent: String(report.updated_at || "").slice(0, 10) }));
+      const mobileActions = document.createElement("footer"); mobileActions.append(actionButton(tr("expenses.action.open", "Ouvrir"), "expenses:select", report.id, "secondary")); if (report.can_edit) mobileActions.append(actionButton(missing.length ? tr("expenses.action.add_evidence", "Ajouter une preuve") : tr("expenses.action.complete", "Compléter"), missing.length ? "expenses:openCapture" : "expenses:select", report.id, "primary"));
       card.append(head, stats, mobileActions); mobile?.append(card);
     }
     toggleEmpty("expense-reports-empty", reports.length);
@@ -332,7 +360,7 @@
     const approvals = byId("expense-approvals-body"); clear(approvals);
     for (const report of submitted) {
       const row = document.createElement("tr"); row.append(reportNumberButton(report), cell(report.title), cell(report.claimant_name || report.claimant_id), cell(money(report.eligible_amount || report.total_gross, report.currency), "numeric"));
-      row.append(cell((report.findings || []).length ? (report.findings || []).length + " constat(s)" : tr("expenses.approvals.no_finding", "Aucun constat")));
+      row.append(cell((report.findings || []).length ? (report.findings || []).length + " " + tr("expenses.approvals.finding_count", "constat(s)") : tr("expenses.approvals.no_finding", "Aucun constat")));
       const actions = document.createElement("td"); actions.className = "platformActions"; actions.append(actionButton(tr("expenses.action.approve", "Approuver"), "expenses:approve", report.id, "primary"), actionButton(tr("expenses.action.return", "À corriger"), "expenses:return", report.id, "secondary"), actionButton(tr("expenses.action.reject", "Refuser"), "expenses:reject", report.id, "danger")); row.append(actions); approvals?.append(row);
     }
     toggleEmpty("expense-approvals-empty", submitted.length);
@@ -352,23 +380,25 @@
       const detail = document.createElement("p"); const limit = rule.limit || {}; detail.textContent = [rule.kind, rule.effect, limit.amount != null ? limit.amount + " " + (limit.currency || pack.currency || "") : ""].filter(Boolean).join(" · ");
       card.append(title, detail); rules?.append(card);
     }
-    for (const source of pack.sources || []) { const row=document.createElement("div"); row.className="expenseReceiptItem"; const text=document.createElement("span"); const strong=document.createElement("strong"); strong.textContent=source.authority || "Source"; const small=document.createElement("small"); small.textContent=source.title || source.id || ""; text.append(strong,small); const link=document.createElement("a"); link.className="btn btn--secondary btn--compact"; link.href=source.url; link.target="_blank"; link.rel="noopener noreferrer"; link.textContent="Source officielle"; row.append(text,link); sources?.append(row); }
+    for (const source of pack.sources || []) { const row=document.createElement("div"); row.className="expenseReceiptItem"; const text=document.createElement("span"); const strong=document.createElement("strong"); strong.textContent=source.authority || tr("common.source", "Source"); const small=document.createElement("small"); small.textContent=source.title || source.id || ""; text.append(strong,small); const link=document.createElement("a"); link.className="btn btn--secondary btn--compact"; link.href=source.url; link.target="_blank"; link.rel="noopener noreferrer"; link.textContent=tr("expenses.rules.official_source", "Source officielle"); row.append(text,link); sources?.append(row); }
   }
 
   function renderPackState(workspacePack) {
     const capability = window.D2FPlatformCapabilities?.countryPack || {};
     const financial = capability.modules?.financial || { country: capability.country || "—", status: "not_qualified", reason: "no_published_financial_pack" };
     const expenses = workspacePack || capability.modules?.expenses || { country: capability.country || "—", status: "not_qualified", reason: "no_published_expenses_pack" };
-    const stateLabel = (pack, module) => (pack.country || "—") + " · " + (pack.status === "qualified" ? "Country Pack " + module + " qualifié" : "Country Pack " + module + " non qualifié");
+    const stateLabel = (pack, module) => (pack.country || "—") + " · " + (pack.status === "qualified"
+      ? tr("expenses.pack.qualified", "Country Pack " + module + " qualifié", { module })
+      : tr("expenses.pack.unqualified", "Country Pack " + module + " non qualifié", { module }));
     setText("financial-country-pack", stateLabel(financial, "Financial"));
     setText("expense-country-pack", stateLabel(expenses, "Expenses"));
     setText("expenses-rules-pack", stateLabel(expenses, "Expenses"));
     setText("financial-pack-rule", financial.packId || "country." + String(financial.country || "").toLowerCase() + ".financial");
     setText("expenses-pack-rule", expenses.packId || "country." + String(expenses.country || "").toLowerCase() + ".expenses");
-    setText("financial-pack-version", financial.version ? financial.version + " · qualified" : "Non publié · " + (financial.reason || "qualification_required"));
-    setText("expenses-pack-version", expenses.version ? expenses.version + " · " + expenses.status : "Non publié · " + (expenses.reason || "qualification_required"));
+    setText("financial-pack-version", financial.version ? financial.version + " · " + tr("expenses.pack.qualified_short", "Qualifié") : tr("expenses.pack.unpublished", "Non publié") + " · " + (financial.reason || "qualification_required"));
+    setText("expenses-pack-version", expenses.version ? expenses.version + " · " + (expenses.status === "qualified" ? tr("expenses.pack.qualified_short", "Qualifié") : tr("expenses.pack.validation_required", "Validation requise")) : tr("expenses.pack.unpublished", "Non publié") + " · " + (expenses.reason || "qualification_required"));
     const financialStatus = byId("financial-pack-status");
-    if (financialStatus) { financialStatus.className = "platformStatus platformStatus--" + (financial.status === "qualified" ? "approved" : "submitted"); financialStatus.textContent = financial.status === "qualified" ? "Qualifié" : "Validation requise"; }
+    if (financialStatus) { financialStatus.className = "platformStatus platformStatus--" + (financial.status === "qualified" ? "approved" : "submitted"); financialStatus.textContent = financial.status === "qualified" ? tr("expenses.pack.qualified_short", "Qualifié") : tr("expenses.pack.validation_required", "Validation requise"); }
     byId("financial-country-notice")?.toggleAttribute("hidden", financial.status === "qualified");
     byId("expenses-country-notice")?.toggleAttribute("hidden", expenses.status === "qualified");
   }
@@ -427,7 +457,7 @@
     return rates;
   }
   function downloadRpcFile(file) {
-    if (!file?.downloadBase64) throw new Error("Fichier indisponible");
+    if (!file?.downloadBase64) throw new Error(tr("expenses.error.file_unavailable", "Fichier indisponible"));
     const binary = atob(file.downloadBase64); const bytes = new Uint8Array(binary.length);
     for (let i=0;i<binary.length;i+=1) bytes[i]=binary.charCodeAt(i);
     const url=URL.createObjectURL(new Blob([bytes],{type:file.mimeType||"application/octet-stream"}));
@@ -443,7 +473,7 @@
   }
   function renderPendingReceipt() {
     const ready = byId("expense-receipt-ready"); if (!ready) return; ready.hidden = !local.pendingReceipt;
-    setText("expense-receipt-name", local.pendingReceipt?.filename || ""); setText("expense-receipt-meta", local.pendingReceipt ? Math.max(1, Math.round(local.pendingReceipt.size / 1024)) + " Ko · " + local.pendingReceipt.mimeType : "");
+    setText("expense-receipt-name", local.pendingReceipt?.filename || ""); setText("expense-receipt-meta", local.pendingReceipt ? Math.max(1, Math.round(local.pendingReceipt.size / 1024)) + " " + tr("common.kilobyte", "KB") + " · " + local.pendingReceipt.mimeType : "");
   }
   async function selectReceiptFile(file) { local.pendingReceipt = await receiptPayload(file); renderPendingReceipt(); }
   function optionalLocation() {
@@ -469,7 +499,7 @@
       return;
     }
     if (action === "expenses:pickReceipt") { byId("expense-receipt-file")?.click(); return; }
-    if (action === "expenses:viewReceipt") { const access = await window.api.expenses.receiptAccess({ id: reportId }); const opened = window.open(access.url, "_blank", "noopener,noreferrer"); if (!opened) setText("appStatus", "Autorisez l’ouverture du justificatif dans un nouvel onglet."); return; }
+    if (action === "expenses:viewReceipt") { const access = await window.api.expenses.receiptAccess({ id: reportId }); const opened = window.open(access.url, "_blank", "noopener,noreferrer"); if (!opened) setText("appStatus", tr("expenses.error.popup_blocked", "Autorisez l’ouverture du justificatif dans un nouvel onglet.")); return; }
     if (action === "expenses:openCapture") { renderExpenses(local.expenses || { reports: [], lines: [], receipts: [], summary: {} }); window.D2FShowPage?.("expenses-capture"); return; }
     if (action === "expenses:openApproval") { window.D2FShowPage?.("expenses-approvals"); return; }
     if (action === "expenses:focusLine") { byId("expense-line-merchant")?.focus(); return; }
@@ -492,10 +522,10 @@
       await window.api.expenses.addLine(expenseInput()); for (const id of ["expense-line-merchant", "expense-line-description", "expense-line-purpose", "expense-line-net", "expense-line-tax", "expense-line-personal", "expense-line-original-gross"]) if (byId(id)) byId(id).value = ""; return refreshExpenses();
     }
     if (action === "expenses:suggestNecessity") {
-      const activity = byId("expense-travel-company-activity")?.value || "les activités déclarées de l’entreprise";
-      const purpose = byId("expense-travel-purpose")?.value || selectedExpenseReport()?.title || "la mission professionnelle";
-      const destination = byId("expense-travel-destination-city")?.value || "la destination indiquée";
-      if (byId("expense-travel-necessity")) byId("expense-travel-necessity").value = "Le déplacement à " + destination + " est nécessaire pour " + purpose + ". Il est directement lié à " + activity + " et requiert une présence sur place afin de réaliser les réunions, vérifications ou travaux qui ne peuvent pas être accomplis avec le même niveau de preuve et d’efficacité à distance. Cette proposition doit être vérifiée et adaptée par le demandeur avant validation.";
+      const activity = byId("expense-travel-company-activity")?.value || tr("expenses.necessity.default_activity", "les activités déclarées de l’entreprise");
+      const purpose = byId("expense-travel-purpose")?.value || selectedExpenseReport()?.title || tr("expenses.necessity.default_purpose", "la mission professionnelle");
+      const destination = byId("expense-travel-destination-city")?.value || tr("expenses.necessity.default_destination", "la destination indiquée");
+      if (byId("expense-travel-necessity")) byId("expense-travel-necessity").value = tr("expenses.necessity.template", "Le déplacement à {destination} est nécessaire pour {purpose}. Il est directement lié à {activity}.", { destination, purpose, activity });
       return;
     }
     if (action === "expenses:saveWorkflow") {
@@ -509,12 +539,12 @@
       await validateExpense({ id: local.selectedReportId, rates: validationRates(), idempotencyKey: "expense:validate:" + local.selectedReportId });
       return refreshExpenses();
     }
-    if (action === "expenses:exportAccountant") { downloadRpcFile(await window.api.expenses.exportAccountant({ id: local.selectedReportId })); return; }
+    if (action === "expenses:exportAccountant") { downloadRpcFile(await window.api.expenses.exportAccountant({ id: local.selectedReportId, locale: locale() })); return; }
     if (action === "expenses:exportTravel") {
-      downloadRpcFile(await window.api.expenses.exportDocument({ id: local.selectedReportId, type: "travel_order" }));
-      downloadRpcFile(await window.api.expenses.exportDocument({ id: local.selectedReportId, type: "travel_account" })); return;
+      downloadRpcFile(await window.api.expenses.exportDocument({ id: local.selectedReportId, type: "travel_order", locale: locale() }));
+      downloadRpcFile(await window.api.expenses.exportDocument({ id: local.selectedReportId, type: "travel_account", locale: locale() })); return;
     }
-    if (action === "expenses:exportBank") { downloadRpcFile(await window.api.expenses.exportDocument({ id: local.selectedReportId, type: "bank_reimbursement" })); return; }
+    if (action === "expenses:exportBank") { downloadRpcFile(await window.api.expenses.exportDocument({ id: local.selectedReportId, type: "bank_reimbursement", locale: locale() })); return; }
     const decisions = { "expenses:approve": "approved", "expenses:reject": "rejected", "expenses:return": "returned" };
     if (decisions[action]) {
       await window.api.expenses.decide({ id: local.selectedReportId, decision: decisions[action], note: byId("expense-decision-note")?.value || "", idempotencyKey: "expense:decision:" + decisions[action] + ":" + local.selectedReportId });

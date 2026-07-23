@@ -1422,11 +1422,15 @@ async function dispatch(ownerEmail: string, method: string, args: unknown[], ten
     return { validated, submitted };
   }
   if (method === "expenses:exportAccountant") {
-    const exported = await createExpenseAccountantCsv(getSupabaseAdmin(), ownerEmail, actorId, actorRole, first(args));
+    const exported = await createExpenseAccountantCsv(getSupabaseAdmin(), ownerEmail, actorId, actorRole, {
+      ...object(first(args)), establishmentCountry: tenantIdentity?.country || "",
+    });
     return { fileName: exported.fileName, mimeType: exported.mimeType, downloadBase64: textToBase64(exported.content) };
   }
   if (method === "expenses:exportDocument") {
-    const exported = await createExpenseDocumentPdf(getSupabaseAdmin(), ownerEmail, actorId, actorRole, first(args));
+    const exported = await createExpenseDocumentPdf(getSupabaseAdmin(), ownerEmail, actorId, actorRole, {
+      ...object(first(args)), establishmentCountry: tenantIdentity?.country || "",
+    });
     return { fileName: exported.fileName, mimeType: exported.mimeType, downloadBase64: pdfBytesToBase64(exported.bytes) };
   }
   if (method === "expenses:addLine") return addExpenseLine(getSupabaseAdmin(), ownerEmail, tenantIdentity?.country || "", actorId, first(args));
