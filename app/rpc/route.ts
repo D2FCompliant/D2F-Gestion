@@ -14,6 +14,8 @@ import { validateEstablishmentIdentifier } from "../../lib/company-identifiers";
 import { preflightInvoice } from "../../lib/country-compliance";
 import { issueInvoiceAtomically } from "../../lib/platform/issue-invoice";
 import { addExpenseLine, createExpenseReport, decideExpenseReport, getExpenseReceiptAccess, listExpenseWorkspace, listFinancialWorkspace, refreshFinancialProjections, submitExpenseReport, uploadExpenseReceipt } from "../../lib/platform/financial-expense";
+import { expenseCountryPolicy } from "../../lib/platform/expense-country-policy";
+import { createExpenseAccountantCsv, createExpenseDocumentPdf, updateExpenseWorkflow, validateExpenseDocument } from "../../lib/platform/expense-documents";
 import { registerCustomerPaymentAtomically } from "../../lib/platform/register-customer-payment";
 import { testSmtpConnection } from "../../lib/support-mail";
 
@@ -1405,6 +1407,28 @@ async function dispatch(ownerEmail: string, method: string, args: unknown[], ten
   if (method === "financial:refreshProjections") return refreshFinancialProjections(getSupabaseAdmin(), ownerEmail);
   if (method === "expenses:workspace") return listExpenseWorkspace(getSupabaseAdmin(), ownerEmail, actorId, actorRole, tenantIdentity?.country || "");
   if (method === "expenses:createReport") return createExpenseReport(getSupabaseAdmin(), ownerEmail, tenantIdentity?.tenantId || ownerEmail, actorId, first(args));
+  if (method === "expenses:updateWorkflow") {
+    const input = object(first(args));
+    const company = await getCompany(ownerEmail);
+    const workflowData = object(input.workflowData || input.workflow_data);
+    const order = { ...object(workflowData.order), companyName: String(company.legal_name || company.name || "") };
+    return updateExpenseWorkflow(getSupabaseAdmin(), ownerEmail, actorId, { ...input, workflowData: { ...workflowData, order } });
+  }
+  if (method === "expenses:validate") {
+    const policy = await expenseCountryPolicy(getSupabaseAdmin(), tenantIdentity?.country || "");
+    const pack = { packId: policy.packId, version: policy.version, manifestHash: null, status: policy.status };
+    const validated = await validateExpenseDocument(getSupabaseAdmin(), ownerEmail, tenantIdentity?.country || "", actorId, pack, first(args));
+    const submitted = await submitExpenseReport(getSupabaseAdmin(), ownerEmail, tenantIdentity?.country || "", actorId, { ...object(first(args)), id: validated.id });
+    return { validated, submitted };
+  }
+  if (method === "expenses:exportAccountant") {
+    const exported = await createExpenseAccountantCsv(getSupabaseAdmin(), ownerEmail, actorId, actorRole, first(args));
+    return { fileName: exported.fileName, mimeType: exported.mimeType, downloadBase64: textToBase64(exported.content) };
+  }
+  if (method === "expenses:exportDocument") {
+    const exported = await createExpenseDocumentPdf(getSupabaseAdmin(), ownerEmail, actorId, actorRole, first(args));
+    return { fileName: exported.fileName, mimeType: exported.mimeType, downloadBase64: pdfBytesToBase64(exported.bytes) };
+  }
   if (method === "expenses:addLine") return addExpenseLine(getSupabaseAdmin(), ownerEmail, tenantIdentity?.country || "", actorId, first(args));
   if (method === "expenses:uploadReceipt") return uploadExpenseReceipt(getSupabaseAdmin(), ownerEmail, actorId, first(args));
   if (method === "expenses:receiptAccess") return getExpenseReceiptAccess(getSupabaseAdmin(), ownerEmail, actorId, actorRole, first(args));

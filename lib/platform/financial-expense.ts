@@ -114,7 +114,7 @@ export async function listExpenseWorkspace(
   const countryPack = await expenseCountryPolicy(supabase, establishmentCountry);
   let reportsQuery = supabase
     .from("d2f_expense_reports")
-    .select("id,report_number,claimant_id,claimant_name,title,currency,status,total_net,total_tax,total_gross,claimed_amount,eligible_amount,rejected_amount,personal_amount,reimbursable_amount,advance_amount,reimbursed_amount,remaining_amount,reimbursement_status,accounting_status,aggregate_version,submitted_at,decided_at,approver_id,decision_note,created_at,updated_at")
+    .select("id,report_number,claimant_id,claimant_name,title,currency,status,document_type,workflow_data,mission_report,business_necessity,validated_at,validated_by,validation_rate_date,country_pack_id,country_pack_version,country_pack_hash,total_net,total_tax,total_gross,claimed_amount,eligible_amount,rejected_amount,personal_amount,reimbursable_amount,advance_amount,reimbursed_amount,remaining_amount,reimbursement_status,accounting_status,aggregate_version,submitted_at,decided_at,approver_id,decision_note,created_at,updated_at")
     .eq("owner_key", ownerKey);
   if (actorRole !== "owner") reportsQuery = reportsQuery.eq("claimant_id", actorId);
   const reports = await reportsQuery.order("updated_at", { ascending: false }).limit(500);
@@ -166,8 +166,11 @@ export async function createExpenseReport(
   if (title.length < 3) throw new Error("Indiquez l'objet de la note de frais");
   const currency = text(input.currency || "EUR").toUpperCase();
   if (!/^[A-Z]{3}$/.test(currency)) throw new Error("Devise invalide");
+  const documentType = text(input.documentType || input.document_type || "company_expense");
+  if (!["company_expense", "travel_order"].includes(documentType)) throw new Error("Type de dépense invalide");
   const id = crypto.randomUUID();
-  const reportNumber = `NDF-${new Date().getUTCFullYear()}-${id.replace(/-/g, "").slice(0, 8).toUpperCase()}`;
+  const prefix = documentType === "travel_order" ? "PN" : "NDF";
+  const reportNumber = prefix + "-" + new Date().getUTCFullYear() + "-" + id.replace(/-/g, "").slice(0, 8).toUpperCase();
   const inserted = await supabase
     .from("d2f_expense_reports")
     .insert({
@@ -179,6 +182,8 @@ export async function createExpenseReport(
       claimant_name: text(input.claimantName || input.claimant_name || actorId),
       title,
       currency,
+      document_type: documentType,
+      workflow_data: object(input.workflowData || input.workflow_data),
       status: "draft",
     })
     .select("*")

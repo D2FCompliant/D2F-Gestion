@@ -378,3 +378,33 @@ test("locks every runtime to the official Supabase project", async () => {
   assert.match(server, /assertOfficialSupabaseUrl\(url\)/);
   assert.doesNotMatch(server, /assertOfficialServiceRoleKey/);
 });
+
+
+test("separates company expenses from governed travel orders with validation-time FX and exports", async () => {
+  const [schemaMigration, packMigration, service, route, html, ui] = await Promise.all([
+    readFile(new URL("supabase/migrations/20260723143000_expense_documents_and_travel_orders.sql", root), "utf8"),
+    readFile(new URL("supabase/migrations/20260723144000_expense_travel_country_pack_candidates.sql", root), "utf8"),
+    readFile(new URL("lib/platform/expense-documents.ts", root), "utf8"),
+    readFile(new URL("app/rpc/route.ts", root), "utf8"),
+    readFile(new URL("public/erp/index.html", root), "utf8"),
+    readFile(new URL("public/erp/financial-expense-ui.js", root), "utf8"),
+  ]);
+  assert.match(schemaMigration, /company_expense','travel_order/);
+  assert.match(schemaMigration, /d2f_expense_exchange_rates/);
+  assert.match(schemaMigration, /d2f_expense_exports/);
+  for (const country of ["RS","FR","IT","ES"]) assert.match(packMigration, new RegExp("'" + country + "'"));
+  assert.match(packMigration, /freezeAtValidation/);
+  assert.match(packMigration, /automaticPublication',false/);
+  assert.match(service, /National Bank of Serbia/);
+  assert.match(service, /rate_date: validationDate/);
+  assert.match(service, /business_necessity/);
+  assert.match(service, /bank_reimbursement/);
+  assert.match(route, /expenses:validate/);
+  assert.match(route, /expenses:exportAccountant/);
+  assert.match(route, /expenses:exportDocument/);
+  assert.match(html, /expense-report-type/);
+  assert.match(html, /expense-travel-order-number/);
+  assert.match(html, /expense-validation-rates/);
+  assert.match(ui, /Valider et soumettre/);
+  assert.match(ui, /expenses:exportBank/);
+});

@@ -5430,3 +5430,22 @@ body{
   .platformFieldWide{grid-column:auto}
   .platformTableWrap{max-height:min(52dvh,520px)!important}
 }
+
+/* D2F Platform 3.4.0 - Expenses document workflows */
+.expenseTravelWorkflow{margin:0 16px 18px;padding:18px;border:1px solid #cbdaf0;border-radius:16px;background:#f7faff}
+.expenseTravelWorkflow .platformPanel__head{align-items:flex-start;gap:16px;flex-wrap:wrap}
+.expenseTravelWorkflow textarea{width:100%;resize:vertical;min-height:82px}
+.expenseRateBox{padding:14px;border:1px solid #f0c98b;border-radius:12px;background:#fffaf0}
+.expenseRateBox p{margin:6px 0 10px;color:#65758c;line-height:1.35}
+.expenseRateBox input{width:100%}
+@media(max-width:1100px){
+  .platformFormRow{grid-template-columns:minmax(0,1fr) minmax(120px,.35fr)}
+  .platformFormRow .btn{grid-column:1/-1;width:100%}
+  .expenseTravelWorkflow{margin-inline:10px;padding:12px}
+}
+@media(max-width:760px){
+  .platformFormRow{display:grid;grid-template-columns:1fr}
+  .platformFormRow>*{min-width:0}
+  .expenseTravelWorkflow .platformActions{width:100%}
+  .expenseTravelWorkflow .platformActions .btn{flex:1 1 100%}
+}

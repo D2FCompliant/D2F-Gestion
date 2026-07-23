@@ -237,11 +237,33 @@
     }
     const editable = report.can_edit === true;
     if (lineForm) lineForm.hidden = !editable;
+    const travel = byId("expense-travel-workflow"); if (travel) travel.hidden = report.document_type !== "travel_order" || !editable;
+    const exportAccountant = byId("expense-export-accountant"), exportTravel = byId("expense-export-travel"), exportBank = byId("expense-export-bank");
+    if (exportAccountant) { exportAccountant.hidden = report.status !== "approved"; exportAccountant.dataset.reportId = report.id; }
+    if (exportTravel) { exportTravel.hidden = report.document_type !== "travel_order" || !["submitted","approved"].includes(report.status); exportTravel.dataset.reportId = report.id; }
+    if (exportBank) { exportBank.hidden = report.document_type !== "travel_order" || report.status !== "approved"; exportBank.dataset.reportId = report.id; }
+    if (report.document_type === "travel_order") {
+      const workflow = report.workflow_data || {}, order = workflow.order || {}, settlement = workflow.settlement || {};
+      const values = {
+        "expense-travel-order-number": order.orderNumber, "expense-travel-order-date": order.orderDate, "expense-travel-traveler": order.traveler,
+        "expense-travel-role": order.travelerRole, "expense-travel-destination-city": order.destinationCity, "expense-travel-destination-country": order.destinationCountry,
+        "expense-travel-departure": order.departureAt, "expense-travel-expected-return": order.expectedReturnAt, "expense-travel-actual-return": settlement.actualReturnAt,
+        "expense-travel-transport": order.transportMode, "expense-travel-route": order.route, "expense-travel-purpose": order.purpose,
+        "expense-travel-perdiem-days": settlement.perDiemDays, "expense-travel-perdiem-rate": settlement.perDiemRate,
+        "expense-travel-perdiem-currency": settlement.perDiemCurrency || "EUR", "expense-travel-duration": settlement.durationHours,
+        "expense-travel-corporate-card": settlement.corporateCardAmount, "expense-travel-advance": settlement.advanceAmount,
+        "expense-travel-reimbursement-rsd": settlement.reimbursementRsd, "expense-travel-reimbursement-fx": settlement.reimbursementForeign,
+        "expense-travel-reimbursement-fx-currency": settlement.reimbursementForeignCurrency || "EUR",
+        "expense-travel-rsd-account": order.rsdAccount, "expense-travel-fx-account": order.fxAccount,
+        "expense-travel-company-activity": order.companyActivity, "expense-travel-necessity": report.business_necessity, "expense-travel-report": report.mission_report
+      };
+      Object.entries(values).forEach(([id,value])=>{ if (byId(id)) byId(id).value = value || ""; });
+    }
     if (submit) {
       submit.hidden = !editable; submit.dataset.reportId = report.id;
       if (!lines.length) { submit.dataset.platformAction = "expenses:focusLine"; submit.textContent = tr("expenses.action.add_first_line", "Ajouter la première dépense"); }
       else if (missingReceipts.length) { submit.dataset.platformAction = "expenses:openCapture"; submit.textContent = tr("expenses.action.add_receipts", "Ajouter " + missingReceipts.length + " justificatif(s)"); }
-      else { submit.dataset.platformAction = "expenses:submit"; submit.textContent = tr("expenses.action.submit", "Soumettre pour approbation"); }
+      else { submit.dataset.platformAction = "expenses:validate"; submit.textContent = "Valider et soumettre"; }
     }
     const proofByLine = new Map(receipts.filter((receipt) => receipt.expense_line_id).map((receipt) => [String(receipt.expense_line_id), receipt]));
     const body = byId("expense-lines-body"); clear(body);
@@ -289,12 +311,12 @@
     for (const report of reports) {
       const lines = reportLines(report.id), receipts = reportReceipts(report.id), missing = missingReceiptLines(report.id);
       const row = document.createElement("tr"); if (String(report.id) === String(local.selectedReportId)) row.classList.add("is-selected");
-      row.append(reportNumberButton(report), cell(report.claimant_name || report.claimant_id), cell(report.title), cell(String(report.updated_at || "").slice(0, 10)), cell(money(report.total_gross, report.currency), "numeric"), cell(money(report.personal_amount, report.currency), "numeric"), cell(money(report.reimbursable_amount, report.currency), "numeric"), cell(receipts.length + "/" + lines.filter((line) => line.receipt_required !== false).length));
+      row.append(reportNumberButton(report), cell(report.claimant_name || report.claimant_id), cell(report.document_type === "travel_order" ? "Ordre de mission" : "Dépense entreprise"), cell(report.title), cell(String(report.updated_at || "").slice(0, 10)), cell(money(report.total_gross, report.currency), "numeric"), cell(money(report.personal_amount, report.currency), "numeric"), cell(money(report.reimbursable_amount, report.currency), "numeric"), cell(receipts.length + "/" + lines.filter((line) => line.receipt_required !== false).length));
       const status = document.createElement("td"); status.append(badge(report.status)); row.append(status);
       const actions = document.createElement("td"); actions.className = "platformActions";
       if (report.can_edit && !lines.length) actions.append(actionButton(tr("expenses.action.add_expense", "Ajouter une dépense"), "expenses:select", report.id, "primary"));
       else if (report.can_edit && missing.length) actions.append(actionButton(tr("expenses.action.add_receipt", "Ajouter un justificatif"), "expenses:openCapture", report.id, "primary"));
-      else if (report.can_edit) actions.append(actionButton(tr("expenses.action.submit", "Soumettre"), "expenses:submit", report.id, "primary"));
+      else if (report.can_edit) actions.append(actionButton("Valider et soumettre", "expenses:validate", report.id, "primary"));
       else if (report.can_approve) actions.append(actionButton(tr("expenses.action.review", "Examiner"), "expenses:openApproval", report.id, "secondary"));
       else actions.append(actionButton(tr("expenses.action.open", "Ouvrir"), "expenses:select", report.id, "secondary"));
       row.append(actions); body?.append(row);
@@ -367,10 +389,49 @@
     }
   }
 
+  function selectedExpenseReport() { return (local.expenses?.reports || []).find((item) => String(item.id) === String(local.selectedReportId)); }
   function expenseInput() {
+    const report = selectedExpenseReport();
     return { reportId: local.selectedReportId, occurredOn: byId("expense-line-date")?.value, merchant: byId("expense-line-merchant")?.value, description: byId("expense-line-description")?.value,
       category: byId("expense-line-category")?.value, paymentMethod: byId("expense-line-payment-method")?.value, personalAmount: byId("expense-line-personal")?.value, businessPurpose: byId("expense-line-purpose")?.value, netAmount: byId("expense-line-net")?.value, taxAmount: byId("expense-line-tax")?.value,
-      grossAmount: number(byId("expense-line-net")?.value) + number(byId("expense-line-tax")?.value), country: byId("expense-line-country")?.value, currency: byId("expense-report-currency")?.value || "EUR", tripScope: byId("expense-trip-scope")?.value, mealContext: byId("expense-meal-context")?.value, distanceKm: byId("expense-distance-km")?.value, vehicleFiscalPower: byId("expense-vehicle-power")?.value, annualBusinessKm: byId("expense-annual-km")?.value, durationHours: byId("expense-duration-hours")?.value, overnight: Boolean(byId("expense-overnight")?.checked), differentMunicipality: Boolean(byId("expense-different-municipality")?.checked), expenseTerritory: byId("expense-line-country")?.value, traceablePayment: !String(byId("expense-line-payment-method")?.value || "").includes("cash") };
+      grossAmount: number(byId("expense-line-net")?.value) + number(byId("expense-line-tax")?.value), country: byId("expense-line-country")?.value, currency: report?.currency || "EUR",
+      originalCurrency: (byId("expense-line-original-currency")?.value || report?.currency || "EUR").toUpperCase(), originalGrossAmount: byId("expense-line-original-gross")?.value || number(byId("expense-line-net")?.value) + number(byId("expense-line-tax")?.value),
+      tripScope: byId("expense-trip-scope")?.value, mealContext: byId("expense-meal-context")?.value, distanceKm: byId("expense-distance-km")?.value, vehicleFiscalPower: byId("expense-vehicle-power")?.value, annualBusinessKm: byId("expense-annual-km")?.value, durationHours: byId("expense-duration-hours")?.value, overnight: Boolean(byId("expense-overnight")?.checked), differentMunicipality: Boolean(byId("expense-different-municipality")?.checked), expenseTerritory: byId("expense-line-country")?.value, traceablePayment: !String(byId("expense-line-payment-method")?.value || "").includes("cash") };
+  }
+  function travelWorkflowInput() {
+    return { order: {
+      orderNumber: byId("expense-travel-order-number")?.value, orderDate: byId("expense-travel-order-date")?.value,
+      traveler: byId("expense-travel-traveler")?.value, travelerRole: byId("expense-travel-role")?.value,
+      destinationCity: byId("expense-travel-destination-city")?.value, destinationCountry: byId("expense-travel-destination-country")?.value,
+      departureAt: byId("expense-travel-departure")?.value, expectedReturnAt: byId("expense-travel-expected-return")?.value,
+      transportMode: byId("expense-travel-transport")?.value, route: byId("expense-travel-route")?.value,
+      purpose: byId("expense-travel-purpose")?.value, rsdAccount: byId("expense-travel-rsd-account")?.value,
+      fxAccount: byId("expense-travel-fx-account")?.value, companyActivity: byId("expense-travel-company-activity")?.value,
+      costBearer: "Company"
+    }, settlement: {
+      actualReturnAt: byId("expense-travel-actual-return")?.value, durationHours: byId("expense-travel-duration")?.value,
+      perDiemDays: byId("expense-travel-perdiem-days")?.value, perDiemRate: byId("expense-travel-perdiem-rate")?.value,
+      perDiemCurrency: byId("expense-travel-perdiem-currency")?.value,
+      corporateCardAmount: byId("expense-travel-corporate-card")?.value, advanceAmount: byId("expense-travel-advance")?.value,
+      reimbursementRsd: byId("expense-travel-reimbursement-rsd")?.value,
+      reimbursementForeign: byId("expense-travel-reimbursement-fx")?.value,
+      reimbursementForeignCurrency: byId("expense-travel-reimbursement-fx-currency")?.value
+    }};
+  }
+  function validationRates() {
+    const rates = {};
+    String(byId("expense-validation-rates")?.value || "").split(",").map((part) => part.trim()).filter(Boolean).forEach((part) => {
+      const [currency, rawRate] = part.split("="); const rate = Number(rawRate);
+      if (currency && Number.isFinite(rate) && rate > 0) rates[currency.trim().toUpperCase()] = { rate };
+    });
+    return rates;
+  }
+  function downloadRpcFile(file) {
+    if (!file?.downloadBase64) throw new Error("Fichier indisponible");
+    const binary = atob(file.downloadBase64); const bytes = new Uint8Array(binary.length);
+    for (let i=0;i<binary.length;i+=1) bytes[i]=binary.charCodeAt(i);
+    const url=URL.createObjectURL(new Blob([bytes],{type:file.mimeType||"application/octet-stream"}));
+    const link=document.createElement("a"); link.href=url; link.download=file.fileName||"d2f-export"; link.click(); setTimeout(()=>URL.revokeObjectURL(url),30000);
   }
   async function receiptPayload(file) {
     if (!file) return null;
@@ -424,13 +485,36 @@
     }
     if (action === "expenses:select") { renderExpenses(local.expenses || { reports: [], lines: [], receipts: [], summary: {} }); window.D2FShowPage?.("expenses-reports"); return; }
     if (action === "expenses:createReport") {
-      const created = await window.api.expenses.createReport({ title: byId("expense-report-title")?.value || "", currency: byId("expense-report-currency")?.value || "EUR" });
+      const created = await window.api.expenses.createReport({ title: byId("expense-report-title")?.value || "", currency: byId("expense-report-currency")?.value || "EUR", documentType: byId("expense-report-type")?.value || "company_expense" });
       local.selectedReportId = created.id; if (byId("expense-report-title")) byId("expense-report-title").value = ""; return refreshExpenses();
     }
     if (action === "expenses:addLine") {
-      await window.api.expenses.addLine(expenseInput()); for (const id of ["expense-line-merchant", "expense-line-description", "expense-line-purpose", "expense-line-net", "expense-line-tax", "expense-line-personal"]) if (byId(id)) byId(id).value = ""; return refreshExpenses();
+      await window.api.expenses.addLine(expenseInput()); for (const id of ["expense-line-merchant", "expense-line-description", "expense-line-purpose", "expense-line-net", "expense-line-tax", "expense-line-personal", "expense-line-original-gross"]) if (byId(id)) byId(id).value = ""; return refreshExpenses();
     }
-    if (action === "expenses:submit") { await window.api.expenses.submit({ id: local.selectedReportId, idempotencyKey: "expense:submit:" + local.selectedReportId }); return refreshExpenses(); }
+    if (action === "expenses:suggestNecessity") {
+      const activity = byId("expense-travel-company-activity")?.value || "les activités déclarées de l’entreprise";
+      const purpose = byId("expense-travel-purpose")?.value || selectedExpenseReport()?.title || "la mission professionnelle";
+      const destination = byId("expense-travel-destination-city")?.value || "la destination indiquée";
+      if (byId("expense-travel-necessity")) byId("expense-travel-necessity").value = "Le déplacement à " + destination + " est nécessaire pour " + purpose + ". Il est directement lié à " + activity + " et requiert une présence sur place afin de réaliser les réunions, vérifications ou travaux qui ne peuvent pas être accomplis avec le même niveau de preuve et d’efficacité à distance. Cette proposition doit être vérifiée et adaptée par le demandeur avant validation.";
+      return;
+    }
+    if (action === "expenses:saveWorkflow") {
+      await window.api.expenses.updateWorkflow({ id: local.selectedReportId, documentType: "travel_order", workflowData: travelWorkflowInput(), missionReport: byId("expense-travel-report")?.value, businessNecessity: byId("expense-travel-necessity")?.value });
+      return refreshExpenses();
+    }
+    if (action === "expenses:validate") {
+      const report = selectedExpenseReport();
+      if (report?.document_type === "travel_order") await window.api.expenses.updateWorkflow({ id: local.selectedReportId, documentType: "travel_order", workflowData: travelWorkflowInput(), missionReport: byId("expense-travel-report")?.value, businessNecessity: byId("expense-travel-necessity")?.value });
+      const validateExpense = window.api.expenses.validate || window.api.expenses.submit;
+      await validateExpense({ id: local.selectedReportId, rates: validationRates(), idempotencyKey: "expense:validate:" + local.selectedReportId });
+      return refreshExpenses();
+    }
+    if (action === "expenses:exportAccountant") { downloadRpcFile(await window.api.expenses.exportAccountant({ id: local.selectedReportId })); return; }
+    if (action === "expenses:exportTravel") {
+      downloadRpcFile(await window.api.expenses.exportDocument({ id: local.selectedReportId, type: "travel_order" }));
+      downloadRpcFile(await window.api.expenses.exportDocument({ id: local.selectedReportId, type: "travel_account" })); return;
+    }
+    if (action === "expenses:exportBank") { downloadRpcFile(await window.api.expenses.exportDocument({ id: local.selectedReportId, type: "bank_reimbursement" })); return; }
     const decisions = { "expenses:approve": "approved", "expenses:reject": "rejected", "expenses:return": "returned" };
     if (decisions[action]) {
       await window.api.expenses.decide({ id: local.selectedReportId, decision: decisions[action], note: byId("expense-decision-note")?.value || "", idempotencyKey: "expense:decision:" + decisions[action] + ":" + local.selectedReportId });

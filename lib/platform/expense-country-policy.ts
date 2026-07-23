@@ -21,8 +21,9 @@ export type ExpenseCountryPolicy = {
 export const CANONICAL_EXPENSE_CATEGORIES = [
   "meal", "accommodation", "fuel", "toll", "parking", "train", "flight", "taxi",
   "ride_hailing", "public_transport", "vehicle_rental", "mileage", "per_diem",
-  "telecommunications", "office_supplies", "representation", "training", "conference",
-  "home_working", "miscellaneous",
+  "telecommunications", "office_supplies", "equipment", "software", "subscriptions",
+  "professional_services", "rent", "utilities", "insurance", "bank_fees",
+  "representation", "training", "conference", "home_working", "miscellaneous",
 ] as const;
 
 function object(value: unknown): JsonRecord {
@@ -48,7 +49,12 @@ export async function expenseCountryPolicy(supabase: SupabaseClient, countryValu
     throw new Error("Le registre Country Pack est indisponible");
   }
   const now = new Date().toISOString();
-  const candidates = (result.data || []).filter((candidate) => (!candidate.effective_from || candidate.effective_from <= now) && (!candidate.effective_to || candidate.effective_to > now));
+  const candidates = (result.data || []).filter((candidate) => {
+    const manifest = object(candidate.manifest);
+    const capabilities = object(manifest.capabilities);
+    const isExpensesPack = String(candidate.pack_id || "").endsWith(".expenses") || manifest.module === "expenses" || Boolean(manifest.expense) || Boolean(capabilities.expense);
+    return isExpensesPack && (!candidate.effective_from || candidate.effective_from <= now) && (!candidate.effective_to || candidate.effective_to > now);
+  });
   const row = candidates.find((candidate) => candidate.status === "published") || candidates[0];
   if (!row) return unqualified("no_published_pack");
   const manifest = object(row.manifest);
