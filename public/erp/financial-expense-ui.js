@@ -240,12 +240,12 @@
 
   function renderExpenseDetail() {
     const report = (local.expenses?.reports || []).find((item) => String(item.id) === String(local.selectedReportId));
-    const title = byId("expense-selected-title"), detail = byId("expense-selected-detail"), lineForm = byId("expense-line-form"), submit = byId("expense-submit-selected");
+    const title = byId("expense-selected-title"), detail = byId("expense-selected-detail"), lineForm = byId("expense-line-form"), submit = byId("expense-submit-selected"), actionHint = byId("expense-action-hint");
     if (!report) {
       if (title) title.textContent = tr("expenses.detail.select", "Sélectionnez une note de frais");
       if (detail) detail.textContent = tr("expenses.detail.empty", "Les lignes et justificatifs apparaîtront ici.");
       setText("expense-capture-report", tr("expenses.capture.no_report", "Sélectionnez d’abord une note de frais"));
-      if (lineForm) lineForm.hidden = true; if (submit) submit.hidden = true;
+      if (lineForm) lineForm.hidden = true; if (submit) submit.hidden = true; if (actionHint) actionHint.hidden = true;
       clear(byId("expense-lines-body")); clear(byId("expense-receipts-list")); return;
     }
     const lines = reportLines(report.id), receipts = reportReceipts(report.id), missingReceipts = missingReceiptLines(report.id);
@@ -267,9 +267,18 @@
     if (lineForm) lineForm.hidden = !editable;
     const travel = byId("expense-travel-workflow"); if (travel) travel.hidden = report.document_type !== "travel_order" || !editable;
     const exportAccountant = byId("expense-export-accountant"), exportTravel = byId("expense-export-travel"), exportBank = byId("expense-export-bank");
-    if (exportAccountant) { exportAccountant.hidden = report.status !== "approved"; exportAccountant.dataset.reportId = report.id; }
-    if (exportTravel) { exportTravel.hidden = report.document_type !== "travel_order" || !["submitted","approved"].includes(report.status); exportTravel.dataset.reportId = report.id; }
-    if (exportBank) { exportBank.hidden = report.document_type !== "travel_order" || report.status !== "approved"; exportBank.dataset.reportId = report.id; }
+    if (exportAccountant) {
+      exportAccountant.hidden = false; exportAccountant.disabled = report.status !== "approved"; exportAccountant.dataset.reportId = report.id;
+      exportAccountant.title = report.status === "approved" ? tr("expenses.export.accountant_ready", "Télécharger le fichier destiné au comptable") : tr("expenses.export.requires_approval", "Disponible après approbation de la note");
+    }
+    if (exportTravel) {
+      exportTravel.hidden = report.document_type !== "travel_order"; exportTravel.disabled = !["submitted","approved"].includes(report.status); exportTravel.dataset.reportId = report.id;
+      exportTravel.title = exportTravel.disabled ? tr("expenses.export.travel_requires_submission", "Disponible après soumission de l’ordre") : tr("expenses.export.travel_ready", "Télécharger l’ordre et le décompte de mission");
+    }
+    if (exportBank) {
+      exportBank.hidden = report.document_type !== "travel_order"; exportBank.disabled = report.status !== "approved"; exportBank.dataset.reportId = report.id;
+      exportBank.title = exportBank.disabled ? tr("expenses.export.requires_approval", "Disponible après approbation de la note") : tr("expenses.export.bank_ready", "Télécharger le dossier justificatif destiné à la banque");
+    }
     if (report.document_type === "travel_order") {
       const workflow = report.workflow_data || {}, order = workflow.order || {}, settlement = workflow.settlement || {};
       const values = {
@@ -288,10 +297,29 @@
       Object.entries(values).forEach(([id,value])=>{ if (byId(id)) byId(id).value = value || ""; });
     }
     if (submit) {
-      submit.hidden = !editable; submit.dataset.reportId = report.id;
-      if (!lines.length) { submit.dataset.platformAction = "expenses:focusLine"; submit.textContent = tr("expenses.action.add_first_line", "Ajouter la première dépense"); }
-      else if (missingReceipts.length) { submit.dataset.platformAction = "expenses:openCapture"; submit.textContent = tr("expenses.action.add_receipts", "Ajouter " + missingReceipts.length + " justificatif(s)"); }
-      else { submit.dataset.platformAction = "expenses:validate"; submit.textContent = tr("expenses.action.validate_submit", "Valider et soumettre"); }
+      submit.hidden = false; submit.dataset.reportId = report.id; submit.dataset.platformAction = "expenses:validate";
+      submit.textContent = tr("expenses.action.validate_submit", "Valider et soumettre");
+      submit.disabled = !editable || !lines.length || missingReceipts.length > 0;
+    }
+    if (actionHint) {
+      actionHint.hidden = false;
+      actionHint.className = "expenseActionHint";
+      if (!editable && report.status === "submitted") {
+        actionHint.textContent = tr("expenses.action.awaiting_approval_hint", "La note alimente maintenant Approbations. Le responsable doit l’approuver ou la renvoyer pour correction.");
+        actionHint.classList.add("is-waiting");
+      } else if (report.status === "approved") {
+        actionHint.textContent = tr("expenses.action.approved_exports_hint", "Note approuvée : les exports comptable et, pour une mission, banque sont maintenant disponibles.");
+        actionHint.classList.add("is-ready");
+      } else if (!lines.length) {
+        actionHint.textContent = tr("expenses.action.add_line_hint", "Ajoutez au moins une dépense ci-dessous avant de pouvoir soumettre la note vers Approbations.");
+      } else if (missingReceipts.length) {
+        actionHint.textContent = tr("expenses.action.add_receipts_hint", "Rattachez un justificatif à chaque ligne requise. Il reste {count} justificatif(s) à ajouter.", { count: missingReceipts.length });
+      } else if (editable) {
+        actionHint.textContent = tr("expenses.action.ready_to_submit_hint", "La note est complète. Cliquez sur « Valider et soumettre » pour alimenter Approbations.");
+        actionHint.classList.add("is-ready");
+      } else {
+        actionHint.textContent = tr("expenses.action.closed_hint", "Cette note n’est plus modifiable dans son statut actuel.");
+      }
     }
     const proofByLine = new Map(receipts.filter((receipt) => receipt.expense_line_id).map((receipt) => [String(receipt.expense_line_id), receipt]));
     const body = byId("expense-lines-body"); clear(body);

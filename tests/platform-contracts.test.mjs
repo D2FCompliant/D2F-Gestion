@@ -409,8 +409,12 @@ test("separates company expenses from governed travel orders with validation-tim
   assert.match(html, /expense-report-type/);
   assert.match(html, /expense-travel-order-number/);
   assert.match(html, /expense-validation-rates/);
+  assert.match(html, /expense-action-hint/);
   assert.match(ui, /Valider et soumettre/);
   assert.match(ui, /expenses\.action\.validate_submit/);
+  assert.match(ui, /exportAccountant\.hidden = false/);
+  assert.match(ui, /submit\.disabled = !editable \|\| !lines\.length \|\| missingReceipts\.length > 0/);
+  assert.match(ui, /expenses\.action\.ready_to_submit_hint/);
   assert.match(ui, /expenses\.necessity\.template/);
   assert.match(ui, /expenses:exportBank/);
 });
