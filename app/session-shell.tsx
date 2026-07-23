@@ -45,6 +45,14 @@ type BillingProfile = { legalName: string; legalIdentifier: string; vatId: strin
 type SubscriptionInvoice = { id: string; number: string; date: string; amount: number; periodStart: string; periodEnd: string };
 type AdminCompany = { id: string; name: string; companyIdentifier: string; status: string; subscriptionStatus: string; plan: string; billingTerm: "monthly" | "annual" | "lifetime"; trialRequested: boolean; members: number; amountEur: number | null; payerName: string; transferReference: string; paidOn: string; currentPeriodEnd: string; isTrial: boolean; trialEndsAt: string; canReactivate: boolean; reactivationKind: "trial" | "paid"; createdAt: string };
 
+const shellCopy: Record<PortalLocale, { idle: string; supportAria: string; ticketCount: string; requests: string; requestsAria: string; logout: string }> = {
+  fr: { idle: "Déconnexion dans", supportAria: "Support D2F", ticketCount: "ticket(s) à consulter", requests: "Demandes", requestsAria: "demandes clients à traiter", logout: "Déconnexion" },
+  en: { idle: "Signing out in", supportAria: "D2F Support", ticketCount: "ticket(s) to review", requests: "Requests", requestsAria: "customer requests to process", logout: "Sign out" },
+  sr: { idle: "Odjava za", supportAria: "D2F podrška", ticketCount: "tiketa za pregled", requests: "Zahtevi", requestsAria: "zahteva klijenata za obradu", logout: "Odjava" },
+  it: { idle: "Disconnessione tra", supportAria: "Supporto D2F", ticketCount: "ticket da esaminare", requests: "Richieste", requestsAria: "richieste clienti da elaborare", logout: "Disconnetti" },
+  es: { idle: "Cierre de sesión en", supportAria: "Soporte D2F", ticketCount: "tickets por revisar", requests: "Solicitudes", requestsAria: "solicitudes de clientes por procesar", logout: "Cerrar sesión" },
+};
+
 const billingProfileCopy: Record<PortalLocale, { title: string; lead: string; street: string; street2: string; postal: string; city: string; vat: string; billingEmail: string }> = {
   fr: { title: "Coordonnées de facturation", lead: "Elles seront reprises sur les factures D2F.", street: "Adresse", street2: "Complément d’adresse (optionnel)", postal: "Code postal", city: "Ville", vat: "Numéro de TVA (optionnel)", billingEmail: "E-mail de facturation" },
   en: { title: "Billing details", lead: "They will appear on D2F invoices.", street: "Address", street2: "Address line 2 (optional)", postal: "Postcode", city: "City", vat: "VAT number (optional)", billingEmail: "Billing email" },
@@ -540,7 +548,15 @@ export default function SessionShell({ monthlyPriceEur, annualPriceEur }: { mont
   const [supportTicketId, setSupportTicketId] = useState("");
   const [supportAttentionCount, setSupportAttentionCount] = useState(0);
   const [completionToken, setCompletionToken] = useState("");
+  const [shellLocale, setShellLocale] = useState<PortalLocale>("en");
   const lastActivity = useRef(0);
+
+  useEffect(() => {
+    const synchronize = () => setShellLocale(normalizePortalLocale(localStorage.getItem("appLang") || localStorage.getItem("d2f-portal-language") || navigator.language));
+    synchronize();
+    window.addEventListener("storage", synchronize);
+    return () => window.removeEventListener("storage", synchronize);
+  }, []);
 
   const logout = useCallback(async () => {
     await fetch("/auth/logout", { method: "POST", credentials: "same-origin" }).catch(() => {});
@@ -646,13 +662,14 @@ export default function SessionShell({ monthlyPriceEur, annualPriceEur }: { mont
   }, []);
 
   const initials = useMemo(() => session?.user.fullName.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase() || "D2F", [session]);
+  const headerCopy = shellCopy[shellLocale];
 
   if (loading) return <main className="session-loading"><img src="/d2f-platform-logo.png" alt="D2F Platform" /><span>Ouverture sécurisée…</span></main>;
   if (completionToken) return <PasswordCompletion token={completionToken} onAuthenticated={(value) => { setCompletionToken(""); setSession(value); }} />;
   if (!session) return <AuthPortal onAuthenticated={setSession} monthlyPriceEur={monthlyPriceEur} annualPriceEur={annualPriceEur} />;
 
   return <main className="app-session-shell">
-    <header className="account-bar"><div className="account-brand"><img src="/d2f-platform-logo.png" alt="" /><strong>D2F Platform</strong><small className="app-build-badge">{D2F_PLATFORM_VERSION_LABEL}</small><span>{session.account.name}</span></div><div className="account-actions">{warning > 0 && <span className="idle-warning">Déconnexion dans {warning} s</span>}<button className="support-header-button" onClick={() => { setDrawer(false); setSupportTicketId(""); setSupportOpen(true); }} aria-label={`Support D2F · ${supportAttentionCount} ticket(s) à consulter`}><span>Support</span>{supportAttentionCount > 0 && <strong>{supportAttentionCount}</strong>}</button>{session.account.isPlatformAdmin && <button className="admin-request-button" onClick={() => { setSupportOpen(false); setDrawer(true); }} aria-label={`${adminPendingCount} demandes clients à traiter`}><span>Demandes</span><strong>{adminPendingCount}</strong></button>}<button className="account-button" onClick={() => { setSupportOpen(false); setDrawer(true); }}><span>{initials}</span><span><strong>{session.user.fullName}</strong><small>{accountStatusLabel(session.account)}</small></span></button><button className="logout-button" onClick={logout}>Déconnexion</button></div></header>
+    <header className="account-bar"><div className="account-brand"><img src="/d2f-platform-logo.png" alt="" /><strong>D2F Platform</strong><small className="app-build-badge">{D2F_PLATFORM_VERSION_LABEL}</small><span>{session.account.name}</span></div><div className="account-actions">{warning > 0 && <span className="idle-warning">{headerCopy.idle} {warning} s</span>}<button className="support-header-button" onClick={() => { setDrawer(false); setSupportTicketId(""); setSupportOpen(true); }} aria-label={`${headerCopy.supportAria} · ${supportAttentionCount} ${headerCopy.ticketCount}`}><span>Support</span>{supportAttentionCount > 0 && <strong>{supportAttentionCount}</strong>}</button>{session.account.isPlatformAdmin && <button className="admin-request-button" onClick={() => { setSupportOpen(false); setDrawer(true); }} aria-label={`${adminPendingCount} ${headerCopy.requestsAria}`}><span>{headerCopy.requests}</span><strong>{adminPendingCount}</strong></button>}<button className="account-button" onClick={() => { setSupportOpen(false); setDrawer(true); }}><span>{initials}</span><span><strong>{session.user.fullName}</strong><small>{accountStatusLabel(session.account)}</small></span></button><button className="logout-button" onClick={logout}>{headerCopy.logout}</button></div></header>
     {session.account.canUseApplication ? <iframe className="web-app-frame" src="/erp/index.html?v=20260723-i18n-v341" title="D2F Platform" allow="clipboard-read; clipboard-write" onLoad={(event) => event.currentTarget.contentWindow?.postMessage({ type: "d2f-platform-license", account: { id: session.account.id, name: session.account.name, plan: session.account.plan, billingTerm: session.account.subscription.billingTerm, isPlatformAdmin: session.account.isPlatformAdmin } }, location.origin)} /> : <LockedSubscription session={session} onOpen={() => setDrawer(true)} onSession={setSession} />}
     {drawer && <AccountDrawer session={session} onSession={setSession} onClose={() => setDrawer(false)} onPendingCount={setAdminPendingCount} />}
     {supportOpen && <SupportCenter session={session} initialTicketId={supportTicketId} onClose={() => { setSupportOpen(false); setSupportTicketId(""); }} onAttentionCount={setSupportAttentionCount} onChanged={notifySupportChanged} />}
